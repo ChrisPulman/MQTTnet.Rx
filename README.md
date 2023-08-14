@@ -26,7 +26,7 @@
 [![NuGet](https://img.shields.io/nuget/v/MQTTnet.Rx.TwinCAT.svg?style=plastic)](https://www.nuget.org/packages/MQTTnet.Rx.TwinCAT)
 
 
-![Alt](https://repobeats.axiom.co/api/embed/ce86c8ce3ab110f48d175c1270296e0b35de8b4c.svg "Repobeats analytics image")
+![Alt](https://repobeats.axiom.co/api/embed/c9b84f3200da41856350a888598eae1ca5613ec2.svg "Repobeats analytics image")
 
 <p align="left">
   <a href="https://github.com/ChrisPulman/MQTTnet.Rx">
