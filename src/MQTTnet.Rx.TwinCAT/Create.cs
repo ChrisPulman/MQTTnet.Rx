@@ -36,7 +36,7 @@ namespace MQTTnet.Rx.TwinCAT
                 throw new ArgumentNullException(nameof(configurePlc));
             }
 
-            var plc = default(RxTcAdsClient)!;
+            var plc = default(IRxTcAdsClient)!;
             configurePlc(plc);
             if (plc == null)
             {
@@ -44,6 +44,46 @@ namespace MQTTnet.Rx.TwinCAT
             }
 
             return client.PublishMessage(plc.Observe<T>(plcVariable).Select(payLoad => (topic, payLoad: payLoad!.ToString()!)));
+        }
+
+        /// <summary>
+        /// Subscribes the tc tag.
+        /// </summary>
+        /// <typeparam name="T">The PLC Tag Data Type.</typeparam>
+        /// <param name="client">The client.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="plcVariable">The PLC variable.</param>
+        /// <param name="configurePlc">The configure PLC.</param>
+        /// <param name="payloadFactory">The payload factory.</param>
+        /// <exception cref="ArgumentNullException">
+        /// nameof(client)
+        /// or
+        /// nameof(configurePlc)
+        /// or
+        /// nameof(plc).
+        /// </exception>
+        public static void SubscribeTcTag<T>(this IObservable<IMqttClient> client, string topic, string plcVariable, Action<IRxTcAdsClient> configurePlc, Func<string, T> payloadFactory)
+        {
+            if (client == null)
+            {
+                throw new ArgumentNullException(nameof(client));
+            }
+
+            if (configurePlc == null)
+            {
+                throw new ArgumentNullException(nameof(configurePlc));
+            }
+
+            var plc = default(IRxTcAdsClient)!;
+            configurePlc(plc);
+            if (plc == null)
+            {
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+                throw new ArgumentNullException(nameof(plc));
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
+            }
+
+            client.SubscribeToTopic(topic).Subscribe(message => plc.Write(plcVariable, payloadFactory(message.ApplicationMessage.ConvertPayloadToString())!));
         }
 
         /// <summary>
@@ -105,7 +145,7 @@ namespace MQTTnet.Rx.TwinCAT
                 throw new ArgumentNullException(nameof(configurePlc));
             }
 
-            var plc = default(RxTcAdsClient)!;
+            var plc = default(IRxTcAdsClient)!;
             configurePlc(plc);
             if (plc == null)
             {
@@ -113,6 +153,46 @@ namespace MQTTnet.Rx.TwinCAT
             }
 
             return client.PublishMessage(plc.Observe<T>(plcVariable).Select(payLoad => (topic, payLoad: payLoad!.ToString()!)));
+        }
+
+        /// <summary>
+        /// Subscribes the tc tag.
+        /// </summary>
+        /// <typeparam name="T">The PLC Tag Data Type.</typeparam>
+        /// <param name="client">The client.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="plcVariable">The PLC variable.</param>
+        /// <param name="configurePlc">The configure PLC.</param>
+        /// <param name="payloadFactory">The payload factory.</param>
+        /// <exception cref="ArgumentNullException">
+        /// nameof(client)
+        /// or
+        /// nameof(configurePlc)
+        /// or
+        /// nameof(s7plc).
+        /// </exception>
+        public static void SubscribeTcTag<T>(this IObservable<IManagedMqttClient> client, string topic, string plcVariable, Action<IRxTcAdsClient> configurePlc, Func<string, T> payloadFactory)
+        {
+            if (client == null)
+            {
+                throw new ArgumentNullException(nameof(client));
+            }
+
+            if (configurePlc == null)
+            {
+                throw new ArgumentNullException(nameof(configurePlc));
+            }
+
+            var plc = default(IRxTcAdsClient)!;
+            configurePlc(plc);
+            if (plc == null)
+            {
+#pragma warning disable CA2208 // Instantiate argument exceptions correctly
+                throw new ArgumentNullException(nameof(plc));
+#pragma warning restore CA2208 // Instantiate argument exceptions correctly
+            }
+
+            client.SubscribeToTopic(topic).Subscribe(message => plc.Write(plcVariable, payloadFactory(message.ApplicationMessage.ConvertPayloadToString())!));
         }
 
         /// <summary>
