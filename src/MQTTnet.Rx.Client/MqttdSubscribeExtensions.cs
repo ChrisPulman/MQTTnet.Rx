@@ -16,6 +16,8 @@ namespace MQTTnet.Rx.Client;
 public static class MqttdSubscribeExtensions
 {
     private static readonly Dictionary<string, IObservable<object?>> _dictJsonValues = new();
+    private static readonly Dictionary<IManagedMqttClient, List<(string topic, int count)>> _managedSubscribeToTopicClients = new();
+    private static readonly Dictionary<IMqttClient, List<(string topic, int count)>> _unmanagedSubscribeToTopicClients = new();
 
     /// <summary>
     /// Converts to dictionary.
@@ -125,18 +127,43 @@ public static class MqttdSubscribeExtensions
             {
                 mqttClient = c;
                 disposable.Add(mqttClient.ApplicationMessageReceived().Subscribe(observer));
-                var mqttSubscribeOptions = Create.MqttFactory.CreateSubscribeOptionsBuilder()
-                    .WithTopicFilter(f => f.WithTopic(topic))
-                    .Build();
+                if (!_unmanagedSubscribeToTopicClients.ContainsKey(mqttClient))
+                {
+                    _unmanagedSubscribeToTopicClients.Add(mqttClient, new List<(string topic, int count)>(new[] { (topic, 0) }));
+                }
 
-                await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+                var check = _unmanagedSubscribeToTopicClients[mqttClient].Find(x => x.topic == topic);
+                if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
+                {
+                    check.count++;
+                    if (check.count == 1)
+                    {
+                        var mqttSubscribeOptions = Create.MqttFactory.CreateSubscribeOptionsBuilder()
+                        .WithTopicFilter(f => f.WithTopic(topic))
+                        .Build();
+
+                        await mqttClient.SubscribeAsync(mqttSubscribeOptions, CancellationToken.None);
+                    }
+                }
             }));
 
             return Disposable.Create(async () =>
                 {
                     try
                     {
-                        await mqttClient!.UnsubscribeAsync(topic).ConfigureAwait(false);
+                        if (mqttClient != null && _unmanagedSubscribeToTopicClients.ContainsKey(mqttClient))
+                        {
+                            var check = _unmanagedSubscribeToTopicClients[mqttClient].Find(x => x.topic == topic);
+                            if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
+                            {
+                                check.count--;
+                                if (check.count == 0)
+                                {
+                                    await mqttClient!.UnsubscribeAsync(topic).ConfigureAwait(false);
+                                }
+                            }
+                        }
+
                         disposable.Dispose();
                     }
                     catch (ObjectDisposedException)
@@ -147,7 +174,7 @@ public static class MqttdSubscribeExtensions
                         observer.OnError(exception);
                     }
                 });
-        }).Retry();
+        }).Retry().Publish().RefCount();
 
     /// <summary>
     /// Discovers the topics.
@@ -282,18 +309,42 @@ public static class MqttdSubscribeExtensions
             {
                 mqttClient = c;
                 disposable.Add(mqttClient.ApplicationMessageReceived().Subscribe(observer));
-                var mqttSubscribeOptions = Create.MqttFactory.CreateTopicFilterBuilder()
-                    .WithTopic(topic)
-                    .Build();
+                if (!_managedSubscribeToTopicClients.ContainsKey(mqttClient))
+                {
+                    _managedSubscribeToTopicClients.Add(mqttClient, new List<(string topic, int count)>(new[] { (topic, 0) }));
+                }
 
-                await mqttClient.SubscribeAsync(new[] { mqttSubscribeOptions });
+                var check = _managedSubscribeToTopicClients[mqttClient].Find(x => x.topic == topic);
+                if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
+                {
+                    check.count++;
+                    if (check.count == 1)
+                    {
+                        var mqttSubscribeOptions = Create.MqttFactory.CreateTopicFilterBuilder()
+                                            .WithTopic(topic)
+                                            .Build();
+
+                        await mqttClient.SubscribeAsync(new[] { mqttSubscribeOptions });
+                    }
+                }
             }));
-
             return Disposable.Create(async () =>
                 {
                     try
                     {
-                        await mqttClient!.UnsubscribeAsync(new[] { topic }).ConfigureAwait(false);
+                        if (mqttClient != null && _managedSubscribeToTopicClients.ContainsKey(mqttClient))
+                        {
+                            var check = _managedSubscribeToTopicClients[mqttClient].Find(x => x.topic == topic);
+                            if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
+                            {
+                                check.count--;
+                                if (check.count == 0)
+                                {
+                                    await mqttClient.UnsubscribeAsync(new[] { topic }).ConfigureAwait(false);
+                                }
+                            }
+                        }
+
                         disposable.Dispose();
                     }
                     catch (ObjectDisposedException)

@@ -31,25 +31,47 @@ public static class Create
     /// Created a mqtt Client.
     /// </summary>
     /// <returns>An IMqttClient.</returns>
-    public static IObservable<IMqttClient> MqttClient() =>
-        Observable.Create<IMqttClient>(observer =>
+    public static IObservable<IMqttClient> MqttClient()
+    {
+        var mqttClient = MqttFactory.CreateMqttClient();
+        var clientCount = 0;
+        return Observable.Create<IMqttClient>(observer =>
             {
-                var mqttClient = MqttFactory.CreateMqttClient();
                 observer.OnNext(mqttClient);
-                return Disposable.Create(() => mqttClient.Dispose());
+                Interlocked.Increment(ref clientCount);
+                return Disposable.Create(() =>
+                {
+                    Interlocked.Decrement(ref clientCount);
+                    if (clientCount == 0)
+                    {
+                        mqttClient.Dispose();
+                    }
+                });
             }).Retry();
+    }
 
     /// <summary>
     /// Manageds the MQTT client.
     /// </summary>
     /// <returns>A Managed Mqtt Client.</returns>
-    public static IObservable<IManagedMqttClient> ManagedMqttClient() =>
-        Observable.Create<IManagedMqttClient>(observer =>
+    public static IObservable<IManagedMqttClient> ManagedMqttClient()
+    {
+        var mqttClient = MqttFactory.CreateManagedMqttClient();
+        var clientCount = 0;
+        return Observable.Create<IManagedMqttClient>(observer =>
             {
-                var mqttClient = MqttFactory.CreateManagedMqttClient();
                 observer.OnNext(mqttClient);
-                return Disposable.Create(() => mqttClient.Dispose());
+                Interlocked.Increment(ref clientCount);
+                return Disposable.Create(() =>
+                {
+                    Interlocked.Decrement(ref clientCount);
+                    if (clientCount == 0)
+                    {
+                        mqttClient.Dispose();
+                    }
+                });
             }).Retry();
+    }
 
     /// <summary>
     /// Withes the client options.
@@ -63,7 +85,17 @@ public static class Create
             var mqttClientOptions = MqttFactory.CreateClientOptionsBuilder();
             optionsBuilder(mqttClientOptions);
             var disposable = new CompositeDisposable();
-            disposable.Add(client.Subscribe(c => disposable.Add(Observable.StartAsync(async token => await c.ConnectAsync(mqttClientOptions.Build(), token)).Subscribe(_ => observer.OnNext(c)))));
+            disposable.Add(client.Subscribe(c =>
+            {
+                if (c.IsConnected)
+                {
+                    observer.OnNext(c);
+                }
+                else
+                {
+                    disposable.Add(Observable.StartAsync(async token => await c.ConnectAsync(mqttClientOptions.Build(), token)).Subscribe(_ => observer.OnNext(c)));
+                }
+            }));
             return disposable;
         });
 
@@ -79,7 +111,17 @@ public static class Create
             var mqttClientOptions = MqttFactory.CreateManagedClientOptionsBuilder();
             optionsBuilder(mqttClientOptions);
             var disposable = new CompositeDisposable();
-            disposable.Add(client.Subscribe(c => disposable.Add(Observable.StartAsync(async () => await c.StartAsync(mqttClientOptions.Build())).Subscribe(_ => observer.OnNext(c)))));
+            disposable.Add(client.Subscribe(c =>
+            {
+                if (c.IsStarted)
+                {
+                    observer.OnNext(c);
+                }
+                else
+                {
+                    disposable.Add(Observable.StartAsync(async () => await c.StartAsync(mqttClientOptions.Build())).Subscribe(_ => observer.OnNext(c)));
+                }
+            }));
             return disposable;
         });
 

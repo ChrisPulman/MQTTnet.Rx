@@ -9,10 +9,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ConsoleMenu-simple" Version="2.6.1" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj" />
   </ItemGroup>
 

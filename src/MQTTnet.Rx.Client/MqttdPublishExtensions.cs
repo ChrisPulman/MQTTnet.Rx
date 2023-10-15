@@ -67,7 +67,14 @@ public static class MqttdPublishExtensions
                                 .WithRetainFlag(retain)
                                 .Build();
 
-                await c.cli.EnqueueAsync(applicationMessage);
+                try
+                {
+                    await c.cli.EnqueueAsync(applicationMessage);
+                }
+                catch (Exception ex)
+                {
+                    observer.OnError(ex);
+                }
             }));
 
             return disposable;
@@ -101,7 +108,14 @@ public static class MqttdPublishExtensions
                                 .WithRetainFlag(retain)
                                 .Build();
 
-                await c.cli.EnqueueAsync(applicationMessage);
+                try
+                {
+                    await c.cli.EnqueueAsync(applicationMessage);
+                }
+                catch (Exception ex)
+                {
+                    observer.OnError(ex);
+                }
             }));
 
             return disposable;
