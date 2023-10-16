@@ -12,7 +12,7 @@ namespace MQTTnet.Rx.Client;
 public static class MqttManagedClientExtensions
 {
     /// <summary>
-    /// Applications the message processed.
+    /// Application messages processed.
     /// </summary>
     /// <param name="client">The client.</param>
     /// <returns>A Application Message Processed Event Args.</returns>
@@ -22,7 +22,7 @@ public static class MqttManagedClientExtensions
             handler => client.ApplicationMessageProcessedAsync -= handler);
 
     /// <summary>
-    /// Connecteds the specified client.
+    /// Connected to the specified client.
     /// </summary>
     /// <param name="client">The client.</param>
     /// <returns>A Mqtt Client Connected Event Args.</returns>
@@ -32,7 +32,7 @@ public static class MqttManagedClientExtensions
             handler => client.ConnectedAsync -= handler);
 
     /// <summary>
-    /// Disconnecteds the specified client.
+    /// Disconnected from the specified client.
     /// </summary>
     /// <param name="client">The client.</param>
     /// <returns>A Mqtt Client Disconnected Event Args.</returns>
@@ -42,7 +42,7 @@ public static class MqttManagedClientExtensions
             handler => client.DisconnectedAsync -= handler);
 
     /// <summary>
-    /// Connectings the failed.
+    /// Connecting failed.
     /// </summary>
     /// <param name="client">The client.</param>
     /// <returns>A Connecting Failed Event Args.</returns>
@@ -52,7 +52,7 @@ public static class MqttManagedClientExtensions
             handler => client.ConnectingFailedAsync -= handler);
 
     /// <summary>
-    /// Connections the state changed.
+    /// Connection state changed.
     /// </summary>
     /// <param name="client">The client.</param>
     /// <returns>Event Args.</returns>
@@ -62,7 +62,7 @@ public static class MqttManagedClientExtensions
             handler => client.ConnectionStateChangedAsync -= handler);
 
     /// <summary>
-    /// Synchronizings the subscriptions failed.
+    /// Synchronizing subscriptions failed.
     /// </summary>
     /// <param name="client">The client.</param>
     /// <returns>A Managed Process Failed Event Args.</returns>
@@ -72,7 +72,7 @@ public static class MqttManagedClientExtensions
             handler => client.SynchronizingSubscriptionsFailedAsync -= handler);
 
     /// <summary>
-    /// Applications the message processed.
+    /// Application messages processed.
     /// </summary>
     /// <param name="client">The client.</param>
     /// <returns>A Application Message Skipped Event Args.</returns>
@@ -82,7 +82,7 @@ public static class MqttManagedClientExtensions
             handler => client.ApplicationMessageSkippedAsync -= handler);
 
     /// <summary>
-    /// Applications the message received.
+    /// Application messages received.
     /// </summary>
     /// <param name="client">The client.</param>
     /// <returns>A Mqtt Application Message Received Event Args.</returns>

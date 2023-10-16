@@ -6,67 +6,76 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using MQTTnet;
 using MQTTnet.Rx.Client;
-using MQTTnet.Server;
 
+IDisposable? disposable = default;
 var serverPort = 2883;
-var mqttServerOptions = new MqttServerOptionsBuilder()
-                        .WithDefaultEndpointPort(serverPort)
-                        .WithDefaultEndpoint().Build();
 
-var mqttFactory = new MqttFactory();
-var mqttServer = mqttFactory.CreateMqttServer(mqttServerOptions);
-mqttServer.ClientConnectedAsync += (args) =>
+disposable =
+Create.MqttServer(builder => builder.WithDefaultEndpointPort(serverPort).WithDefaultEndpoint().Build())
+      .Subscribe(async sub =>
+      {
+          sub.Disposable.Add(sub.Server.ClientConnected().Subscribe(args => Console.WriteLine($"SERVER: ClientConnectedAsync => clientId:{args.ClientId}")));
+          sub.Disposable.Add(sub.Server.ClientDisconnected().Subscribe(args => Console.WriteLine($"SERVER: ClientDisconnectedAsync => clientId:{args.ClientId}")));
+
+          var obsClient1 = Create.ManagedMqttClient()
+                          .WithManagedClientOptions(options =>
+                            options.WithClientOptions(c =>
+                                        c.WithTcpServer("localhost", serverPort))
+                                   .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
+
+          var obsClient2 = Create.ManagedMqttClient()
+                                .WithManagedClientOptions(options =>
+                                  options.WithClientOptions(c =>
+                                              c.WithTcpServer("localhost", serverPort)
+                                               .WithClientId("Client02"))
+                                         .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
+          sub.Disposable.Add(
+          obsClient1.Subscribe(i =>
+          {
+              sub.Disposable.Add(i.Connected().Subscribe((_) =>
+                  Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Connected with server.")));
+              sub.Disposable.Add(i.Disconnected().Subscribe((_) =>
+                  Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Disconnected with server.")));
+          }));
+
+          var s1 = obsClient1.SubscribeToTopic("FromMilliseconds")
+                   .Subscribe(r => Console.WriteLine($"\tCLIENT S1: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
+
+          var s2 = obsClient1.SubscribeToTopic("FromMilliseconds")
+                   .Subscribe(r => Console.WriteLine($"\tCLIENT S2: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
+
+          var s3 = obsClient1.SubscribeToTopic("FromMilliseconds")
+                   .Subscribe(r => Console.WriteLine($"\tCLIENT S3: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
+
+          var s4 = obsClient2.SubscribeToTopic("FromMilliseconds")
+                   .Subscribe(r => Console.WriteLine($"\tCLIENT S4: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
+
+          Subject<(string topic, string payload)> message = new();
+
+          sub.Disposable.Add(Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds", "{" + $"payload: {i}" + "}"))));
+          sub.Disposable.Add(obsClient1.PublishMessage(message).Subscribe());
+
+          await Task.Delay(3000);
+          s2.Dispose();
+          Console.WriteLine("Dispose S2 ---------------");
+          await Task.Delay(5000);
+          s1.Dispose();
+          Console.WriteLine("Dispose S1 ---------------");
+          await Task.Delay(5000);
+          s4.Dispose();
+          Console.WriteLine("Dispose S4 ---------------");
+
+          Console.Read();
+          s3.Dispose();
+          Console.WriteLine("Dispose S3 ---------------");
+      });
+Console.WriteLine("Press 'Escape' or 'Q' to exit.");
+
+while (Console.ReadKey(true).Key is ConsoleKey key && !(key == ConsoleKey.Escape || key == ConsoleKey.Q))
 {
-    Console.WriteLine($"SERVER: ClientConnectedAsync => clientId:{args.ClientId}");
-    return Task.CompletedTask;
-};
-mqttServer.ClientDisconnectedAsync += (args) =>
-{
-    Console.WriteLine($"SERVER: ClientDisconnectedAsync => clientId:{args.ClientId}");
-    return Task.CompletedTask;
-};
-Console.WriteLine("Starting MQTT server...");
-await mqttServer.StartAsync();
-Console.WriteLine("MQTT server is started.");
-Console.WriteLine("------------------------------------\n");
+    Thread.Sleep(1);
+}
 
-var obsClient = Create.ManagedMqttClient()
-                      .WithManagedClientOptions(options =>
-                        options.WithClientOptions(c =>
-                                    c.WithTcpServer("localhost", serverPort))
-                                ////.WithClientId("Client01"))
-                               .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
-
-obsClient.Subscribe(i =>
-{
-    i.Connected().Subscribe((_) =>
-        Console.WriteLine($"{DateTime.Now.Dump()}\t {_.ConnectResult.AssignedClientIdentifier} CLIENT: Connected with server."));
-    i.Disconnected().Subscribe((_) =>
-        Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Disconnected with server."));
-});
-var subClient = obsClient.Publish().RefCount();
-var s1 = subClient.SubscribeToTopic("FromMilliseconds")
-         .Subscribe(r => Console.WriteLine($"\tCLIENT S1: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
-
-var s2 = obsClient.SubscribeToTopic("FromMilliseconds")
-         .Subscribe(r => Console.WriteLine($"\tCLIENT S2: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
-
-var s3 = obsClient.SubscribeToTopic("FromMilliseconds")
-         .Subscribe(r => Console.WriteLine($"\tCLIENT S3: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
-
-Subject<(string topic, string payload)> message = new();
-
-Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds", "{" + $"payload: {i}" + "}")));
-
-obsClient.PublishMessage(message).Subscribe(r =>
-{
-    // Console.WriteLine($"Publish result [{r.Exception == null}], Id:{r.ApplicationMessage.Id}, Topic:{r.ApplicationMessage.ApplicationMessage.Topic}");
-});
-
-await Task.Delay(3000);
-s2.Dispose();
-Console.WriteLine("Dispose S2 ---------------");
-await Task.Delay(5000);
-s1.Dispose();
-Console.WriteLine("Dispose S1 ---------------");
-Console.Read();
+Console.WriteLine("Disposing Server ---------------");
+disposable?.Dispose();
+Console.WriteLine("Disposed Server ---------------");

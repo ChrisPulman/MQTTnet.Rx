@@ -5,6 +5,7 @@ using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using MQTTnet.Client;
 using MQTTnet.Extensions.ManagedClient;
+using MQTTnet.Server;
 
 namespace MQTTnet.Rx.Client;
 
@@ -26,6 +27,45 @@ public static class Create
     /// </summary>
     /// <param name="mqttFactory">The MQTT factory.</param>
     public static void NewMqttFactory(MqttFactory mqttFactory) => MqttFactory = mqttFactory;
+
+    /// <summary>
+    /// Creates a MQTTs server.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
+    /// <returns>An MqttServer.</returns>
+    /// <exception cref="System.ArgumentNullException">builder.</exception>
+    public static IObservable<(MqttServer Server, CompositeDisposable Disposable)> MqttServer(Func<MqttServerOptionsBuilder, MqttServerOptions> builder)
+    {
+        if (builder == null)
+        {
+            throw new ArgumentNullException(nameof(builder));
+        }
+
+        var mqttServer = MqttFactory.CreateMqttServer(builder(MqttFactory.CreateServerOptionsBuilder()));
+        var serverCount = 0;
+        return Observable.Create<(MqttServer Server, CompositeDisposable Disposable)>(async observer =>
+        {
+            var disposable = new CompositeDisposable();
+            observer.OnNext((mqttServer, disposable));
+            Interlocked.Increment(ref serverCount);
+            if (serverCount == 1)
+            {
+                await mqttServer.StartAsync();
+            }
+
+            return Disposable.Create(async () =>
+            {
+                Interlocked.Decrement(ref serverCount);
+                if (serverCount == 0)
+                {
+                    await mqttServer.StopAsync();
+                    mqttServer.Dispose();
+                }
+
+                disposable.Dispose();
+            });
+        }).Retry();
+    }
 
     /// <summary>
     /// Created a mqtt Client.
