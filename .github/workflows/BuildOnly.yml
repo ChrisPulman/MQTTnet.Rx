@@ -25,6 +25,8 @@ jobs:
   windows-latest:
     name: windows-latest
     runs-on: windows-latest
+    
+    permissions: write-all
     steps:
       - uses: actions/checkout@v3
         with:
