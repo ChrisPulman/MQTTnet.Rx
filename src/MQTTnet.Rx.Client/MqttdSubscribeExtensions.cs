@@ -127,12 +127,13 @@ public static class MqttdSubscribeExtensions
             {
                 mqttClient = c;
                 disposable.Add(mqttClient.ApplicationMessageReceived().Subscribe(observer));
-                if (!_unmanagedSubscribeToTopicClients.ContainsKey(mqttClient))
+                if (!_unmanagedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
                 {
-                    _unmanagedSubscribeToTopicClients.Add(mqttClient, new List<(string topic, int count)>(new[] { (topic, 0) }));
+                    value = new List<(string topic, int count)>(new[] { (topic, 0) });
+                    _unmanagedSubscribeToTopicClients.Add(mqttClient, value);
                 }
 
-                var check = _unmanagedSubscribeToTopicClients[mqttClient].Find(x => x.topic == topic);
+                var check = value.Find(x => x.topic == topic);
                 if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
                 {
                     check.count++;
@@ -151,9 +152,9 @@ public static class MqttdSubscribeExtensions
                 {
                     try
                     {
-                        if (mqttClient != null && _unmanagedSubscribeToTopicClients.ContainsKey(mqttClient))
+                        if (mqttClient != null && _unmanagedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
                         {
-                            var check = _unmanagedSubscribeToTopicClients[mqttClient].Find(x => x.topic == topic);
+                            var check = value.Find(x => x.topic == topic);
                             if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
                             {
                                 check.count--;
@@ -309,12 +310,13 @@ public static class MqttdSubscribeExtensions
             {
                 mqttClient = c;
                 disposable.Add(mqttClient.ApplicationMessageReceived().Subscribe(observer));
-                if (!_managedSubscribeToTopicClients.ContainsKey(mqttClient))
+                if (!_managedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
                 {
-                    _managedSubscribeToTopicClients.Add(mqttClient, new List<(string topic, int count)>(new[] { (topic, 0) }));
+                    value = new List<(string topic, int count)>(new[] { (topic, 0) });
+                    _managedSubscribeToTopicClients.Add(mqttClient, value);
                 }
 
-                var check = _managedSubscribeToTopicClients[mqttClient].Find(x => x.topic == topic);
+                var check = value.Find(x => x.topic == topic);
                 if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
                 {
                     check.count++;
@@ -332,9 +334,9 @@ public static class MqttdSubscribeExtensions
                 {
                     try
                     {
-                        if (mqttClient != null && _managedSubscribeToTopicClients.ContainsKey(mqttClient))
+                        if (mqttClient != null && _managedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
                         {
-                            var check = _managedSubscribeToTopicClients[mqttClient].Find(x => x.topic == topic);
+                            var check = value.Find(x => x.topic == topic);
                             if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
                             {
                                 check.count--;

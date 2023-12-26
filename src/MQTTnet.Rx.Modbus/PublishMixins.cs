@@ -35,15 +35,8 @@ namespace MQTTnet.Rx.Modbus
         /// </exception>
         public static IObservable<MqttClientPublishResult> PublishInputRegisters(this IObservable<IMqttClient> client, IObservable<(bool connected, Exception? error, ModbusIpMaster? master)> modbusMaster, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (modbusMaster == null)
-            {
-                throw new ArgumentNullException(nameof(modbusMaster));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            modbusMaster.ThrowArgumentNullExceptionIfNull(nameof(modbusMaster));
 
             return client.PublishMessage(modbusMaster.ReadInputRegisters(startAddress, numberOfPoints, interval).Select(d => d.data!.Serialize()).Select(payLoad => (topic, payLoad)));
         }
@@ -67,15 +60,8 @@ namespace MQTTnet.Rx.Modbus
         /// </exception>
         public static IObservable<ApplicationMessageProcessedEventArgs> PublishInputRegisters(this IObservable<IManagedMqttClient> client, IObservable<(bool connected, Exception? error, ModbusIpMaster? master)> modbusMaster, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (modbusMaster == null)
-            {
-                throw new ArgumentNullException(nameof(modbusMaster));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            modbusMaster.ThrowArgumentNullExceptionIfNull(nameof(modbusMaster));
 
             return client.PublishMessage(modbusMaster.ReadInputRegisters(startAddress, numberOfPoints, interval).Select(d => d.data!.Serialize()).Select(payLoad => (topic, payLoad)));
         }
@@ -99,15 +85,8 @@ namespace MQTTnet.Rx.Modbus
         /// </exception>
         public static IObservable<MqttClientPublishResult> PublishHoldingRegisters(this IObservable<IMqttClient> client, IObservable<(bool connected, Exception? error, ModbusIpMaster? master)> modbusMaster, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (modbusMaster == null)
-            {
-                throw new ArgumentNullException(nameof(modbusMaster));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            modbusMaster.ThrowArgumentNullExceptionIfNull(nameof(modbusMaster));
 
             return client.PublishMessage(modbusMaster.ReadHoldingRegisters(startAddress, numberOfPoints, interval).Select(d => d.data!.Serialize()).Select(payLoad => (topic, payLoad)));
         }
@@ -131,15 +110,8 @@ namespace MQTTnet.Rx.Modbus
         /// </exception>
         public static IObservable<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters(this IObservable<IManagedMqttClient> client, IObservable<(bool connected, Exception? error, ModbusIpMaster? master)> modbusMaster, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (modbusMaster == null)
-            {
-                throw new ArgumentNullException(nameof(modbusMaster));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            modbusMaster.ThrowArgumentNullExceptionIfNull(nameof(modbusMaster));
 
             return client.PublishMessage(modbusMaster.ReadHoldingRegisters(startAddress, numberOfPoints, interval).Select(d => d.data!.Serialize()).Select(payLoad => (topic, payLoad)));
         }
@@ -163,15 +135,8 @@ namespace MQTTnet.Rx.Modbus
         /// </exception>
         public static IObservable<MqttClientPublishResult> PublishInputs(this IObservable<IMqttClient> client, IObservable<(bool connected, Exception? error, ModbusIpMaster? master)> modbusMaster, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (modbusMaster == null)
-            {
-                throw new ArgumentNullException(nameof(modbusMaster));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            modbusMaster.ThrowArgumentNullExceptionIfNull(nameof(modbusMaster));
 
             return client.PublishMessage(modbusMaster.ReadInputs(startAddress, numberOfPoints, interval).Select(d => d.data!.Serialize()).Select(payLoad => (topic, payLoad)));
         }
@@ -195,15 +160,8 @@ namespace MQTTnet.Rx.Modbus
         /// </exception>
         public static IObservable<ApplicationMessageProcessedEventArgs> PublishInputs(this IObservable<IManagedMqttClient> client, IObservable<(bool connected, Exception? error, ModbusIpMaster? master)> modbusMaster, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (modbusMaster == null)
-            {
-                throw new ArgumentNullException(nameof(modbusMaster));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            modbusMaster.ThrowArgumentNullExceptionIfNull(nameof(modbusMaster));
 
             return client.PublishMessage(modbusMaster.ReadInputs(startAddress, numberOfPoints, interval).Select(d => d.data!.Serialize()).Select(payLoad => (topic, payLoad)));
         }
@@ -227,15 +185,8 @@ namespace MQTTnet.Rx.Modbus
         /// </exception>
         public static IObservable<MqttClientPublishResult> PublishCoils(this IObservable<IMqttClient> client, IObservable<(bool connected, Exception? error, ModbusIpMaster? master)> modbusMaster, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (modbusMaster == null)
-            {
-                throw new ArgumentNullException(nameof(modbusMaster));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            modbusMaster.ThrowArgumentNullExceptionIfNull(nameof(modbusMaster));
 
             return client.PublishMessage(modbusMaster.ReadCoils(startAddress, numberOfPoints, interval).Select(d => d.data!.Serialize()).Select(payLoad => (topic, payLoad)));
         }
@@ -259,15 +210,8 @@ namespace MQTTnet.Rx.Modbus
         /// </exception>
         public static IObservable<ApplicationMessageProcessedEventArgs> PublishCoils(this IObservable<IManagedMqttClient> client, IObservable<(bool connected, Exception? error, ModbusIpMaster? master)> modbusMaster, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (modbusMaster == null)
-            {
-                throw new ArgumentNullException(nameof(modbusMaster));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            modbusMaster.ThrowArgumentNullExceptionIfNull(nameof(modbusMaster));
 
             return client.PublishMessage(modbusMaster.ReadCoils(startAddress, numberOfPoints, interval).Select(d => d.data!.Serialize()).Select(payLoad => (topic, payLoad)));
         }

@@ -34,22 +34,12 @@ namespace MQTTnet.Rx.ABPlc
         /// </exception>
         public static IObservable<MqttClientPublishResult> PublishABPlcTag<T>(this IObservable<IMqttClient> client, string topic, string plcVariable, Action<IABPlcRx> configurePlc)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (configurePlc == null)
-            {
-                throw new ArgumentNullException(nameof(configurePlc));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePlc.ThrowArgumentNullExceptionIfNull(nameof(configurePlc));
 
             var plc = default(IABPlcRx)!;
-            configurePlc(plc);
-            if (plc == null)
-            {
-                throw new ArgumentNullException(nameof(plc));
-            }
+            configurePlc?.Invoke(plc);
+            plc.ThrowArgumentNullExceptionIfNull(nameof(plc));
 
             return client.PublishMessage(plc.Observe<T>(plcVariable).Select(payLoad => (topic, payLoad: payLoad!.ToString()!)));
         }
@@ -72,24 +62,12 @@ namespace MQTTnet.Rx.ABPlc
         /// </exception>
         public static void SubscribeABPlcTag<T>(this IObservable<IMqttClient> client, string topic, string plcVariable, Action<IABPlcRx> configurePlc, Func<string, T> payloadFactory)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (configurePlc == null)
-            {
-                throw new ArgumentNullException(nameof(configurePlc));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePlc.ThrowArgumentNullExceptionIfNull(nameof(configurePlc));
 
             var plc = default(IABPlcRx)!;
-            configurePlc(plc);
-            if (plc == null)
-            {
-#pragma warning disable CA2208 // Instantiate argument exceptions correctly
-                throw new ArgumentNullException(nameof(plc));
-#pragma warning restore CA2208 // Instantiate argument exceptions correctly
-            }
+            configurePlc?.Invoke(plc);
+            plc.ThrowArgumentNullExceptionIfNull(nameof(plc));
 
             client.SubscribeToTopic(topic).Subscribe(message => plc.Value(plcVariable, payloadFactory(message.ApplicationMessage.ConvertPayloadToString())!));
         }
@@ -112,22 +90,12 @@ namespace MQTTnet.Rx.ABPlc
         /// </exception>
         public static IObservable<ApplicationMessageProcessedEventArgs> PublishABPlcTag<T>(this IObservable<IManagedMqttClient> client, string topic, string plcVariable, Action<IABPlcRx> configurePlc)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (configurePlc == null)
-            {
-                throw new ArgumentNullException(nameof(configurePlc));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePlc.ThrowArgumentNullExceptionIfNull(nameof(configurePlc));
 
             var plc = default(IABPlcRx)!;
-            configurePlc(plc);
-            if (plc == null)
-            {
-                throw new ArgumentNullException(nameof(plc));
-            }
+            configurePlc?.Invoke(plc);
+            plc.ThrowArgumentNullExceptionIfNull(nameof(plc));
 
             return client.PublishMessage(plc.Observe<T>(plcVariable).Select(payLoad => (topic, payLoad: payLoad!.ToString()!)));
         }
@@ -150,24 +118,12 @@ namespace MQTTnet.Rx.ABPlc
         /// </exception>
         public static void SubscribeABPlcTag<T>(this IObservable<IManagedMqttClient> client, string topic, string plcVariable, Action<IABPlcRx> configurePlc, Func<string, T> payloadFactory)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (configurePlc == null)
-            {
-                throw new ArgumentNullException(nameof(configurePlc));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePlc.ThrowArgumentNullExceptionIfNull(nameof(configurePlc));
 
             var plc = default(IABPlcRx)!;
-            configurePlc(plc);
-            if (plc == null)
-            {
-#pragma warning disable CA2208 // Instantiate argument exceptions correctly
-                throw new ArgumentNullException(nameof(plc));
-#pragma warning restore CA2208 // Instantiate argument exceptions correctly
-            }
+            configurePlc?.Invoke(plc);
+            plc.ThrowArgumentNullExceptionIfNull(nameof(plc));
 
             client.SubscribeToTopic(topic).Subscribe(message => plc.Value(plcVariable, payloadFactory(message.ApplicationMessage.ConvertPayloadToString())!));
         }

@@ -30,17 +30,10 @@ namespace MQTTnet.Rx.SerialPort
         /// </exception>
         public static IObservable<MqttClientPublishResult> PublishSerialPort(this IObservable<IMqttClient> client, string topic, ISerialPortRx serialPort, IObservable<char> startsWith, IObservable<char> endsWith, int timeOut)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            serialPort.ThrowArgumentNullExceptionIfNull(nameof(serialPort));
 
-            if (serialPort == null)
-            {
-                throw new ArgumentNullException(nameof(serialPort));
-            }
-
-            return client.PublishMessage(serialPort.DataReceived.BufferUntil(startsWith, endsWith, timeOut).Select(payLoad => (topic, payLoad)));
+            return client.PublishMessage(serialPort?.DataReceived.BufferUntil(startsWith, endsWith, timeOut).Select(payLoad => (topic, payLoad))!);
         }
     }
 }

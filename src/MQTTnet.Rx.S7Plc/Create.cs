@@ -34,24 +34,12 @@ namespace MQTTnet.Rx.S7Plc
         /// </exception>
         public static IObservable<MqttClientPublishResult> PublishS7PlcTag<T>(this IObservable<IMqttClient> client, string topic, string plcVariable, Action<IRxS7> configurePlc)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (configurePlc == null)
-            {
-                throw new ArgumentNullException(nameof(configurePlc));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePlc.ThrowArgumentNullExceptionIfNull(nameof(configurePlc));
 
             var s7plc = default(IRxS7)!;
-            configurePlc(s7plc);
-            if (s7plc == null)
-            {
-#pragma warning disable CA2208 // Instantiate argument exceptions correctly
-                throw new ArgumentNullException(nameof(s7plc));
-#pragma warning restore CA2208 // Instantiate argument exceptions correctly
-            }
+            configurePlc?.Invoke(s7plc);
+            s7plc.ThrowArgumentNullExceptionIfNull(nameof(s7plc));
 
             return client.PublishMessage(s7plc.Observe<T>(plcVariable).Select(payLoad => (topic, payLoad: payLoad!.ToString()!)));
         }
@@ -72,24 +60,12 @@ namespace MQTTnet.Rx.S7Plc
         /// nameof(s7plc).</exception>
         public static void SubscribeS7PlcTag<T>(this IObservable<IMqttClient> client, string topic, string plcVariable, Action<IRxS7> configurePlc, Func<string, T> payloadFactory)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (configurePlc == null)
-            {
-                throw new ArgumentNullException(nameof(configurePlc));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePlc.ThrowArgumentNullExceptionIfNull(nameof(configurePlc));
 
             var s7plc = default(IRxS7)!;
-            configurePlc(s7plc);
-            if (s7plc == null)
-            {
-#pragma warning disable CA2208 // Instantiate argument exceptions correctly
-                throw new ArgumentNullException(nameof(s7plc));
-#pragma warning restore CA2208 // Instantiate argument exceptions correctly
-            }
+            configurePlc?.Invoke(s7plc);
+            s7plc.ThrowArgumentNullExceptionIfNull(nameof(s7plc));
 
             client.SubscribeToTopic(topic).Subscribe(message => s7plc.Value<T>(plcVariable, payloadFactory(message.ApplicationMessage.ConvertPayloadToString())));
         }
@@ -112,24 +88,12 @@ namespace MQTTnet.Rx.S7Plc
         /// </exception>
         public static IObservable<ApplicationMessageProcessedEventArgs> PublishS7PlcTag<T>(this IObservable<IManagedMqttClient> client, string topic, string plcVariable, Action<IRxS7> configurePlc)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (configurePlc == null)
-            {
-                throw new ArgumentNullException(nameof(configurePlc));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePlc.ThrowArgumentNullExceptionIfNull(nameof(configurePlc));
 
             var s7plc = default(IRxS7)!;
-            configurePlc(s7plc);
-            if (s7plc == null)
-            {
-#pragma warning disable CA2208 // Instantiate argument exceptions correctly
-                throw new ArgumentNullException(nameof(s7plc));
-#pragma warning restore CA2208 // Instantiate argument exceptions correctly
-            }
+            configurePlc?.Invoke(s7plc);
+            s7plc.ThrowArgumentNullExceptionIfNull(nameof(s7plc));
 
             return client.PublishMessage(s7plc.Observe<T>(plcVariable).Select(payLoad => (topic, payLoad: payLoad!.ToString()!)));
         }
@@ -152,24 +116,12 @@ namespace MQTTnet.Rx.S7Plc
         /// </exception>
         public static void SubscribeS7PlcTag<T>(this IObservable<IManagedMqttClient> client, string topic, string plcVariable, Action<IRxS7> configurePlc, Func<string, T> payloadFactory)
         {
-            if (client == null)
-            {
-                throw new ArgumentNullException(nameof(client));
-            }
-
-            if (configurePlc == null)
-            {
-                throw new ArgumentNullException(nameof(configurePlc));
-            }
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePlc.ThrowArgumentNullExceptionIfNull(nameof(configurePlc));
 
             var s7plc = default(IRxS7)!;
-            configurePlc(s7plc);
-            if (s7plc == null)
-            {
-#pragma warning disable CA2208 // Instantiate argument exceptions correctly
-                throw new ArgumentNullException(nameof(s7plc));
-#pragma warning restore CA2208 // Instantiate argument exceptions correctly
-            }
+            configurePlc?.Invoke(s7plc);
+            s7plc.ThrowArgumentNullExceptionIfNull(nameof(s7plc));
 
             client.SubscribeToTopic(topic).Subscribe(message => s7plc.Value<T>(plcVariable, payloadFactory(message.ApplicationMessage.ConvertPayloadToString())));
         }
