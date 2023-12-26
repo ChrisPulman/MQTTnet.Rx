@@ -36,10 +36,7 @@ public static class Create
     /// <exception cref="System.ArgumentNullException">builder.</exception>
     public static IObservable<(MqttServer Server, CompositeDisposable Disposable)> MqttServer(Func<MqttServerOptionsBuilder, MqttServerOptions> builder)
     {
-        if (builder == null)
-        {
-            throw new ArgumentNullException(nameof(builder));
-        }
+        builder.ThrowArgumentNullExceptionIfNull(nameof(builder));
 
         var mqttServer = MqttFactory.CreateMqttServer(builder(MqttFactory.CreateServerOptionsBuilder()));
         var serverCount = 0;
@@ -178,15 +175,8 @@ public static class Create
     /// </exception>
     public static ManagedMqttClientOptionsBuilder WithClientOptions(this ManagedMqttClientOptionsBuilder builder, Action<MqttClientOptionsBuilder> clientBuilder)
     {
-        if (builder == null)
-        {
-            throw new ArgumentNullException(nameof(builder));
-        }
-
-        if (clientBuilder == null)
-        {
-            throw new ArgumentNullException(nameof(clientBuilder));
-        }
+        builder.ThrowArgumentNullExceptionIfNull(nameof(builder));
+        clientBuilder.ThrowArgumentNullExceptionIfNull(nameof(clientBuilder));
 
         var optionsBuilder = MqttFactory.CreateClientOptionsBuilder();
         clientBuilder(optionsBuilder);
