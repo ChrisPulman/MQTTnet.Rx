@@ -25,18 +25,10 @@ jobs:
   windows-latest:
     name: windows-latest
     runs-on: windows-latest
-    
-    permissions: write-all
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: NBGV
-        id: nbgv
-        uses: dotnet/nbgv@master
-        with:
-          setAllVars: true
-      - run: echo 'SemVer2=${{ steps.nbgv.outputs.SemVer2 }}'
 
       - name: 'Cache: .nuke/temp, ~/.nuget/packages'
         uses: actions/cache@v3
