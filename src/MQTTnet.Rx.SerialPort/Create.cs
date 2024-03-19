@@ -4,6 +4,7 @@
 using System.Reactive.Linq;
 using CP.IO.Ports;
 using MQTTnet.Client;
+using MQTTnet.Extensions.ManagedClient;
 using MQTTnet.Rx.Client;
 
 namespace MQTTnet.Rx.SerialPort
@@ -34,6 +35,138 @@ namespace MQTTnet.Rx.SerialPort
             serialPort.ThrowArgumentNullExceptionIfNull(nameof(serialPort));
 
             return client.PublishMessage(serialPort?.DataReceived.BufferUntil(startsWith, endsWith, timeOut).Select(payLoad => (topic, payLoad))!);
+        }
+
+        /// <summary>
+        /// Subscribes the serial port.
+        /// </summary>
+        /// <param name="client">The client.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="configurePort">The configure port.</param>
+        /// <param name="payloadFactory">The payload factory.</param>
+        public static void SubscribeSerialPortWriteLine(this IObservable<IMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, string> payloadFactory)
+        {
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePort.ThrowArgumentNullExceptionIfNull(nameof(configurePort));
+
+            var serialPort = default(ISerialPortRx)!;
+            configurePort?.Invoke(serialPort);
+            serialPort.ThrowArgumentNullExceptionIfNull(nameof(serialPort));
+
+            client.SubscribeToTopic(topic).Subscribe(message => serialPort.WriteLine(payloadFactory(message.ApplicationMessage.ConvertPayloadToString())));
+        }
+
+        /// <summary>
+        /// Subscribes the serial port.
+        /// </summary>
+        /// <param name="client">The client.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="configurePort">The configure port.</param>
+        /// <param name="payloadFactory">The payload factory.</param>
+        public static void SubscribeSerialPortWrite(this IObservable<IMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, string> payloadFactory)
+        {
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePort.ThrowArgumentNullExceptionIfNull(nameof(configurePort));
+
+            var serialPort = default(ISerialPortRx)!;
+            configurePort?.Invoke(serialPort);
+            serialPort.ThrowArgumentNullExceptionIfNull(nameof(serialPort));
+
+            client.SubscribeToTopic(topic).Subscribe(message => serialPort.Write(payloadFactory(message.ApplicationMessage.ConvertPayloadToString())));
+        }
+
+        /// <summary>
+        /// Subscribes the serial port.
+        /// </summary>
+        /// <param name="client">The client.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="configurePort">The configure port.</param>
+        /// <param name="payloadFactory">The payload factory.</param>
+        public static void SubscribeSerialPortWrite(this IObservable<IMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, byte[]> payloadFactory)
+        {
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePort.ThrowArgumentNullExceptionIfNull(nameof(configurePort));
+
+            var serialPort = default(ISerialPortRx)!;
+            configurePort?.Invoke(serialPort);
+            serialPort.ThrowArgumentNullExceptionIfNull(nameof(serialPort));
+
+            client.SubscribeToTopic(topic).Subscribe(message => serialPort.Write(payloadFactory(message.ApplicationMessage.ConvertPayloadToString())));
+        }
+
+        /// <summary>
+        /// Publishes the serial port.
+        /// </summary>
+        /// <param name="client">The client.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="serialPort">The serial port.</param>
+        /// <param name="startsWith">The starts with.</param>
+        /// <param name="endsWith">The ends with.</param>
+        /// <param name="timeOut">The time out.</param>
+        /// <returns>A ApplicationMessageProcessedEventArgs.</returns>
+        public static IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPort(this IObservable<IManagedMqttClient> client, string topic, ISerialPortRx serialPort, IObservable<char> startsWith, IObservable<char> endsWith, int timeOut)
+        {
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            serialPort.ThrowArgumentNullExceptionIfNull(nameof(serialPort));
+
+            return client.PublishMessage(serialPort?.DataReceived.BufferUntil(startsWith, endsWith, timeOut).Select(payLoad => (topic, payLoad))!);
+        }
+
+        /// <summary>
+        /// Subscribes the serial port.
+        /// </summary>
+        /// <param name="client">The client.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="configurePort">The configure port.</param>
+        /// <param name="payloadFactory">The payload factory.</param>
+        public static void SubscribeSerialPortWriteLine(this IObservable<IManagedMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, string> payloadFactory)
+        {
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePort.ThrowArgumentNullExceptionIfNull(nameof(configurePort));
+
+            var serialPort = default(ISerialPortRx)!;
+            configurePort?.Invoke(serialPort);
+            serialPort.ThrowArgumentNullExceptionIfNull(nameof(serialPort));
+
+            client.SubscribeToTopic(topic).Subscribe(message => serialPort.WriteLine(payloadFactory(message.ApplicationMessage.ConvertPayloadToString())));
+        }
+
+        /// <summary>
+        /// Subscribes the serial port.
+        /// </summary>
+        /// <param name="client">The client.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="configurePort">The configure port.</param>
+        /// <param name="payloadFactory">The payload factory.</param>
+        public static void SubscribeSerialPortWrite(this IObservable<IManagedMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, string> payloadFactory)
+        {
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePort.ThrowArgumentNullExceptionIfNull(nameof(configurePort));
+
+            var serialPort = default(ISerialPortRx)!;
+            configurePort?.Invoke(serialPort);
+            serialPort.ThrowArgumentNullExceptionIfNull(nameof(serialPort));
+
+            client.SubscribeToTopic(topic).Subscribe(message => serialPort.Write(payloadFactory(message.ApplicationMessage.ConvertPayloadToString())));
+        }
+
+        /// <summary>
+        /// Subscribes the serial port.
+        /// </summary>
+        /// <param name="client">The client.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="configurePort">The configure port.</param>
+        /// <param name="payloadFactory">The payload factory.</param>
+        public static void SubscribeSerialPortWrite(this IObservable<IManagedMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, byte[]> payloadFactory)
+        {
+            client.ThrowArgumentNullExceptionIfNull(nameof(client));
+            configurePort.ThrowArgumentNullExceptionIfNull(nameof(configurePort));
+
+            var serialPort = default(ISerialPortRx)!;
+            configurePort?.Invoke(serialPort);
+            serialPort.ThrowArgumentNullExceptionIfNull(nameof(serialPort));
+
+            client.SubscribeToTopic(topic).Subscribe(message => serialPort.Write(payloadFactory(message.ApplicationMessage.ConvertPayloadToString())));
         }
     }
 }
