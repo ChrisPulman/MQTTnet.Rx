@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ConsoleMenu-simple" Version="2.6.1" />
+    <PackageReference Include="ConsoleMenu-simple" Version="2.7.0" />
   </ItemGroup>
 
   <ItemGroup>
