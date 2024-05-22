@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="$(MQTTnetVersion)" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="System.Reactive" Version="6.0.0" />
+    <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
 
 </Project>
