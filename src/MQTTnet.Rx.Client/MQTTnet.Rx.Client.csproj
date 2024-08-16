@@ -6,8 +6,14 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <!--<ItemGroup Condition="'$(TargetFramework)' == 'net8.0'">
+    <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="5.0.0.1145" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net8.0'">
+    <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.3.6.1152" />
+  </ItemGroup>-->
   <ItemGroup>
-    <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="$(MQTTnetVersion)" />
+    <PackageReference Include="MQTTnet.Extensions.ManagedClient" Version="4.3.6.1152" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
