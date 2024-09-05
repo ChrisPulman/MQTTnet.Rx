@@ -12,7 +12,8 @@ namespace MQTTnet.Rx.Client.TestApp
     internal static class Program
     {
         private static readonly Subject<(string topic, string payload)> _message = new();
-        private static CompositeDisposable _disposables = new();
+        private static readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
+        private static CompositeDisposable _disposables = [];
 
         /// <summary>
         /// Defines the entry point of the application.
@@ -128,9 +129,9 @@ namespace MQTTnet.Rx.Client.TestApp
                 .Subscribe(r =>
                 {
                     Console.Clear();
-                    foreach (var topic in r)
+                    foreach (var (topic, lastSeen) in r)
                     {
-                        Console.WriteLine($"{topic.Topic} Last Seen: {topic.LastSeen}");
+                        Console.WriteLine($"{topic} Last Seen: {lastSeen}");
                     }
                 }));
             WaitForExit();
@@ -161,7 +162,7 @@ namespace MQTTnet.Rx.Client.TestApp
             }
 
             _disposables.Dispose();
-            _disposables = new();
+            _disposables = [];
         }
 
         private static TObject DumpToConsole<TObject>(this TObject @object)
@@ -169,10 +170,7 @@ namespace MQTTnet.Rx.Client.TestApp
             var output = "NULL";
             if (@object != null)
             {
-                output = JsonSerializer.Serialize(@object, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+                output = JsonSerializer.Serialize(@object, _jsonOptions);
             }
 
             Console.WriteLine($"[{@object?.GetType().Name}]:\r\n{output}");

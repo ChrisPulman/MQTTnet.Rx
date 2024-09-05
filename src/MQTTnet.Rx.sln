@@ -1,5 +1,5 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
+# 17
 VisualStudioVersion = 17.7.34003.232
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.ABPlc", "MQTTnet.Rx.ABPlc\MQTTnet.Rx.ABPlc.csproj", "{5DB1DAEB-5A4E-436C-8D23-AC185DD67276}"
@@ -9,7 +9,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionConfig", "SolutionC
 		..\.editorconfig = ..\.editorconfig
 		..\.gitignore = ..\.gitignore
 		..\Directory.Build.props = ..\Directory.Build.props
-		..\global.json = ..\global.json
 		..\LICENSE = ..\LICENSE
 		..\README.md = ..\README.md
 		..\stylecop.json = ..\stylecop.json

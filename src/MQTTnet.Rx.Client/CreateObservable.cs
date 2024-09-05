@@ -9,7 +9,7 @@ namespace MQTTnet.Rx.Client;
 /// <summary>
 /// Mqtt Extensions.
 /// </summary>
-public static class CreateObservable
+internal static class CreateObservable
 {
     internal static IObservable<T> FromAsyncEvent<T>(Action<Func<T, Task>> addHandler, Action<Func<T, Task>> removeHandler) =>
         Observable.Create<T>(observer =>

@@ -50,10 +50,18 @@ Create.MqttServer(builder => builder.WithDefaultEndpointPort(serverPort).WithDef
           var s4 = obsClient2.SubscribeToTopic("FromMilliseconds")
                    .Subscribe(r => Console.WriteLine($"\tCLIENT S4: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
 
+          var s5 = obsClient1.SubscribeToTopic("FromMilliseconds1")
+                   .Subscribe(r => Console.WriteLine($"\tCLIENT S5: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
+
           Subject<(string topic, string payload)> message = new();
 
           sub.Disposable.Add(Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds", "{" + $"payload: {i}" + "}"))));
           sub.Disposable.Add(obsClient1.PublishMessage(message).Subscribe());
+
+          Subject<(string topic, string payload)> message1 = new();
+
+          sub.Disposable.Add(Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds1", "{" + $"payload: {i}" + "}"))));
+          sub.Disposable.Add(obsClient1.PublishMessage(message1).Subscribe());
 
           await Task.Delay(3000);
           s2.Dispose();
@@ -68,6 +76,9 @@ Create.MqttServer(builder => builder.WithDefaultEndpointPort(serverPort).WithDef
           Console.Read();
           s3.Dispose();
           Console.WriteLine("Dispose S3 ---------------");
+          Console.Read();
+          s5.Dispose();
+          Console.WriteLine("Dispose S5 ---------------");
       });
 Console.WriteLine("Press 'Escape' or 'Q' to exit.");
 

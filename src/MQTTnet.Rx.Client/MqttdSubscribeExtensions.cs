@@ -15,9 +15,9 @@ namespace MQTTnet.Rx.Client;
 /// </summary>
 public static class MqttdSubscribeExtensions
 {
-    private static readonly Dictionary<string, IObservable<object?>> _dictJsonValues = new();
-    private static readonly Dictionary<IManagedMqttClient, List<(string topic, int count)>> _managedSubscribeToTopicClients = new();
-    private static readonly Dictionary<IMqttClient, List<(string topic, int count)>> _unmanagedSubscribeToTopicClients = new();
+    private static readonly Dictionary<string, IObservable<object?>> _dictJsonValues = [];
+    private static readonly Dictionary<IManagedMqttClient, List<(string topic, int count)>> _managedSubscribeToTopicClients = [];
+    private static readonly Dictionary<IMqttClient, List<(string topic, int count)>> _unmanagedSubscribeToTopicClients = [];
 
     /// <summary>
     /// Converts to dictionary.
@@ -126,16 +126,20 @@ public static class MqttdSubscribeExtensions
             disposable.Add(client.Subscribe(async c =>
             {
                 mqttClient = c;
-                disposable.Add(mqttClient.ApplicationMessageReceived().Subscribe(observer));
                 if (!_unmanagedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
                 {
-                    value = new List<(string topic, int count)>(new[] { (topic, 0) });
+                    value = new([(topic, 0)]);
                     _unmanagedSubscribeToTopicClients.Add(mqttClient, value);
+                }
+                else if (!value.Any(x => x.topic == topic))
+                {
+                    value.Add((topic, 0));
                 }
 
                 var check = value.Find(x => x.topic == topic);
                 if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
                 {
+                    disposable.Add(mqttClient.ApplicationMessageReceived().Where(x => x.ApplicationMessage.Topic == topic).Subscribe(observer));
                     check.count++;
                     if (check.count == 1)
                     {
@@ -309,16 +313,20 @@ public static class MqttdSubscribeExtensions
             disposable.Add(client.Subscribe(async c =>
             {
                 mqttClient = c;
-                disposable.Add(mqttClient.ApplicationMessageReceived().Subscribe(observer));
                 if (!_managedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
                 {
-                    value = new List<(string topic, int count)>(new[] { (topic, 0) });
+                    value = new([(topic, 0)]);
                     _managedSubscribeToTopicClients.Add(mqttClient, value);
+                }
+                else if (!value.Any(x => x.topic == topic))
+                {
+                    value.Add((topic, 0));
                 }
 
                 var check = value.Find(x => x.topic == topic);
                 if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
                 {
+                    disposable.Add(mqttClient.ApplicationMessageReceived().Where(x => x.ApplicationMessage.Topic == topic).Subscribe(observer));
                     check.count++;
                     if (check.count == 1)
                     {
@@ -326,7 +334,7 @@ public static class MqttdSubscribeExtensions
                                             .WithTopic(topic)
                                             .Build();
 
-                        await mqttClient.SubscribeAsync(new[] { mqttSubscribeOptions });
+                        await mqttClient.SubscribeAsync([mqttSubscribeOptions]);
                     }
                 }
             }));
@@ -342,7 +350,7 @@ public static class MqttdSubscribeExtensions
                                 check.count--;
                                 if (check.count == 0)
                                 {
-                                    await mqttClient.UnsubscribeAsync(new[] { topic }).ConfigureAwait(false);
+                                    await mqttClient.UnsubscribeAsync([topic]).ConfigureAwait(false);
                                 }
                             }
                         }
