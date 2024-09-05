@@ -14,7 +14,7 @@
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.12.0" />
     <PackageReference Include="CP.Nuke.BuildTools" Version="1.0.44" />
-    <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.141" />
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.143" />
     <PackageReference Include="NuGet.Packaging" Version="6.11.0" />
     <PackageReference Include="Nuke.Common" Version="8.0.0" />
     <PackageReference Include="System.Formats.Asn1" Version="8.0.1" />
