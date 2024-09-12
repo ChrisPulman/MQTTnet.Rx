@@ -38,29 +38,29 @@ Create.MqttServer(builder => builder.WithDefaultEndpointPort(serverPort).WithDef
                   Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Disconnected with server.")));
           }));
 
-          var s1 = obsClient1.SubscribeToTopic("FromMilliseconds")
+          var s1 = obsClient1.SubscribeToTopic("FromMilliseconds/#")
                    .Subscribe(r => Console.WriteLine($"\tCLIENT S1: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
 
-          var s2 = obsClient1.SubscribeToTopic("FromMilliseconds")
+          var s2 = obsClient1.SubscribeToTopic("FromMilliseconds/+/abc")
                    .Subscribe(r => Console.WriteLine($"\tCLIENT S2: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
 
-          var s3 = obsClient1.SubscribeToTopic("FromMilliseconds")
+          var s3 = obsClient1.SubscribeToTopic("FromMilliseconds/+")
                    .Subscribe(r => Console.WriteLine($"\tCLIENT S3: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
 
-          var s4 = obsClient2.SubscribeToTopic("FromMilliseconds")
+          var s4 = obsClient2.SubscribeToTopic("FromMilliseconds/1/abc")
                    .Subscribe(r => Console.WriteLine($"\tCLIENT S4: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
 
-          var s5 = obsClient1.SubscribeToTopic("FromMilliseconds1")
+          var s5 = obsClient1.SubscribeToTopic("FromMilliseconds/2/abc")
                    .Subscribe(r => Console.WriteLine($"\tCLIENT S5: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
 
           Subject<(string topic, string payload)> message = new();
 
-          sub.Disposable.Add(Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds", "{" + $"payload: {i}" + "}"))));
+          sub.Disposable.Add(Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds/1/abc", "{" + $"payload: {i}" + "}"))));
           sub.Disposable.Add(obsClient1.PublishMessage(message).Subscribe());
 
           Subject<(string topic, string payload)> message1 = new();
 
-          sub.Disposable.Add(Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds1", "{" + $"payload: {i}" + "}"))));
+          sub.Disposable.Add(Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds/2/abc", "{" + $"payload: {i}" + "}"))));
           sub.Disposable.Add(obsClient1.PublishMessage(message1).Subscribe());
 
           await Task.Delay(3000);

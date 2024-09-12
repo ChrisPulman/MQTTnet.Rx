@@ -139,7 +139,7 @@ public static class MqttdSubscribeExtensions
                 var check = value.Find(x => x.topic == topic);
                 if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
                 {
-                    disposable.Add(mqttClient.ApplicationMessageReceived().Where(x => x.ApplicationMessage.Topic == topic).Subscribe(observer));
+                    disposable.Add(mqttClient.ApplicationMessageReceived().Where(x => x.DetectCorrectTopicWithOrWithoutWildcard(topic)).Subscribe(observer));
                     check.count++;
                     if (check.count == 1)
                     {
@@ -326,7 +326,7 @@ public static class MqttdSubscribeExtensions
                 var check = value.Find(x => x.topic == topic);
                 if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
                 {
-                    disposable.Add(mqttClient.ApplicationMessageReceived().Where(x => x.ApplicationMessage.Topic == topic).Subscribe(observer));
+                    disposable.Add(mqttClient.ApplicationMessageReceived().Where(x => x.DetectCorrectTopicWithOrWithoutWildcard(topic)).Subscribe(observer));
                     check.count++;
                     if (check.count == 1)
                     {
@@ -366,4 +366,13 @@ public static class MqttdSubscribeExtensions
                     }
                 });
         }).Retry().Publish().RefCount();
+
+    private static bool DetectCorrectTopicWithOrWithoutWildcard(this MqttApplicationMessageReceivedEventArgs message, string topic)
+    {
+        var topicToCheck = message.ApplicationMessage.Topic;
+        var topicParts = topic.Split('+');
+        return topic == topicToCheck ||
+            (topic.EndsWith("#") && topicToCheck.StartsWith(topic.Substring(0, topic.Length - 1))) ||
+            (topicParts.Length == 2 && topicToCheck.StartsWith(topicParts[0]) && (topic.EndsWith("+") || topicToCheck.EndsWith(topicParts[1])));
+    }
 }
