@@ -1,34 +1,30 @@
 ﻿// Copyright (c) Chris Pulman. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-using System;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using MQTTnet;
 using MQTTnet.Rx.Client;
+using MQTTnet.Rx.Server;
 
 IDisposable? disposable = default;
 var serverPort = 2883;
 
 disposable =
-Create.MqttServer(builder => builder.WithDefaultEndpointPort(serverPort).WithDefaultEndpoint().Build())
+MQTTnet.Rx.Server.Create.MqttServer(builder => builder.WithDefaultEndpointPort(serverPort).WithDefaultEndpoint().Build())
       .Subscribe(async sub =>
       {
           sub.Disposable.Add(sub.Server.ClientConnected().Subscribe(args => Console.WriteLine($"SERVER: ClientConnectedAsync => clientId:{args.ClientId}")));
           sub.Disposable.Add(sub.Server.ClientDisconnected().Subscribe(args => Console.WriteLine($"SERVER: ClientDisconnectedAsync => clientId:{args.ClientId}")));
 
-          var obsClient1 = Create.ManagedMqttClient()
-                          .WithManagedClientOptions(options =>
-                            options.WithClientOptions(c =>
-                                        c.WithTcpServer("localhost", serverPort))
-                                   .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
+          var obsClient1 = MQTTnet.Rx.Client.Create.MqttClient()
+                          .WithClientOptions(options =>
+                            options.WithTcpServer("localhost", serverPort));
 
-          var obsClient2 = Create.ManagedMqttClient()
-                                .WithManagedClientOptions(options =>
-                                  options.WithClientOptions(c =>
-                                              c.WithTcpServer("localhost", serverPort)
-                                               .WithClientId("Client02"))
-                                         .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
+          var obsClient2 = MQTTnet.Rx.Client.Create.MqttClient()
+                                .WithClientOptions(options =>
+                                  options.WithTcpServer("localhost", serverPort)
+                                               .WithClientId("Client02"));
           sub.Disposable.Add(
           obsClient1.Subscribe(i =>
           {

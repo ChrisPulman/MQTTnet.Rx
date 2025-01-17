@@ -7,13 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="MqttManagedClientExtensions.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="MQTTnet" Version="5.0.1.1416" />
+    <PackageReference Include="MQTTnet.Server" Version="5.0.1.1416" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Reactive" Version="6.0.1" />
   </ItemGroup>
-
 </Project>

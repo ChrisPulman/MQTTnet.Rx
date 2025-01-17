@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Server\MQTTnet.Rx.Server.csproj" />
   </ItemGroup>
 
 </Project>

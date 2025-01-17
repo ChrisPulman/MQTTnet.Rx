@@ -3,7 +3,7 @@
 
 using MQTTnet.Server;
 
-namespace MQTTnet.Rx.Client;
+namespace MQTTnet.Rx.Server;
 
 /// <summary>
 /// MqttServerExtensions.
