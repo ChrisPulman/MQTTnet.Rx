@@ -23,7 +23,7 @@ namespace MQTTnet.Rx.Client.TestApp
         {
             var publishMenu = new ConsoleMenu(args, level: 1)
                 .Add("Publish Client", PublishClient)
-                .Add("Publish Managed", PublishManagedClient)
+                ////.Add("Publish Managed", PublishManagedClient)
                 .Add("Close", ConsoleMenu.Close)
                 .Configure(config =>
                 {
@@ -35,7 +35,7 @@ namespace MQTTnet.Rx.Client.TestApp
                 });
             var subscribeMenu = new ConsoleMenu(args, level: 1)
                 .Add("Subscribe Client", SubscribeClient)
-                .Add("Subscribe Managed Client", SubscribeManagedClient)
+                ////.Add("Subscribe Managed Client", SubscribeManagedClient)
                 .Add("Discover Managed Client", DiscoverTopicsManagedClient)
                 .Add("Close", ConsoleMenu.Close)
                 .Configure(config =>
@@ -59,18 +59,18 @@ namespace MQTTnet.Rx.Client.TestApp
                .Show();
         }
 
-        private static void PublishManagedClient()
-        {
-            _disposables.Add(Create.ManagedMqttClient()
-             .WithManagedClientOptions(a =>
-                 a.WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
-                     .WithClientOptions(c =>
-                         c.WithTcpServer("localhost", 9000)))
-             .PublishMessage(_message)
-             .Subscribe(r => Console.WriteLine($"{r.ApplicationMessage.Id} [{r.ApplicationMessage.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ApplicationMessage.ConvertPayloadToString()}")));
-            StartMessages("managed/");
-            WaitForExit();
-        }
+        ////private static void PublishManagedClient()
+        ////{
+        ////    _disposables.Add(Create.ManagedMqttClient()
+        ////     .WithManagedClientOptions(a =>
+        ////         a.WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
+        ////             .WithClientOptions(c =>
+        ////                 c.WithTcpServer("localhost", 9000)))
+        ////     .PublishMessage(_message)
+        ////     .Subscribe(r => Console.WriteLine($"{r.ApplicationMessage.Id} [{r.ApplicationMessage.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ApplicationMessage.ConvertPayloadToString()}")));
+        ////    StartMessages("managed/");
+        ////    WaitForExit();
+        ////}
 
         private static void PublishClient()
         {
@@ -98,33 +98,31 @@ namespace MQTTnet.Rx.Client.TestApp
             WaitForExit();
         }
 
-        private static void SubscribeManagedClient()
-        {
-            _disposables.Add(Create.ManagedMqttClient()
-                .WithManagedClientOptions(a =>
-                 a.WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
-                     .WithClientOptions(c =>
-                         c.WithTcpServer("localhost", 9000)))
-                .SubscribeToTopic("+/FromMilliseconds")
-                .Do(r => Console.WriteLine($"{r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"))
-                .ToDictionary()
-                .Subscribe(dict =>
-                {
-                    foreach (var item in dict!)
-                    {
-                        Console.WriteLine($"key: {item.Key} value: {item.Value}");
-                    }
-                }));
-            WaitForExit();
-        }
+        ////private static void SubscribeManagedClient()
+        ////{
+        ////    _disposables.Add(Create.ManagedMqttClient()
+        ////        .WithManagedClientOptions(a =>
+        ////         a.WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
+        ////             .WithClientOptions(c =>
+        ////                 c.WithTcpServer("localhost", 9000)))
+        ////        .SubscribeToTopic("+/FromMilliseconds")
+        ////        .Do(r => Console.WriteLine($"{r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"))
+        ////        .ToDictionary()
+        ////        .Subscribe(dict =>
+        ////        {
+        ////            foreach (var item in dict!)
+        ////            {
+        ////                Console.WriteLine($"key: {item.Key} value: {item.Value}");
+        ////            }
+        ////        }));
+        ////    WaitForExit();
+        ////}
 
         private static void DiscoverTopicsManagedClient()
         {
-            _disposables.Add(Create.ManagedMqttClient()
-                .WithManagedClientOptions(a =>
-                 a.WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
-                     .WithClientOptions(c =>
-                         c.WithTcpServer("localhost", 9000)))
+            _disposables.Add(Create.MqttClient()
+                .WithClientOptions(a =>
+                 a.WithTcpServer("localhost", 9000))
                 .DiscoverTopics(TimeSpan.FromMinutes(5))
                 .Subscribe(r =>
                 {

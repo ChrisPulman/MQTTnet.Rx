@@ -13,7 +13,7 @@
     <Nullable>enable</Nullable>
     <PackageIcon>logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Compatability with Net 6 / 8 and netstandard2.0</PackageReleaseNotes>
+    <PackageReleaseNotes>Compatability with Net 8 / 9</PackageReleaseNotes>
     <PackageTags>MQTT;MQTTnet;S7Plc;Allen;Bradley;Rockwell;Modbus;S7;Seimens;Serial;Beckhoff;TwinCat;rx;reactive;extensions;observable;LINQ;net;netstandard</PackageTags>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
@@ -28,7 +28,7 @@
     <!-- Include PDB in the built .nupkg -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
     <IncludePackageReferencesDuringMarkupCompilation>true</IncludePackageReferencesDuringMarkupCompilation>
-    <MQTTnetRxTargetFrameworks>netstandard2.0;net6.0;net8.0</MQTTnetRxTargetFrameworks>
+    <MQTTnetRxTargetFrameworks>net8.0;net9.0</MQTTnetRxTargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>

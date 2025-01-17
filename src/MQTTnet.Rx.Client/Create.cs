@@ -3,9 +3,6 @@
 
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
-using MQTTnet.Client;
-using MQTTnet.Extensions.ManagedClient;
-using MQTTnet.Server;
 
 namespace MQTTnet.Rx.Client;
 
@@ -20,49 +17,13 @@ public static class Create
     /// <value>
     /// The MQTT factory.
     /// </value>
-    public static MqttFactory MqttFactory { get; private set; } = new();
+    public static MqttClientFactory MqttFactory { get; private set; } = new();
 
     /// <summary>
     /// Creates the MQTT factory.
     /// </summary>
     /// <param name="mqttFactory">The MQTT factory.</param>
-    public static void NewMqttFactory(MqttFactory mqttFactory) => MqttFactory = mqttFactory;
-
-    /// <summary>
-    /// Creates a MQTTs server.
-    /// </summary>
-    /// <param name="builder">The builder.</param>
-    /// <returns>An MqttServer.</returns>
-    /// <exception cref="System.ArgumentNullException">builder.</exception>
-    public static IObservable<(MqttServer Server, CompositeDisposable Disposable)> MqttServer(Func<MqttServerOptionsBuilder, MqttServerOptions> builder)
-    {
-        builder.ThrowArgumentNullExceptionIfNull(nameof(builder));
-
-        var mqttServer = MqttFactory.CreateMqttServer(builder(MqttFactory.CreateServerOptionsBuilder()));
-        var serverCount = 0;
-        return Observable.Create<(MqttServer Server, CompositeDisposable Disposable)>(async observer =>
-        {
-            var disposable = new CompositeDisposable();
-            observer.OnNext((mqttServer, disposable));
-            Interlocked.Increment(ref serverCount);
-            if (serverCount == 1)
-            {
-                await mqttServer.StartAsync();
-            }
-
-            return Disposable.Create(async () =>
-            {
-                Interlocked.Decrement(ref serverCount);
-                if (serverCount == 0)
-                {
-                    await mqttServer.StopAsync();
-                    mqttServer.Dispose();
-                }
-
-                disposable.Dispose();
-            });
-        }).Retry();
-    }
+    public static void NewMqttFactory(MqttClientFactory mqttFactory) => MqttFactory = mqttFactory;
 
     /// <summary>
     /// Created a mqtt Client.
@@ -87,28 +48,28 @@ public static class Create
             }).Retry();
     }
 
-    /// <summary>
-    /// Manageds the MQTT client.
-    /// </summary>
-    /// <returns>A Managed Mqtt Client.</returns>
-    public static IObservable<IManagedMqttClient> ManagedMqttClient()
-    {
-        var mqttClient = MqttFactory.CreateManagedMqttClient();
-        var clientCount = 0;
-        return Observable.Create<IManagedMqttClient>(observer =>
-            {
-                observer.OnNext(mqttClient);
-                Interlocked.Increment(ref clientCount);
-                return Disposable.Create(() =>
-                {
-                    Interlocked.Decrement(ref clientCount);
-                    if (clientCount == 0)
-                    {
-                        mqttClient.Dispose();
-                    }
-                });
-            }).Retry();
-    }
+    /////// <summary>
+    /////// Manageds the MQTT client.
+    /////// </summary>
+    /////// <returns>A Managed Mqtt Client.</returns>
+    ////public static IObservable<IManagedMqttClient> ManagedMqttClient()
+    ////{
+    ////    var mqttClient = MqttFactory.CreateManagedMqttClient();
+    ////    var clientCount = 0;
+    ////    return Observable.Create<IManagedMqttClient>(observer =>
+    ////        {
+    ////            observer.OnNext(mqttClient);
+    ////            Interlocked.Increment(ref clientCount);
+    ////            return Disposable.Create(() =>
+    ////            {
+    ////                Interlocked.Decrement(ref clientCount);
+    ////                if (clientCount == 0)
+    ////                {
+    ////                    mqttClient.Dispose();
+    ////                }
+    ////            });
+    ////        }).Retry();
+    ////}
 
     /// <summary>
     /// Withes the client options.
@@ -136,60 +97,60 @@ public static class Create
             return disposable;
         });
 
-    /// <summary>
-    /// Withes the managed client options.
-    /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="optionsBuilder">The options builder.</param>
-    /// <returns>A Managed Mqtt Client.</returns>
-    public static IObservable<IManagedMqttClient> WithManagedClientOptions(this IObservable<IManagedMqttClient> client, Action<ManagedMqttClientOptionsBuilder> optionsBuilder) =>
-        Observable.Create<IManagedMqttClient>(observer =>
-        {
-            var mqttClientOptions = MqttFactory.CreateManagedClientOptionsBuilder();
-            optionsBuilder(mqttClientOptions);
-            var disposable = new CompositeDisposable();
-            disposable.Add(client.Subscribe(c =>
-            {
-                if (c.IsStarted)
-                {
-                    observer.OnNext(c);
-                }
-                else
-                {
-                    disposable.Add(Observable.StartAsync(async () => await c.StartAsync(mqttClientOptions.Build())).Subscribe(_ => observer.OnNext(c)));
-                }
-            }));
-            return disposable;
-        });
+    /////// <summary>
+    /////// Withes the managed client options.
+    /////// </summary>
+    /////// <param name="client">The client.</param>
+    /////// <param name="optionsBuilder">The options builder.</param>
+    /////// <returns>A Managed Mqtt Client.</returns>
+    ////public static IObservable<IManagedMqttClient> WithManagedClientOptions(this IObservable<IManagedMqttClient> client, Action<ManagedMqttClientOptionsBuilder> optionsBuilder) =>
+    ////    Observable.Create<IManagedMqttClient>(observer =>
+    ////    {
+    ////        var mqttClientOptions = MqttFactory.CreateManagedClientOptionsBuilder();
+    ////        optionsBuilder(mqttClientOptions);
+    ////        var disposable = new CompositeDisposable();
+    ////        disposable.Add(client.Subscribe(c =>
+    ////        {
+    ////            if (c.IsStarted)
+    ////            {
+    ////                observer.OnNext(c);
+    ////            }
+    ////            else
+    ////            {
+    ////                disposable.Add(Observable.StartAsync(async () => await c.StartAsync(mqttClientOptions.Build())).Subscribe(_ => observer.OnNext(c)));
+    ////            }
+    ////        }));
+    ////        return disposable;
+    ////    });
 
-    /// <summary>
-    /// Withes the client options.
-    /// </summary>
-    /// <param name="builder">The builder.</param>
-    /// <param name="clientBuilder">The client builder.</param>
-    /// <returns>A ManagedMqttClientOptionsBuilder.</returns>
-    /// <exception cref="System.ArgumentNullException">
-    /// builder
-    /// or
-    /// clientBuilder.
-    /// </exception>
-    public static ManagedMqttClientOptionsBuilder WithClientOptions(this ManagedMqttClientOptionsBuilder builder, Action<MqttClientOptionsBuilder> clientBuilder)
-    {
-        builder.ThrowArgumentNullExceptionIfNull(nameof(builder));
-        clientBuilder.ThrowArgumentNullExceptionIfNull(nameof(clientBuilder));
+    /////// <summary>
+    /////// Withes the client options.
+    /////// </summary>
+    /////// <param name="builder">The builder.</param>
+    /////// <param name="clientBuilder">The client builder.</param>
+    /////// <returns>A ManagedMqttClientOptionsBuilder.</returns>
+    /////// <exception cref="System.ArgumentNullException">
+    /////// builder
+    /////// or
+    /////// clientBuilder.
+    /////// </exception>
+    ////public static ManagedMqttClientOptionsBuilder WithClientOptions(this ManagedMqttClientOptionsBuilder builder, Action<MqttClientOptionsBuilder> clientBuilder)
+    ////{
+    ////    builder.ThrowArgumentNullExceptionIfNull(nameof(builder));
+    ////    clientBuilder.ThrowArgumentNullExceptionIfNull(nameof(clientBuilder));
 
-        var optionsBuilder = MqttFactory.CreateClientOptionsBuilder();
-        clientBuilder(optionsBuilder);
-        builder.WithClientOptions(optionsBuilder);
-        return builder;
-    }
+    ////    var optionsBuilder = MqttFactory.CreateClientOptionsBuilder();
+    ////    clientBuilder(optionsBuilder);
+    ////    builder.WithClientOptions(optionsBuilder);
+    ////    return builder;
+    ////}
 
-    /// <summary>
-    /// Creates the client options builder.
-    /// </summary>
-    /// <param name="factory">The MqttFactory.</param>
-    /// <returns>A Managed Mqtt Client Options Builder.</returns>
-#pragma warning disable RCS1175 // Unused 'this' parameter.
-    public static ManagedMqttClientOptionsBuilder CreateManagedClientOptionsBuilder(this MqttFactory factory) => new();
-#pragma warning restore RCS1175 // Unused 'this' parameter.
+////    /// <summary>
+////    /// Creates the client options builder.
+////    /// </summary>
+////    /// <param name="factory">The MqttFactory.</param>
+////    /// <returns>A Managed Mqtt Client Options Builder.</returns>
+////#pragma warning disable RCS1175 // Unused 'this' parameter.
+////    public static ManagedMqttClientOptionsBuilder CreateManagedClientOptionsBuilder(this MqttClientFactory factory) => new();
+////#pragma warning restore RCS1175 // Unused 'this' parameter.
 }

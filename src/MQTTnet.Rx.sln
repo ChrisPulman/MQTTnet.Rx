@@ -1,8 +1,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 17
+# Visual Studio Version 17
 VisualStudioVersion = 17.7.34003.232
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.ABPlc", "MQTTnet.Rx.ABPlc\MQTTnet.Rx.ABPlc.csproj", "{5DB1DAEB-5A4E-436C-8D23-AC185DD67276}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.ABPlc", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\src\MQTTnet.Rx.ABPlc\MQTTnet.Rx.ABPlc.csproj", "{5DB1DAEB-5A4E-436C-8D23-AC185DD67276}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionConfig", "SolutionConfig", "{8994737C-D02C-4FA6-AFD7-507AC44D0F0B}"
 	ProjectSection(SolutionItems) = preProject
@@ -16,21 +16,23 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionConfig", "SolutionC
 		..\Version.json = ..\Version.json
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.Client", "MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj", "{A0EB10D6-429B-4CB6-8F73-5992BF1BD577}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.Client", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\src\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj", "{A0EB10D6-429B-4CB6-8F73-5992BF1BD577}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.Client.TestApp", "MQTTnet.Rx.Client.TestApp\MQTTnet.Rx.Client.TestApp.csproj", "{C0D67B21-7EA6-4200-9131-7DF3CFF0C6AA}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.Client.TestApp", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\src\MQTTnet.Rx.Client.TestApp\MQTTnet.Rx.Client.TestApp.csproj", "{C0D67B21-7EA6-4200-9131-7DF3CFF0C6AA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.Modbus", "MQTTnet.Rx.Modbus\MQTTnet.Rx.Modbus.csproj", "{DB66BB54-7E41-45F6-9FDC-6433DA76550F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.Modbus", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\src\MQTTnet.Rx.Modbus\MQTTnet.Rx.Modbus.csproj", "{DB66BB54-7E41-45F6-9FDC-6433DA76550F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.S7Plc", "MQTTnet.Rx.S7Plc\MQTTnet.Rx.S7Plc.csproj", "{83E34163-36DE-4907-B347-71610E563B83}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.S7Plc", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\src\MQTTnet.Rx.S7Plc\MQTTnet.Rx.S7Plc.csproj", "{83E34163-36DE-4907-B347-71610E563B83}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.SerialPort", "MQTTnet.Rx.SerialPort\MQTTnet.Rx.SerialPort.csproj", "{19D987A8-77AC-4BF8-9ADF-E989193B3563}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.SerialPort", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\src\MQTTnet.Rx.SerialPort\MQTTnet.Rx.SerialPort.csproj", "{19D987A8-77AC-4BF8-9ADF-E989193B3563}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.TwinCAT", "MQTTnet.Rx.TwinCAT\MQTTnet.Rx.TwinCAT.csproj", "{6DAF0CF3-8259-465C-A649-9AF745719D31}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.TwinCAT", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\src\MQTTnet.Rx.TwinCAT\MQTTnet.Rx.TwinCAT.csproj", "{6DAF0CF3-8259-465C-A649-9AF745719D31}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "..\build\_build.csproj", "{1DC64497-CF38-416D-A023-C8012E5265A4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "_build", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\build\_build.csproj", "{1DC64497-CF38-416D-A023-C8012E5265A4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestSingleClient", "TestSingleClient\TestSingleClient.csproj", "{1340E0BA-6642-4633-850E-E62F0C137DE8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestSingleClient", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\src\TestSingleClient\TestSingleClient.csproj", "{1340E0BA-6642-4633-850E-E62F0C137DE8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MQTTnet.Rx.Server", "D:\Projects\GitHub\ChrisPulman\MQTTnet.Rx\src\MQTTnet.Rx.Server\MQTTnet.Rx.Server.csproj", "{3E4A2891-40D3-4D4B-A67B-DD949B21C037}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -72,6 +74,10 @@ Global
 		{1340E0BA-6642-4633-850E-E62F0C137DE8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1340E0BA-6642-4633-850E-E62F0C137DE8}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1340E0BA-6642-4633-850E-E62F0C137DE8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E4A2891-40D3-4D4B-A67B-DD949B21C037}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E4A2891-40D3-4D4B-A67B-DD949B21C037}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E4A2891-40D3-4D4B-A67B-DD949B21C037}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E4A2891-40D3-4D4B-A67B-DD949B21C037}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
