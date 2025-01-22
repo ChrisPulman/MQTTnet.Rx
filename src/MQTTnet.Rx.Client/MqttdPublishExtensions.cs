@@ -51,87 +51,87 @@ public static class MqttdPublishExtensions
             return disposable;
         }).Retry();
 
-    /////// <summary>
-    /////// Publishes the message.
-    /////// </summary>
-    /////// <param name="client">The client.</param>
-    /////// <param name="message">The message.</param>
-    /////// <param name="qos">The qos.</param>
-    /////// <param name="retain">if set to <c>true</c> [retain].</param>
-    /////// <returns>A Mqtt Client Publish Result.</returns>
-    ////public static IObservable<ApplicationMessageProcessedEventArgs> PublishMessage(this IObservable<IManagedMqttClient> client, IObservable<(string topic, string payLoad)> message, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
-    ////    Observable.Create<ApplicationMessageProcessedEventArgs>(observer =>
-    ////    {
-    ////        var disposable = new CompositeDisposable();
-    ////        var setup = false;
-    ////        disposable.Add(client.CombineLatest(message, (cli, mess) => (cli, mess)).Subscribe(async c =>
-    ////        {
-    ////            if (!setup)
-    ////            {
-    ////                setup = true;
-    ////                disposable.Add(c.cli.ApplicationMessageProcessed().Retry().Subscribe(args => observer.OnNext(args)));
-    ////            }
+    /// <summary>
+    /// Publishes the message.
+    /// </summary>
+    /// <param name="client">The client.</param>
+    /// <param name="message">The message.</param>
+    /// <param name="qos">The qos.</param>
+    /// <param name="retain">if set to <c>true</c> [retain].</param>
+    /// <returns>A Mqtt Client Publish Result.</returns>
+    public static IObservable<ApplicationMessageProcessedEventArgs> PublishMessage(this IObservable<IResilientMqttClient> client, IObservable<(string topic, string payLoad)> message, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
+        Observable.Create<ApplicationMessageProcessedEventArgs>(observer =>
+        {
+            var disposable = new CompositeDisposable();
+            var setup = false;
+            disposable.Add(client.CombineLatest(message, (cli, mess) => (cli, mess)).Subscribe(async c =>
+            {
+                if (!setup)
+                {
+                    setup = true;
+                    disposable.Add(c.cli.ApplicationMessageProcessed.Retry().Subscribe(args => observer.OnNext(args)));
+                }
 
-    ////            var applicationMessage = Create.MqttFactory.CreateApplicationMessageBuilder()
-    ////                            .WithTopic(c.mess.topic)
-    ////                            .WithPayload(c.mess.payLoad)
-    ////                            .WithQualityOfServiceLevel(qos)
-    ////                            .WithRetainFlag(retain)
-    ////                            .Build();
+                var applicationMessage = Create.MqttFactory.CreateApplicationMessageBuilder()
+                                .WithTopic(c.mess.topic)
+                                .WithPayload(c.mess.payLoad)
+                                .WithQualityOfServiceLevel(qos)
+                                .WithRetainFlag(retain)
+                                .Build();
 
-    ////            try
-    ////            {
-    ////                await c.cli.EnqueueAsync(applicationMessage);
-    ////            }
-    ////            catch (Exception ex)
-    ////            {
-    ////                observer.OnError(ex);
-    ////            }
-    ////        }));
+                try
+                {
+                    await c.cli.EnqueueAsync(applicationMessage);
+                }
+                catch (Exception ex)
+                {
+                    observer.OnError(ex);
+                }
+            }));
 
-    ////        return disposable;
-    ////    }).Retry();
+            return disposable;
+        }).Retry();
 
-    /////// <summary>
-    /////// Publishes the message.
-    /////// </summary>
-    /////// <param name="client">The client.</param>
-    /////// <param name="message">The message.</param>
-    /////// <param name="qos">The qos.</param>
-    /////// <param name="retain">if set to <c>true</c> [retain].</param>
-    /////// <returns>A Mqtt Client Publish Result.</returns>
-    ////public static IObservable<ApplicationMessageProcessedEventArgs> PublishMessage(this IObservable<IManagedMqttClient> client, IObservable<(string topic, byte[] payLoad)> message, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
-    ////    Observable.Create<ApplicationMessageProcessedEventArgs>(observer =>
-    ////    {
-    ////        var disposable = new CompositeDisposable();
-    ////        var setup = false;
-    ////        disposable.Add(client.CombineLatest(message, (cli, mess) => (cli, mess)).Subscribe(async c =>
-    ////        {
-    ////            if (!setup)
-    ////            {
-    ////                setup = true;
-    ////                disposable.Add(c.cli.ApplicationMessageProcessed().Retry().Subscribe(args => observer.OnNext(args)));
-    ////            }
+    /// <summary>
+    /// Publishes the message.
+    /// </summary>
+    /// <param name="client">The client.</param>
+    /// <param name="message">The message.</param>
+    /// <param name="qos">The qos.</param>
+    /// <param name="retain">if set to <c>true</c> [retain].</param>
+    /// <returns>A Mqtt Client Publish Result.</returns>
+    public static IObservable<ApplicationMessageProcessedEventArgs> PublishMessage(this IObservable<IResilientMqttClient> client, IObservable<(string topic, byte[] payLoad)> message, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
+        Observable.Create<ApplicationMessageProcessedEventArgs>(observer =>
+        {
+            var disposable = new CompositeDisposable();
+            var setup = false;
+            disposable.Add(client.CombineLatest(message, (cli, mess) => (cli, mess)).Subscribe(async c =>
+            {
+                if (!setup)
+                {
+                    setup = true;
+                    disposable.Add(c.cli.ApplicationMessageProcessed.Retry().Subscribe(args => observer.OnNext(args)));
+                }
 
-    ////            var applicationMessage = Create.MqttFactory.CreateApplicationMessageBuilder()
-    ////                            .WithTopic(c.mess.topic)
-    ////                            .WithPayload(c.mess.payLoad)
-    ////                            .WithQualityOfServiceLevel(qos)
-    ////                            .WithRetainFlag(retain)
-    ////                            .Build();
+                var applicationMessage = Create.MqttFactory.CreateApplicationMessageBuilder()
+                                .WithTopic(c.mess.topic)
+                                .WithPayload(c.mess.payLoad)
+                                .WithQualityOfServiceLevel(qos)
+                                .WithRetainFlag(retain)
+                                .Build();
 
-    ////            try
-    ////            {
-    ////                await c.cli.EnqueueAsync(applicationMessage);
-    ////            }
-    ////            catch (Exception ex)
-    ////            {
-    ////                observer.OnError(ex);
-    ////            }
-    ////        }));
+                try
+                {
+                    await c.cli.EnqueueAsync(applicationMessage);
+                }
+                catch (Exception ex)
+                {
+                    observer.OnError(ex);
+                }
+            }));
 
-    ////        return disposable;
-    ////    }).Retry();
+            return disposable;
+        }).Retry();
 
     /// <summary>
     /// Publishes the message.

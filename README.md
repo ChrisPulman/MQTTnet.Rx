@@ -38,7 +38,32 @@
 # MQTTnet.Rx.Client
 A Reactive Client for MQTTnet Broker
 
-## NOTE: ManagedClient support has currently been removed from the MQTTnet.Rx.Client library. We will look into the possibility of adding this functionality in the future. This is due to the fact that the ManagedClient is no longer included in the MQTTnet V5 library.
+## NOTE: ManagedClient support has been removed from the MQTTnet.Rx.Client library. This is due to the fact that the ManagedClient is no longer included in the MQTTnet V5 library.
+
+## We now have a Reactive implimentaion through IResilientClient that we aim to have feature parity with the ManagedClient.
+## The ResilientClient is a wrapper around the MqttClient that will automatically reconnect to the broker if the connection is lost.
+
+## Create a Resilient Mqtt Client to Publish an Observable stream
+```csharp
+Create.ResilientMqttClient()
+    .WithResilientClientOptions(a =>
+    a.WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
+        .WithClientOptions(c =>
+            c.WithTcpServer("localhost", 9000)))
+    .PublishMessage(_message)
+    .Subscribe(r => Console.WriteLine($"{r.ReasonCode} [{r.PacketIdentifier}]"));
+```
+
+## Create a Resilient Mqtt Client to Subscribe to a Topic
+```csharp
+Create.ResilientMqttClient()
+    .WithResilientClientOptions(a =>
+        a.WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
+            .WithClientOptions(c =>
+                c.WithTcpServer("localhost", 9000)))
+    .SubscribeToTopic("FromMilliseconds")
+    .Subscribe(r => Console.WriteLine($"{r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
+```
 
 ## Create a Mqtt Client to Publish an Observable stream
 ```csharp
