@@ -3,6 +3,7 @@
 
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using MQTTnet.Rx.Client.ResilientClient.Internal;
 
 namespace MQTTnet.Rx.Client;
 
@@ -48,28 +49,28 @@ public static class Create
             }).Retry();
     }
 
-    /////// <summary>
-    /////// Manageds the MQTT client.
-    /////// </summary>
-    /////// <returns>A Managed Mqtt Client.</returns>
-    ////public static IObservable<IManagedMqttClient> ManagedMqttClient()
-    ////{
-    ////    var mqttClient = MqttFactory.CreateManagedMqttClient();
-    ////    var clientCount = 0;
-    ////    return Observable.Create<IManagedMqttClient>(observer =>
-    ////        {
-    ////            observer.OnNext(mqttClient);
-    ////            Interlocked.Increment(ref clientCount);
-    ////            return Disposable.Create(() =>
-    ////            {
-    ////                Interlocked.Decrement(ref clientCount);
-    ////                if (clientCount == 0)
-    ////                {
-    ////                    mqttClient.Dispose();
-    ////                }
-    ////            });
-    ////        }).Retry();
-    ////}
+    /// <summary>
+    /// Resilient the MQTT client.
+    /// </summary>
+    /// <returns>A Resilient Mqtt Client.</returns>
+    public static IObservable<IResilientMqttClient> ResilientMqttClient()
+    {
+        var mqttClient = MqttFactory.CreateResilientMqttClient();
+        var clientCount = 0;
+        return Observable.Create<IResilientMqttClient>(observer =>
+            {
+                observer.OnNext(mqttClient);
+                Interlocked.Increment(ref clientCount);
+                return Disposable.Create(() =>
+                {
+                    Interlocked.Decrement(ref clientCount);
+                    if (clientCount == 0)
+                    {
+                        mqttClient.Dispose();
+                    }
+                });
+            }).Retry();
+    }
 
     /// <summary>
     /// Withes the client options.
@@ -97,60 +98,79 @@ public static class Create
             return disposable;
         });
 
-    /////// <summary>
-    /////// Withes the managed client options.
-    /////// </summary>
-    /////// <param name="client">The client.</param>
-    /////// <param name="optionsBuilder">The options builder.</param>
-    /////// <returns>A Managed Mqtt Client.</returns>
-    ////public static IObservable<IManagedMqttClient> WithManagedClientOptions(this IObservable<IManagedMqttClient> client, Action<ManagedMqttClientOptionsBuilder> optionsBuilder) =>
-    ////    Observable.Create<IManagedMqttClient>(observer =>
-    ////    {
-    ////        var mqttClientOptions = MqttFactory.CreateManagedClientOptionsBuilder();
-    ////        optionsBuilder(mqttClientOptions);
-    ////        var disposable = new CompositeDisposable();
-    ////        disposable.Add(client.Subscribe(c =>
-    ////        {
-    ////            if (c.IsStarted)
-    ////            {
-    ////                observer.OnNext(c);
-    ////            }
-    ////            else
-    ////            {
-    ////                disposable.Add(Observable.StartAsync(async () => await c.StartAsync(mqttClientOptions.Build())).Subscribe(_ => observer.OnNext(c)));
-    ////            }
-    ////        }));
-    ////        return disposable;
-    ////    });
+    /// <summary>
+    /// Withes the Resilient client options.
+    /// </summary>
+    /// <param name="client">The client.</param>
+    /// <param name="optionsBuilder">The options builder.</param>
+    /// <returns>A Resilient Mqtt Client.</returns>
+    public static IObservable<IResilientMqttClient> WithResilientClientOptions(this IObservable<IResilientMqttClient> client, Action<ResilientMqttClientOptionsBuilder> optionsBuilder) =>
+        Observable.Create<IResilientMqttClient>(observer =>
+        {
+            var mqttClientOptions = MqttFactory.CreateResilientClientOptionsBuilder();
+            optionsBuilder(mqttClientOptions);
+            var disposable = new CompositeDisposable();
+            disposable.Add(client.Subscribe(c =>
+            {
+                if (c.IsStarted)
+                {
+                    observer.OnNext(c);
+                }
+                else
+                {
+                    disposable.Add(Observable.StartAsync(async () => await c.StartAsync(mqttClientOptions.Build())).Subscribe(_ => observer.OnNext(c)));
+                }
+            }));
+            return disposable;
+        });
 
-    /////// <summary>
-    /////// Withes the client options.
-    /////// </summary>
-    /////// <param name="builder">The builder.</param>
-    /////// <param name="clientBuilder">The client builder.</param>
-    /////// <returns>A ManagedMqttClientOptionsBuilder.</returns>
-    /////// <exception cref="System.ArgumentNullException">
-    /////// builder
-    /////// or
-    /////// clientBuilder.
-    /////// </exception>
-    ////public static ManagedMqttClientOptionsBuilder WithClientOptions(this ManagedMqttClientOptionsBuilder builder, Action<MqttClientOptionsBuilder> clientBuilder)
-    ////{
-    ////    builder.ThrowArgumentNullExceptionIfNull(nameof(builder));
-    ////    clientBuilder.ThrowArgumentNullExceptionIfNull(nameof(clientBuilder));
+    /// <summary>
+    /// Withes the client options.
+    /// </summary>
+    /// <param name="builder">The builder.</param>
+    /// <param name="clientBuilder">The client builder.</param>
+    /// <returns>A ManagedMqttClientOptionsBuilder.</returns>
+    /// <exception cref="ArgumentNullException">
+    /// builder
+    /// or
+    /// clientBuilder.
+    /// </exception>
+    public static ResilientMqttClientOptionsBuilder WithClientOptions(this ResilientMqttClientOptionsBuilder builder, Action<MqttClientOptionsBuilder> clientBuilder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(clientBuilder);
 
-    ////    var optionsBuilder = MqttFactory.CreateClientOptionsBuilder();
-    ////    clientBuilder(optionsBuilder);
-    ////    builder.WithClientOptions(optionsBuilder);
-    ////    return builder;
-    ////}
+        var optionsBuilder = MqttFactory.CreateClientOptionsBuilder();
+        clientBuilder(optionsBuilder);
+        builder.WithClientOptions(optionsBuilder);
+        return builder;
+    }
 
-////    /// <summary>
-////    /// Creates the client options builder.
-////    /// </summary>
-////    /// <param name="factory">The MqttFactory.</param>
-////    /// <returns>A Managed Mqtt Client Options Builder.</returns>
-////#pragma warning disable RCS1175 // Unused 'this' parameter.
-////    public static ManagedMqttClientOptionsBuilder CreateManagedClientOptionsBuilder(this MqttClientFactory factory) => new();
-////#pragma warning restore RCS1175 // Unused 'this' parameter.
+    /// <summary>
+    /// Creates the client options builder.
+    /// </summary>
+    /// <param name="factory">The MqttFactory.</param>
+    /// <returns>A Resilient Mqtt Client Options Builder.</returns>
+#pragma warning disable RCS1175 // Unused 'this' parameter.
+    public static ResilientMqttClientOptionsBuilder CreateResilientClientOptionsBuilder(this MqttClientFactory factory) => new();
+#pragma warning restore RCS1175 // Unused 'this' parameter.
+
+    /// <summary>
+    /// Creates the Resilient MQTT client.
+    /// </summary>
+    /// <param name="factory">The factory.</param>
+    /// <param name="mqttClient">The MQTT client.</param>
+    /// <returns>IResilientMqttClient.</returns>
+    /// <exception cref="ArgumentNullException">factory.</exception>
+    private static ResilientMqttClient CreateResilientMqttClient(this MqttClientFactory factory, IMqttClient? mqttClient = null)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+
+        if (mqttClient == null)
+        {
+            return new ResilientMqttClient(factory.CreateMqttClient(), factory.DefaultLogger);
+        }
+
+        return new ResilientMqttClient(mqttClient, factory.DefaultLogger);
+    }
 }

@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Chris Pulman. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using MQTTnet;
@@ -17,20 +18,24 @@ MQTTnet.Rx.Server.Create.MqttServer(builder => builder.WithDefaultEndpointPort(s
           sub.Disposable.Add(sub.Server.ClientConnected().Subscribe(args => Console.WriteLine($"SERVER: ClientConnectedAsync => clientId:{args.ClientId}")));
           sub.Disposable.Add(sub.Server.ClientDisconnected().Subscribe(args => Console.WriteLine($"SERVER: ClientDisconnectedAsync => clientId:{args.ClientId}")));
 
-          var obsClient1 = MQTTnet.Rx.Client.Create.MqttClient()
-                          .WithClientOptions(options =>
-                            options.WithTcpServer("localhost", serverPort));
+          var obsClient1 = MQTTnet.Rx.Client.Create.ResilientMqttClient()
+                          .WithResilientClientOptions(options =>
+                            options.WithClientOptions(c =>
+                                        c.WithTcpServer("localhost", serverPort))
+                                   .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
 
-          var obsClient2 = MQTTnet.Rx.Client.Create.MqttClient()
-                                .WithClientOptions(options =>
-                                  options.WithTcpServer("localhost", serverPort)
-                                               .WithClientId("Client02"));
+          var obsClient2 = MQTTnet.Rx.Client.Create.ResilientMqttClient()
+                                .WithResilientClientOptions(options =>
+                                  options.WithClientOptions(c =>
+                                              c.WithTcpServer("localhost", serverPort)
+                                               .WithClientId("Client02"))
+                                         .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
           sub.Disposable.Add(
           obsClient1.Subscribe(i =>
           {
-              sub.Disposable.Add(i.Connected().Subscribe((_) =>
+              sub.Disposable.Add(i.Connected.Subscribe((_) =>
                   Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Connected with server.")));
-              sub.Disposable.Add(i.Disconnected().Subscribe((_) =>
+              sub.Disposable.Add(i.Disconnected.Subscribe((_) =>
                   Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Disconnected with server.")));
           }));
 
