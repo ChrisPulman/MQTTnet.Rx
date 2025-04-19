@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CP.TwinCATRx" Version="1.6.1" />
+    <PackageReference Include="CP.TwinCATRx" Version="1.6.2" />
   </ItemGroup>
 
   <ItemGroup>
