@@ -403,37 +403,131 @@ var sniff = c.Subscribe(cli => cli.InspectPackage().Subscribe(p => Console.Write
 These packages provide focused helpers to bridge other systems to MQTT using observables. Refer to the respective package documentation for how to create and configure the underlying connections/clients.
 
 ### Modbus (MQTTnet.Rx.Modbus)
-Publish Modbus registers/coils/inputs as MQTT messages. The helpers extend an IObservable<(bool connected, Exception? error, ModbusIpMaster? master)> from ModbusRx.Reactive:
+Publish Modbus registers/coils/inputs as MQTT messages. You can provide either a preconfigured Modbus master or a factory.
+
+- FromMaster(master): wrap an existing ModbusIpMaster
+- FromFactory(() => new ModbusIpMaster(...)): wrap a factory creating a master
+
+Raw client publish (IMqttClient) with QoS/retain:
 
 ```csharp
 using MQTTnet.Rx.Modbus;
+using MQTTnet.Protocol;
 
-// modbusMaster is an observable from ModbusRx.Reactive that yields connection state and a ModbusIpMaster
-IObservable<(bool connected, Exception? error, ModbusRx.Device.ModbusIpMaster? master)> modbusMaster = /* create with ModbusRx.Reactive */;
+var modbusState = Create.FromFactory(() => /* create and configure ModbusIpMaster */);
 
-var pub1 = Create.MqttClient()
+// Input registers
+var pubInRegs = Create.MqttClient()
     .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
-    .PublishInputRegisters(modbusMaster, topic: "modbus/inputregs", startAddress: 0, numberOfPoints: 8, interval: 250)
+    .PublishInputRegisters(modbusState, topic: "modbus/inputregs", startAddress: 0, numberOfPoints: 8, interval: 250, qos: MqttQualityOfServiceLevel.AtLeastOnce, retain: false)
     .Subscribe();
 
-var pub2 = Create.MqttClient()
+// Holding registers
+var pubHold = Create.MqttClient()
     .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
-    .PublishHoldingRegisters(modbusMaster, topic: "modbus/holdingregs", startAddress: 0, numberOfPoints: 8, interval: 500)
+    .PublishHoldingRegisters(modbusState, topic: "modbus/holdingregs", startAddress: 0, numberOfPoints: 8, interval: 500)
+    .Subscribe();
+
+// Inputs (discrete)
+var pubInputs = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .PublishInputs(modbusState, topic: "modbus/inputs", startAddress: 0, numberOfPoints: 16, interval: 250)
+    .Subscribe();
+
+// Coils
+var pubCoils = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .PublishCoils(modbusState, topic: "modbus/coils", startAddress: 0, numberOfPoints: 16, interval: 250)
     .Subscribe();
 ```
+
+Resilient client publish (IResilientMqttClient):
+
+```csharp
+using MQTTnet.Rx.Modbus;
+using MQTTnet.Protocol;
+
+var modbusState = Create.FromMaster(preconfiguredMaster);
+
+var resilient = Create.ResilientMqttClient()
+    .WithResilientClientOptions(o => o.WithClientOptions(c => c.WithTcpServer("localhost", 1883)).WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
+
+var p1 = resilient.PublishInputRegisters(modbusState, "modbus/inputregs", 0, 8, 250).Subscribe();
+var p2 = resilient.PublishHoldingRegisters(modbusState, "modbus/holdingregs", 0, 8, 500).Subscribe();
+var p3 = resilient.PublishInputs(modbusState, "modbus/inputs", 0, 16, 250).Subscribe();
+var p4 = resilient.PublishCoils(modbusState, "modbus/coils", 0, 16, 250).Subscribe();
+```
+
+Custom payloads (string/byte[]) via factory:
+
+```csharp
+// JSON with additional metadata
+var reader = modbusState.ReadHoldingRegisters(0, 8, 500)
+    .Select(r => (connected: true, error: (Exception?)null, data: new { ts = DateTime.UtcNow, values = r.data } as object));
+
+var pubCustom = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .PublishModbus(reader, topic: "modbus/custom", payloadFactory: d => JsonConvert.SerializeObject(d))
+    .Subscribe();
+
+// Binary payload
+var pubBin = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .PublishModbus(reader, topic: "modbus/customBin", payloadFactory: d => Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(d)))
+    .Subscribe();
+```
+
+Write values from MQTT to Modbus (subscribe + write):
+
+```csharp
+// Shortcuts with default parsers
+var subReg1 = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeWriteSingleRegister(modbusState, topic: "modbus/write/reg/10", address: 10, writer: (m, v) => m.WriteSingleRegister(10, v));
+
+var subRegs = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeWriteMultipleRegisters(modbusState, topic: "modbus/write/regs", startAddress: 0, writer: (m, values) => m.WriteMultipleRegisters(0, values));
+
+var subCoil1 = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeWriteSingleCoil(modbusState, topic: "modbus/write/coil/5", address: 5, writer: (m, v) => m.WriteSingleCoil(5, v));
+
+var subCoils = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeWriteMultipleCoils(modbusState, topic: "modbus/write/coils", startAddress: 0, writer: (m, values) => m.WriteMultipleCoils(0, values));
+
+// Or generic form mapping your own parser/writer
+var generic = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeWrite(modbusState, topic: "modbus/write/custom", parse: s => ushort.Parse(s), writer: (m, v) => m.WriteSingleRegister(20, v));
+```
+
+Notes:
+- FromMaster and FromFactory help you pass your own configured master or a factory.
+- All publish helpers accept qos/retain.
+- For write operations, use SubscribeWrite* helpers or the generic SubscribeWrite/SubscribeWriteAsync to plug the correct Modbus API calls.
 
 ### Serial Port (MQTTnet.Rx.SerialPort)
 Publish framed serial data to MQTT using CP.IO.Ports ISerialPortRx.
 
 ```csharp
+using System;
+using System.Reactive.Linq;
 using CP.IO.Ports;
 using MQTTnet.Rx.SerialPort;
 
-ISerialPortRx port = /* create and configure an ISerialPortRx (e.g., COM port, baud, parity) */;
+// Create and configure an ISerialPortRx (COM port, baud, parity, etc.)
+ISerialPortRx port = /* create and configure an ISerialPortRx */;
 
 var serialPub = Create.MqttClient()
     .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
-    .PublishSerialPort(topic: "serial/data", serialPort: port, startsWith: Observable.Return('<'), endsWith: Observable.Return('>'), timeOut: 1000)
+    .PublishSerialPort(
+        topic: "serial/data",
+        serialPort: port,
+        startsWith: Observable.Return('<'),
+        endsWith: Observable.Return('>'),
+        timeOut: 1000)
     .Subscribe();
 ```
 
@@ -445,75 +539,3 @@ Each PLC package adds helpers to publish or subscribe PLC tags via MQTT using th
 - MQTTnet.Rx.TwinCAT: PublishTcPlcTag<T>(client, topic, plcVariable, configurePlc)
 
 Refer to those libraries for creating and configuring connected PLC clients, then use the Publish* helpers to push tag changes to MQTT. You can also combine SubscribeToTopic with your PLC client to write incoming values back to tags.
-
----
-
-## End-to-end sample (server + resilient clients)
-```csharp
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using MQTTnet.Rx.Client;
-using MQTTnet.Rx.Server;
-
-var serverPort = 2883;
-
-// Start server
-var server = Create.MqttServer(b => b.WithDefaultEndpointPort(serverPort).WithDefaultEndpoint().Build())
-    .Subscribe(sub =>
-    {
-        sub.Disposable.Add(sub.Server.ClientConnected().Subscribe(e => Console.WriteLine($"SERVER: Client connected {e.ClientId}")));
-        sub.Disposable.Add(sub.Server.ClientDisconnected().Subscribe(e => Console.WriteLine($"SERVER: Client disconnected {e.ClientId}")));
-    });
-
-// Client 1 – subscriber
-var c1 = Create.ResilientMqttClient()
-    .WithResilientClientOptions(o => o.WithAutoReconnectDelay(TimeSpan.FromSeconds(2))
-                                      .WithClientOptions(c => c.WithTcpServer("localhost", serverPort)));
-
-var s1 = c1.SubscribeToTopic("demo/#")
-    .Subscribe(m => Console.WriteLine($"C1: {m.ApplicationMessage.Topic} => {m.ApplicationMessage.ConvertPayloadToString()}"));
-
-// Client 2 – publisher
-var messages = new Subject<(string topic, string payload)>();
-var c2 = Create.ResilientMqttClient()
-    .WithResilientClientOptions(o => o.WithAutoReconnectDelay(TimeSpan.FromSeconds(2))
-                                      .WithClientOptions(c => c.WithTcpServer("localhost", serverPort).WithClientId("publisher")));
-
-var p2 = c2.PublishMessage(messages).Subscribe();
-
-messages.OnNext(("demo/FromMilliseconds", "{" + $"payload:{Environment.TickCount}" + "}"));
-```
-
----
-
-## 📖 API reference (high-level)
-- Create.MqttClient(): IObservable<IMqttClient>
-- Create.ResilientMqttClient(): IObservable<IResilientMqttClient>
-- WithClientOptions(Action<MqttClientOptionsBuilder>) ensures connected client and emits it
-- WithResilientClientOptions(Action<ResilientMqttClientOptionsBuilder>) starts the resilient client and emits it
-- PublishMessage(...) overloads for IMqttClient and IResilientMqttClient
-- SubscribeToTopic(string topic) for IMqttClient and IResilientMqttClient
-- SubscribeToTopics(params string[]) – multi-topic helper
-- DiscoverTopics(TimeSpan? expiry)
-- JSON: ToDictionary(), ToObject<T>(), Observe(key), ToBool/ToInt16/ToInt32/ToInt64/ToSingle/ToDouble/ToString
-- Payload: Payload(), PayloadUtf8(), observable.ToUtf8String()
-- Connection: WhenReady()
-- Server: Create.MqttServer(Func<MqttServerOptionsBuilder, MqttServerOptions>) and many server event streams (ClientConnected, ClientDisconnected, InterceptingPublish, etc.)
-
----
-
-## Notes
-- All observable helpers use Retry() where appropriate to keep streams alive.
-- Dispose subscriptions returned from Subscribe(...) to cleanly unsubscribe and allow helper logic to ref-count subscriptions and perform Unsubscribe at zero subscribers.
-- QoS defaults to ExactlyOnce and retain defaults to true; override as needed.
-
-## Contributing
-Issues and PRs are welcome.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-**MQTTnet.Rx** - Empowering Industrial Automation with Reactive Technology ⚡🏭
