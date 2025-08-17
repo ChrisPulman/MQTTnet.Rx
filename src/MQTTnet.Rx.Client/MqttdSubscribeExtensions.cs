@@ -13,24 +13,39 @@ namespace MQTTnet.Rx.Client;
 /// </summary>
 public static class MqttdSubscribeExtensions
 {
+    private static readonly object _sync = new();
     private static readonly Dictionary<string, IObservable<object?>> _dictJsonValues = [];
-    private static readonly Dictionary<IResilientMqttClient, List<(string topic, int count)>> _managedSubscribeToTopicClients = [];
-    private static readonly Dictionary<IMqttClient, List<(string topic, int count)>> _unmanagedSubscribeToTopicClients = [];
+    private static readonly Dictionary<IResilientMqttClient, Dictionary<string, SubscriptionHub>> _resilientTopicHubs = [];
+    private static readonly Dictionary<IMqttClient, Dictionary<string, SubscriptionHub>> _rawTopicHubs = [];
 
     /// <summary>
     /// Converts to dictionary.
     /// </summary>
-    /// <param name="message">The message with Json formated key data pairs.</param>
-    /// <returns>A Dictionary of key data pairs.</returns>
+    /// <param name="message">The incoming messages whose payload contains JSON formatted key/value pairs.</param>
+    /// <returns>A dictionary of key/value pairs for each incoming message or null if deserialization fails.</returns>
     public static IObservable<Dictionary<string, object>?> ToDictionary(this IObservable<MqttApplicationMessageReceivedEventArgs> message) =>
         Observable.Create<Dictionary<string, object>?>(observer => message.Retry().Subscribe(m => observer.OnNext(JsonConvert.DeserializeObject<Dictionary<string, object>?>(m.ApplicationMessage.ConvertPayloadToString())))).Retry();
 
     /// <summary>
-    /// Observes the specified key.
+    /// Deserializes JSON payload to the specified type.
     /// </summary>
-    /// <param name="dictionary">The dictionary.</param>
-    /// <param name="key">The key.</param>
-    /// <returns>An Observable object.</returns>
+    /// <typeparam name="T">Type to deserialize to.</typeparam>
+    /// <param name="message">The incoming messages whose payload contains JSON.</param>
+    /// <param name="settings">Optional Json.NET serializer settings.</param>
+    /// <returns>An observable sequence of deserialized values.</returns>
+    public static IObservable<T?> ToObject<T>(this IObservable<MqttApplicationMessageReceivedEventArgs> message, JsonSerializerSettings? settings = null) =>
+        message.Select(m =>
+        {
+            var json = m.ApplicationMessage.ConvertPayloadToString();
+            return settings is null ? JsonConvert.DeserializeObject<T>(json) : JsonConvert.DeserializeObject<T>(json, settings);
+        });
+
+    /// <summary>
+    /// Observes the specified key in a stream of dictionaries and emits its values.
+    /// </summary>
+    /// <param name="dictionary">The dictionary stream.</param>
+    /// <param name="key">The key to observe.</param>
+    /// <returns>An observable sequence of values for the key.</returns>
     public static IObservable<object?> Observe(this IObservable<Dictionary<string, object>> dictionary, string key)
     {
         _dictJsonValues.TryGetValue(key, out var observable);
@@ -47,353 +62,404 @@ public static class MqttdSubscribeExtensions
     }
 
     /// <summary>
-    /// Converts to bool.
+    /// Maps an object sequence to bool.
     /// </summary>
-    /// <param name="observable">The observable.</param>
-    /// <returns>Observable of bool.</returns>
-    public static IObservable<bool> ToBool(this IObservable<object?> observable) =>
-        observable.Select(Convert.ToBoolean);
+    /// <param name="observable">The source observable.</param>
+    /// <returns>Sequence of bool.</returns>
+    public static IObservable<bool> ToBool(this IObservable<object?> observable) => observable.Select(Convert.ToBoolean);
 
     /// <summary>
-    /// Converts to byte.
+    /// Maps an object sequence to byte.
     /// </summary>
-    /// <param name="observable">The observable.</param>
-    /// <returns>Observable of byte.</returns>
-    public static IObservable<byte> ToByte(this IObservable<object?> observable) =>
-        observable.Select(Convert.ToByte);
+    /// <param name="observable">The source observable.</param>
+    /// <returns>Sequence of byte.</returns>
+    public static IObservable<byte> ToByte(this IObservable<object?> observable) => observable.Select(Convert.ToByte);
 
     /// <summary>
-    /// Converts to short.
+    /// Maps an object sequence to Int16.
     /// </summary>
-    /// <param name="observable">The observable.</param>
-    /// <returns>Observable of short.</returns>
-    public static IObservable<short> ToInt16(this IObservable<object?> observable) =>
-        observable.Select(Convert.ToInt16);
+    /// <param name="observable">The source observable.</param>
+    /// <returns>Sequence of Int16.</returns>
+    public static IObservable<short> ToInt16(this IObservable<object?> observable) => observable.Select(Convert.ToInt16);
 
     /// <summary>
-    /// Converts to int.
+    /// Maps an object sequence to Int32.
     /// </summary>
-    /// <param name="observable">The observable.</param>
-    /// <returns>Observable of int.</returns>
-    public static IObservable<int> ToInt32(this IObservable<object?> observable) =>
-        observable.Select(Convert.ToInt32);
+    /// <param name="observable">The source observable.</param>
+    /// <returns>Sequence of Int32.</returns>
+    public static IObservable<int> ToInt32(this IObservable<object?> observable) => observable.Select(Convert.ToInt32);
 
     /// <summary>
-    /// Converts to long.
+    /// Maps an object sequence to Int64.
     /// </summary>
-    /// <param name="observable">The observable.</param>
-    /// <returns>Observable of long.</returns>
-    public static IObservable<long> ToInt64(this IObservable<object?> observable) =>
-        observable.Select(Convert.ToInt64);
+    /// <param name="observable">The source observable.</param>
+    /// <returns>Sequence of Int64.</returns>
+    public static IObservable<long> ToInt64(this IObservable<object?> observable) => observable.Select(Convert.ToInt64);
 
     /// <summary>
-    /// Converts to single.
+    /// Maps an object sequence to Single.
     /// </summary>
-    /// <param name="observable">The observable.</param>
-    /// <returns>Observable of float.</returns>
-    public static IObservable<float> ToSingle(this IObservable<object?> observable) =>
-        observable.Select(Convert.ToSingle);
+    /// <param name="observable">The source observable.</param>
+    /// <returns>Sequence of Single.</returns>
+    public static IObservable<float> ToSingle(this IObservable<object?> observable) => observable.Select(Convert.ToSingle);
 
     /// <summary>
-    /// Converts to double.
+    /// Maps an object sequence to Double.
     /// </summary>
-    /// <param name="observable">The observable.</param>
-    /// <returns>Observable of double.</returns>
-    public static IObservable<double> ToDouble(this IObservable<object?> observable) =>
-        observable.Select(Convert.ToDouble);
+    /// <param name="observable">The source observable.</param>
+    /// <returns>Sequence of Double.</returns>
+    public static IObservable<double> ToDouble(this IObservable<object?> observable) => observable.Select(Convert.ToDouble);
 
     /// <summary>
-    /// Converts to string.
+    /// Maps an object sequence to string.
     /// </summary>
-    /// <param name="observable">The observable.</param>
-    /// <returns>Observable of string.</returns>
-    public static IObservable<string?> ToString(this IObservable<object?> observable) =>
-        observable.Select(Convert.ToString);
+    /// <param name="observable">The source observable.</param>
+    /// <returns>Sequence of string.</returns>
+    public static IObservable<string?> ToString(this IObservable<object?> observable) => observable.Select(Convert.ToString);
 
     /// <summary>
-    /// Subscribes to topic.
+    /// Subscribe to multiple topics and merge messages for the raw client.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="topic">The topic.</param>
-    /// <returns>An Observable Mqtt Client Subscribe Result.</returns>
+    /// <param name="client">The raw client observable.</param>
+    /// <param name="topics">Topic filters.</param>
+    /// <returns>Merged stream of received messages matching the given topics.</returns>
+    public static IObservable<MqttApplicationMessageReceivedEventArgs> SubscribeToTopics(this IObservable<IMqttClient> client, params string[] topics) =>
+        topics.Select(t => client.SubscribeToTopic(t)).Merge();
+
+    /// <summary>
+    /// Subscribe to multiple topics and merge messages for the resilient client.
+    /// </summary>
+    /// <param name="client">The resilient client observable.</param>
+    /// <param name="topics">Topic filters.</param>
+    /// <returns>Merged stream of received messages matching the given topics.</returns>
+    public static IObservable<MqttApplicationMessageReceivedEventArgs> SubscribeToTopics(this IObservable<IResilientMqttClient> client, params string[] topics) =>
+        topics.Select(t => client.SubscribeToTopic(t)).Merge();
+
+    /// <summary>
+    /// Subscribes to a topic (raw client). Ref-counted per client/topic to avoid duplicate broker subscriptions.
+    /// </summary>
+    /// <param name="client">The raw client observable.</param>
+    /// <param name="topic">Topic filter (supports + and # wildcards).</param>
+    /// <returns>Message stream matching the topic.</returns>
     public static IObservable<MqttApplicationMessageReceivedEventArgs> SubscribeToTopic(this IObservable<IMqttClient> client, string topic) =>
         Observable.Create<MqttApplicationMessageReceivedEventArgs>(observer =>
         {
             var disposable = new CompositeDisposable();
-
-            // Create a CancellationTokenSource to cancel the subscription.
-            var cancellationTokenSource = new CancellationTokenSource();
-
-            // Add the CancellationTokenSource to the CompositeDisposable.
-            disposable.Add(cancellationTokenSource);
-
-            var cancellationToken = cancellationTokenSource.Token;
-
             IMqttClient? mqttClient = null;
-            disposable.Add(client.Subscribe(async c =>
+
+            var inner = client.Subscribe(async c =>
             {
                 mqttClient = c;
-                if (!_unmanagedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
+                SubscriptionHub? hub = null;
+                var needSubscribe = false;
+                lock (_sync)
                 {
-                    value = new([(topic, 0)]);
-                    _unmanagedSubscribeToTopicClients.Add(mqttClient, value);
-                }
-                else if (!value.Any(x => x.topic == topic))
-                {
-                    value.Add((topic, 0));
-                }
-
-                var check = value.Find(x => x.topic == topic);
-                if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
-                {
-                    disposable.Add(mqttClient.ApplicationMessageReceived().WhereTopicIsMatch(topic).Subscribe(observer));
-                    check.count++;
-                    if (check.count == 1)
+                    if (!_rawTopicHubs.TryGetValue(c, out var topicMap))
                     {
-                        var mqttSubscribeOptions = Create.MqttFactory.CreateSubscribeOptionsBuilder()
-                        .WithTopicFilter(f => f.WithTopic(topic))
-                        .Build();
+                        topicMap = new Dictionary<string, SubscriptionHub>(StringComparer.Ordinal);
+                        _rawTopicHubs[c] = topicMap;
+                    }
 
-                        await mqttClient.SubscribeAsync(mqttSubscribeOptions, cancellationToken);
+                    if (!topicMap.TryGetValue(topic, out hub))
+                    {
+                        hub = new SubscriptionHub();
+                        topicMap[topic] = hub;
+                    }
+
+                    hub.Count++;
+                    if (hub.Count == 1)
+                    {
+                        // First subscriber for this client/topic: set up a single tap and request broker subscription
+                        hub.SourceTap = c.ApplicationMessageReceived().WhereTopicIsMatch(topic).Subscribe(hub.Subject);
+                        needSubscribe = true;
                     }
                 }
-            }));
+
+                // connect observer to shared subject
+                if (hub != null)
+                {
+                    disposable.Add(hub.Subject.Subscribe(observer));
+                }
+
+                if (needSubscribe)
+                {
+                    var subscribeOptions = Create.MqttFactory.CreateSubscribeOptionsBuilder().WithTopicFilter(f => f.WithTopic(topic)).Build();
+                    await c.SubscribeAsync(subscribeOptions).ConfigureAwait(false);
+                }
+            });
+
+            disposable.Add(inner);
 
             return Disposable.Create(async () =>
+            {
+                try
                 {
-                    try
+                    if (mqttClient != null)
                     {
-                        if (mqttClient != null && _unmanagedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
+                        SubscriptionHub? hub = null;
+                        var needUnsubscribe = false;
+                        lock (_sync)
                         {
-                            var check = value.Find(x => x.topic == topic);
-                            if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
+                            if (_rawTopicHubs.TryGetValue(mqttClient, out var topicMap) && topicMap.TryGetValue(topic, out hub))
                             {
-                                check.count--;
-                                if (check.count == 0)
+                                hub.Count--;
+                                if (hub.Count <= 0)
                                 {
-                                    await mqttClient!.UnsubscribeAsync(topic).ConfigureAwait(false);
+                                    topicMap.Remove(topic);
+
+                                    // tear down
+                                    hub.SourceTap?.Dispose();
+                                    hub.Subject.OnCompleted();
+                                    hub.Subject.Dispose();
+                                    needUnsubscribe = true;
                                 }
                             }
                         }
 
-                        disposable.Dispose();
+                        if (needUnsubscribe)
+                        {
+                            try
+                            {
+                                await mqttClient.UnsubscribeAsync(topic).ConfigureAwait(false);
+                            }
+                            catch
+                            {
+                            }
+                        }
                     }
-                    catch (ObjectDisposedException)
-                    {
-                    }
-                    catch (Exception exception)
-                    {
-                        observer.OnError(exception);
-                    }
-                });
+                }
+                finally
+                {
+                    disposable.Dispose();
+                }
+            });
         }).Retry().Publish().RefCount();
 
     /// <summary>
-    /// Discovers the topics.
+    /// Discovers topics seen by the client, with an optional expiry for inactive topics.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="topicExpiry">The topic expiry, topics are removed if they do not publish a value within this time.</param>
-    /// <returns>
-    /// A List of topics.
-    /// </returns>
+    /// <param name="client">The raw client observable.</param>
+    /// <param name="topicExpiry">Topic expiry; topics are removed if they do not publish a value within this time.</param>
+    /// <returns>A stream of topic lists with last-seen timestamps.</returns>
     public static IObservable<IEnumerable<(string Topic, DateTime LastSeen)>> DiscoverTopics(this IObservable<IMqttClient> client, TimeSpan? topicExpiry = null) =>
         Observable.Create<IEnumerable<(string Topic, DateTime LastSeen)>>(observer =>
+        {
+            topicExpiry ??= TimeSpan.FromHours(1);
+            if (topicExpiry.Value.TotalSeconds < 1)
             {
-                if (topicExpiry == null)
+                throw new ArgumentOutOfRangeException(nameof(topicExpiry), "Topic expiry must be greater or equal to one.");
+            }
+
+            var gate = new object();
+            var disposable = new CompositeDisposable();
+            var topics = new List<(string Topic, DateTime LastSeen)>();
+            var cleanupTopics = false;
+            var lastCount = -1;
+
+            disposable.Add(client.SubscribeToTopic("#").Select(m => m.ApplicationMessage.Topic)
+                .Merge(Observable.Interval(TimeSpan.FromMinutes(1)).Select(_ => string.Empty))
+                .Subscribe(topic =>
                 {
-                    topicExpiry = TimeSpan.FromHours(1);
-                }
-
-                if (topicExpiry.Value.TotalSeconds < 1)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(topicExpiry), "Topic expiry must be greater or equal to one.");
-                }
-
-                var disposable = new CompositeDisposable();
-                var semaphore = new SemaphoreSlim(1);
-                disposable.Add(semaphore);
-                var topics = new List<(string Topic, DateTime LastSeen)>();
-                var cleanupTopics = false;
-                var lastCount = -1;
-                disposable.Add(client.SubscribeToTopic("#").Select(m => m.ApplicationMessage.Topic)
-                    .Merge(Observable.Interval(TimeSpan.FromMinutes(1)).Select(_ => string.Empty)).Subscribe(topic =>
-                {
-                    semaphore.Wait();
-                    if (string.IsNullOrEmpty(topic))
+                    lock (gate)
                     {
-                        cleanupTopics = true;
-                    }
-                    else if (topics.Select(x => x.Topic).Contains(topic))
-                    {
-                        topics.RemoveAll(x => x.Topic == topic);
-                        topics.Add((topic, DateTime.UtcNow));
-                    }
-                    else
-                    {
-                        topics.Add((topic, DateTime.UtcNow));
-                    }
+                        if (string.IsNullOrEmpty(topic))
+                        {
+                            cleanupTopics = true;
+                        }
+                        else if (topics.Select(x => x.Topic).Contains(topic))
+                        {
+                            topics.RemoveAll(x => x.Topic == topic);
+                            topics.Add((topic, DateTime.UtcNow));
+                        }
+                        else
+                        {
+                            topics.Add((topic, DateTime.UtcNow));
+                        }
 
-                    if (cleanupTopics || lastCount != topics.Count)
-                    {
-                        topics.RemoveAll(x => DateTime.UtcNow.Subtract(x.LastSeen) > topicExpiry);
-                        lastCount = topics.Count;
-                        cleanupTopics = false;
-                        observer.OnNext(topics);
+                        if (cleanupTopics || lastCount != topics.Count)
+                        {
+                            topics.RemoveAll(x => DateTime.UtcNow.Subtract(x.LastSeen) > topicExpiry);
+                            lastCount = topics.Count;
+                            cleanupTopics = false;
+                            observer.OnNext(topics);
+                        }
                     }
-
-                    semaphore.Release();
                 }));
 
-                return disposable;
-            }).Retry().Publish().RefCount();
+            return disposable;
+        }).Retry().Publish().RefCount();
 
     /// <summary>
-    /// Discovers the topics.
+    /// Discovers topics seen by the resilient client, with an optional expiry for inactive topics.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="topicExpiry">The topic expiry, topics are removed if they do not publish a value within this time.</param>
-    /// <returns>
-    /// A List of topics.
-    /// </returns>
+    /// <param name="client">The resilient client observable.</param>
+    /// <param name="topicExpiry">Topic expiry; topics are removed if they do not publish a value within this time.</param>
+    /// <returns>A stream of topic lists with last-seen timestamps.</returns>
     public static IObservable<IEnumerable<(string Topic, DateTime LastSeen)>> DiscoverTopics(this IObservable<IResilientMqttClient> client, TimeSpan? topicExpiry = null) =>
         Observable.Create<IEnumerable<(string Topic, DateTime LastSeen)>>(observer =>
+        {
+            topicExpiry ??= TimeSpan.FromHours(1);
+            if (topicExpiry.Value.TotalSeconds < 1)
             {
-                if (topicExpiry == null)
+                throw new ArgumentOutOfRangeException(nameof(topicExpiry), "Topic expiry must be greater or equal to one.");
+            }
+
+            var gate = new object();
+            var disposable = new CompositeDisposable();
+            var topics = new List<(string Topic, DateTime LastSeen)>();
+            var cleanupTopics = false;
+            var lastCount = -1;
+
+            disposable.Add(client.SubscribeToTopic("#").Select(m => m.ApplicationMessage.Topic)
+                .Merge(Observable.Interval(TimeSpan.FromMinutes(1)).Select(_ => string.Empty))
+                .Subscribe(topic =>
                 {
-                    topicExpiry = TimeSpan.FromHours(1);
-                }
-
-                if (topicExpiry.Value.TotalSeconds < 1)
-                {
-                    throw new ArgumentOutOfRangeException(nameof(topicExpiry), "Topic expiry must be greater or equal to one.");
-                }
-
-                var disposable = new CompositeDisposable();
-                var semaphore = new SemaphoreSlim(1);
-                disposable.Add(semaphore);
-                var topics = new List<(string Topic, DateTime LastSeen)>();
-                var cleanupTopics = false;
-                var lastCount = -1;
-                disposable.Add(client.SubscribeToTopic("#").Select(m => m.ApplicationMessage.Topic)
-                    .Merge(Observable.Interval(TimeSpan.FromMinutes(1)).Select(_ => string.Empty)).Subscribe(topic =>
-                {
-                    semaphore.Wait();
-                    if (string.IsNullOrEmpty(topic))
+                    lock (gate)
                     {
-                        cleanupTopics = true;
-                    }
-                    else if (topics.Select(x => x.Topic).Contains(topic))
-                    {
-                        topics.RemoveAll(x => x.Topic == topic);
-                        topics.Add((topic, DateTime.UtcNow));
-                    }
-                    else
-                    {
-                        topics.Add((topic, DateTime.UtcNow));
-                    }
+                        if (string.IsNullOrEmpty(topic))
+                        {
+                            cleanupTopics = true;
+                        }
+                        else if (topics.Select(x => x.Topic).Contains(topic))
+                        {
+                            topics.RemoveAll(x => x.Topic == topic);
+                            topics.Add((topic, DateTime.UtcNow));
+                        }
+                        else
+                        {
+                            topics.Add((topic, DateTime.UtcNow));
+                        }
 
-                    if (cleanupTopics || lastCount != topics.Count)
-                    {
-                        topics.RemoveAll(x => DateTime.UtcNow.Subtract(x.LastSeen) > topicExpiry);
-                        lastCount = topics.Count;
-                        cleanupTopics = false;
-                        observer.OnNext(topics);
+                        if (cleanupTopics || lastCount != topics.Count)
+                        {
+                            topics.RemoveAll(x => DateTime.UtcNow.Subtract(x.LastSeen) > topicExpiry);
+                            lastCount = topics.Count;
+                            cleanupTopics = false;
+                            observer.OnNext(topics);
+                        }
                     }
-
-                    semaphore.Release();
                 }));
 
-                return disposable;
-            }).Retry().Publish().RefCount();
+            return disposable;
+        }).Retry().Publish().RefCount();
 
     /// <summary>
-    /// Subscribes to topic.
+    /// Subscribes to a topic (resilient client). Ref-counted per client/topic to avoid duplicate broker subscriptions.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="topic">The topic.</param>
-    /// <returns>An Observable Mqtt Client Subscribe Result.</returns>
+    /// <param name="client">The resilient client observable.</param>
+    /// <param name="topic">Topic filter (supports + and # wildcards).</param>
+    /// <returns>Message stream matching the topic.</returns>
     public static IObservable<MqttApplicationMessageReceivedEventArgs> SubscribeToTopic(this IObservable<IResilientMqttClient> client, string topic) =>
         Observable.Create<MqttApplicationMessageReceivedEventArgs>(observer =>
         {
             var disposable = new CompositeDisposable();
             IResilientMqttClient? mqttClient = null;
-            disposable.Add(client.Subscribe(async c =>
+
+            var inner = client.Subscribe(async c =>
             {
                 mqttClient = c;
-                if (!_managedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
+                SubscriptionHub? hub = null;
+                var needSubscribe = false;
+                lock (_sync)
                 {
-                    value = new([(topic, 0)]);
-                    _managedSubscribeToTopicClients.Add(mqttClient, value);
-                }
-                else if (!value.Any(x => x.topic == topic))
-                {
-                    value.Add((topic, 0));
-                }
-
-                var check = value.Find(x => x.topic == topic);
-                if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
-                {
-                    disposable.Add(mqttClient.ApplicationMessageReceived.WhereTopicIsMatch(topic).Subscribe(observer));
-                    check.count++;
-                    if (check.count == 1)
+                    if (!_resilientTopicHubs.TryGetValue(c, out var topicMap))
                     {
-                        var mqttSubscribeOptions = Create.MqttFactory.CreateTopicFilterBuilder()
-                                            .WithTopic(topic)
-                                            .Build();
+                        topicMap = new Dictionary<string, SubscriptionHub>(StringComparer.Ordinal);
+                        _resilientTopicHubs[c] = topicMap;
+                    }
 
-                        await mqttClient.SubscribeAsync([mqttSubscribeOptions]);
+                    if (!topicMap.TryGetValue(topic, out hub))
+                    {
+                        hub = new SubscriptionHub();
+                        topicMap[topic] = hub;
+                    }
+
+                    hub.Count++;
+                    if (hub.Count == 1)
+                    {
+                        // First subscriber for this client/topic: set up a single tap and request broker subscription
+                        hub.SourceTap = c.ApplicationMessageReceived.WhereTopicIsMatch(topic).Subscribe(hub.Subject);
+                        needSubscribe = true;
                     }
                 }
-            }));
-            return Disposable.Create(async () =>
+
+                if (hub != null)
                 {
-                    try
+                    disposable.Add(hub.Subject.Subscribe(observer));
+                }
+
+                if (needSubscribe)
+                {
+                    var mqttSubscribeOptions = Create.MqttFactory.CreateTopicFilterBuilder().WithTopic(topic).Build();
+                    await c.SubscribeAsync([mqttSubscribeOptions]).ConfigureAwait(false);
+                }
+            });
+
+            disposable.Add(inner);
+
+            return Disposable.Create(async () =>
+            {
+                try
+                {
+                    if (mqttClient != null)
                     {
-                        if (mqttClient != null && _managedSubscribeToTopicClients.TryGetValue(mqttClient, out var value))
+                        SubscriptionHub? hub = null;
+                        var needUnsubscribe = false;
+                        lock (_sync)
                         {
-                            var check = value.Find(x => x.topic == topic);
-                            if (!EqualityComparer<(string topic, int count)>.Default.Equals(check, default))
+                            if (_resilientTopicHubs.TryGetValue(mqttClient, out var topicMap) && topicMap.TryGetValue(topic, out hub))
                             {
-                                check.count--;
-                                if (check.count == 0)
+                                hub.Count--;
+                                if (hub.Count <= 0)
                                 {
-                                    await mqttClient.UnsubscribeAsync([topic]).ConfigureAwait(false);
+                                    topicMap.Remove(topic);
+                                    hub.SourceTap?.Dispose();
+                                    hub.Subject.OnCompleted();
+                                    hub.Subject.Dispose();
+                                    needUnsubscribe = true;
                                 }
                             }
                         }
 
-                        disposable.Dispose();
+                        if (needUnsubscribe)
+                        {
+                            try
+                            {
+                                await mqttClient.UnsubscribeAsync([topic]).ConfigureAwait(false);
+                            }
+                            catch
+                            {
+                            }
+                        }
                     }
-                    catch (ObjectDisposedException)
-                    {
-                    }
-                    catch (Exception exception)
-                    {
-                        observer.OnError(exception);
-                    }
-                });
+                }
+                finally
+                {
+                    disposable.Dispose();
+                }
+            });
         }).Retry().Publish().RefCount();
 
     /// <summary>
     /// Filters allowing only the topics which match the specified topic.
     /// </summary>
-    /// <param name="observable">The observable.</param>
-    /// <param name="topic">The topic.</param>
-    /// <returns>A MqttApplicationMessageReceivedEventArgs where the topic is a Match.</returns>
+    /// <param name="observable">The observable source of messages.</param>
+    /// <param name="topic">The topic filter to match.</param>
+    /// <returns>A message stream where the topic matches the filter.</returns>
     public static IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicIsMatch(this IObservable<MqttApplicationMessageReceivedEventArgs> observable, string topic)
     {
         // This is a simple cache to avoid re-evaluating the same topic multiple times.
-        var isValidTopics = new Dictionary<string, bool>();
+        var isValidTopics = new Dictionary<string, bool>(StringComparer.Ordinal);
         return Observable.Create<MqttApplicationMessageReceivedEventArgs>(observer => observable.Where(x =>
         {
             // Check if the topic is valid.
-            var incommingTopic = x.ApplicationMessage.Topic;
-            if (!isValidTopics.TryGetValue(incommingTopic, out var isValid))
+            var incomingTopic = x.ApplicationMessage.Topic;
+            if (!isValidTopics.TryGetValue(incomingTopic, out var isValid))
             {
                 isValid = x.DetectCorrectTopicWithOrWithoutWildcard(topic);
 
                 // Cache the result.
-                isValidTopics.Add(incommingTopic, isValid);
+                isValidTopics[incomingTopic] = isValid;
             }
 
             return isValid;
@@ -402,4 +468,19 @@ public static class MqttdSubscribeExtensions
 
     private static bool DetectCorrectTopicWithOrWithoutWildcard(this MqttApplicationMessageReceivedEventArgs message, string topic) =>
         MqttTopicFilterComparer.Compare(message.ApplicationMessage.Topic, topic) == MqttTopicFilterCompareResult.IsMatch;
+
+    private sealed class SubscriptionHub : IDisposable
+    {
+        public int Count { get; set; }
+
+        public ReplaySubject<MqttApplicationMessageReceivedEventArgs> Subject { get; } = new(bufferSize: 1);
+
+        public IDisposable? SourceTap { get; set; }
+
+        public void Dispose()
+        {
+            SourceTap?.Dispose();
+            Subject.Dispose();
+        }
+    }
 }

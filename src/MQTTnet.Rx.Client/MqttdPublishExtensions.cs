@@ -15,25 +15,18 @@ public static class MqttdPublishExtensions
     /// <summary>
     /// Publishes the message.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="message">The message.</param>
-    /// <param name="qos">The QoS.</param>
-    /// <param name="retain">if set to <c>true</c> [retain].</param>
-    /// <returns>
-    /// A Mqtt Client Publish Result.
-    /// </returns>
+    /// <param name="client">Client observable.</param>
+    /// <param name="message">Stream of (topic, payload) tuples.</param>
+    /// <param name="qos">Quality of Service.</param>
+    /// <param name="retain">Retain flag.</param>
+    /// <returns>Publish results.</returns>
     public static IObservable<MqttClientPublishResult> PublishMessage(this IObservable<IMqttClient> client, IObservable<(string topic, string payLoad)> message, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
         Observable.Create<MqttClientPublishResult>(observer =>
         {
             var disposable = new CompositeDisposable();
-
-            // Create a CancellationTokenSource to cancel the subscription.
-            var cancellationTokenSource = new CancellationTokenSource();
-
-            // Add the CancellationTokenSource to the CompositeDisposable.
-            disposable.Add(cancellationTokenSource);
-
-            var cancellationToken = cancellationTokenSource.Token;
+            var cts = new CancellationTokenSource();
+            disposable.Add(cts);
+            var token = cts.Token;
 
             disposable.Add(client.CombineLatest(message, (cli, mess) => (cli, mess))
                     .Subscribe(async c =>
@@ -45,20 +38,20 @@ public static class MqttdPublishExtensions
                                         .WithRetainFlag(retain)
                                         .Build();
 
-                        var result = await c.cli.PublishAsync(applicationMessage, cancellationToken);
+                        var result = await c.cli.PublishAsync(applicationMessage, token).ConfigureAwait(false);
                         observer.OnNext(result);
                     }));
             return disposable;
         }).Retry();
 
     /// <summary>
-    /// Publishes the message.
+    /// Publishes the message and projects to ApplicationMessageProcessed for resilient client.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="message">The message.</param>
-    /// <param name="qos">The qos.</param>
-    /// <param name="retain">if set to <c>true</c> [retain].</param>
-    /// <returns>A Mqtt Client Publish Result.</returns>
+    /// <param name="client">Resilient client observable.</param>
+    /// <param name="message">Stream of (topic, payload) tuples.</param>
+    /// <param name="qos">Quality of Service.</param>
+    /// <param name="retain">Retain flag.</param>
+    /// <returns>ApplicationMessageProcessed events.</returns>
     public static IObservable<ApplicationMessageProcessedEventArgs> PublishMessage(this IObservable<IResilientMqttClient> client, IObservable<(string topic, string payLoad)> message, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
         Observable.Create<ApplicationMessageProcessedEventArgs>(observer =>
         {
@@ -69,7 +62,7 @@ public static class MqttdPublishExtensions
                 if (!setup)
                 {
                     setup = true;
-                    disposable.Add(c.cli.ApplicationMessageProcessed.Retry().Subscribe(args => observer.OnNext(args)));
+                    disposable.Add(c.cli.ApplicationMessageProcessed.Retry().Subscribe(observer));
                 }
 
                 var applicationMessage = Create.MqttFactory.CreateApplicationMessageBuilder()
@@ -81,7 +74,7 @@ public static class MqttdPublishExtensions
 
                 try
                 {
-                    await c.cli.EnqueueAsync(applicationMessage);
+                    await c.cli.EnqueueAsync(applicationMessage).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -93,13 +86,13 @@ public static class MqttdPublishExtensions
         }).Retry();
 
     /// <summary>
-    /// Publishes the message.
+    /// Publishes the message using byte[] payloads with resilient client.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="message">The message.</param>
-    /// <param name="qos">The qos.</param>
-    /// <param name="retain">if set to <c>true</c> [retain].</param>
-    /// <returns>A Mqtt Client Publish Result.</returns>
+    /// <param name="client">Resilient client observable.</param>
+    /// <param name="message">Stream of (topic, payload) tuples.</param>
+    /// <param name="qos">Quality of Service.</param>
+    /// <param name="retain">Retain flag.</param>
+    /// <returns>ApplicationMessageProcessed events.</returns>
     public static IObservable<ApplicationMessageProcessedEventArgs> PublishMessage(this IObservable<IResilientMqttClient> client, IObservable<(string topic, byte[] payLoad)> message, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
         Observable.Create<ApplicationMessageProcessedEventArgs>(observer =>
         {
@@ -110,7 +103,7 @@ public static class MqttdPublishExtensions
                 if (!setup)
                 {
                     setup = true;
-                    disposable.Add(c.cli.ApplicationMessageProcessed.Retry().Subscribe(args => observer.OnNext(args)));
+                    disposable.Add(c.cli.ApplicationMessageProcessed.Retry().Subscribe(observer));
                 }
 
                 var applicationMessage = Create.MqttFactory.CreateApplicationMessageBuilder()
@@ -122,7 +115,7 @@ public static class MqttdPublishExtensions
 
                 try
                 {
-                    await c.cli.EnqueueAsync(applicationMessage);
+                    await c.cli.EnqueueAsync(applicationMessage).ConfigureAwait(false);
                 }
                 catch (Exception ex)
                 {
@@ -134,51 +127,46 @@ public static class MqttdPublishExtensions
         }).Retry();
 
     /// <summary>
-    /// Publishes the message.
+    /// Publishes the message with custom builder.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="message">The message.</param>
-    /// <param name="messageBuilder">The message builder.</param>
-    /// <param name="qos">The qos.</param>
-    /// <param name="retain">if set to <c>true</c> [retain].</param>
-    /// <returns>A Mqtt Client Publish Result.</returns>
+    /// <param name="client">Client observable.</param>
+    /// <param name="message">Stream of (topic, payload) tuples.</param>
+    /// <param name="messageBuilder">Callback to customize the MQTT application message.</param>
+    /// <param name="qos">Quality of Service.</param>
+    /// <param name="retain">Retain flag.</param>
+    /// <returns>Publish results.</returns>
     public static IObservable<MqttClientPublishResult> PublishMessage(this IObservable<IMqttClient> client, IObservable<(string topic, string payLoad)> message, Action<MqttApplicationMessageBuilder> messageBuilder, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
         Observable.Create<MqttClientPublishResult>(observer =>
         {
             var disposable = new CompositeDisposable();
-
-            // Create a CancellationTokenSource to cancel the subscription.
-            var cancellationTokenSource = new CancellationTokenSource();
-
-            // Add the CancellationTokenSource to the CompositeDisposable.
-            disposable.Add(cancellationTokenSource);
-
-            var cancellationToken = cancellationTokenSource.Token;
+            var cts = new CancellationTokenSource();
+            disposable.Add(cts);
+            var token = cts.Token;
 
             disposable.Add(client.CombineLatest(message, (cli, mess) => (cli, mess))
                 .Subscribe(async c =>
                 {
-                    var applicationMessage = Create.MqttFactory.CreateApplicationMessageBuilder()
+                    var builder = Create.MqttFactory.CreateApplicationMessageBuilder()
                                     .WithTopic(c.mess.topic)
                                     .WithPayload(c.mess.payLoad)
                                     .WithQualityOfServiceLevel(qos)
                                     .WithRetainFlag(retain);
-                    messageBuilder(applicationMessage);
+                    messageBuilder(builder);
 
-                    var result = await c.cli.PublishAsync(applicationMessage.Build(), cancellationToken);
+                    var result = await c.cli.PublishAsync(builder.Build(), token).ConfigureAwait(false);
                     observer.OnNext(result);
                 }));
             return disposable;
         }).Retry();
 
     /// <summary>
-    /// Publishes the message.
+    /// Publishes the message using byte[] payloads.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="message">The message.</param>
-    /// <param name="qos">The qos.</param>
-    /// <param name="retain">if set to <c>true</c> [retain].</param>
-    /// <returns>A Mqtt Client Publish Result.</returns>
+    /// <param name="client">Client observable.</param>
+    /// <param name="message">Stream of (topic, payload) tuples.</param>
+    /// <param name="qos">Quality of Service.</param>
+    /// <param name="retain">Retain flag.</param>
+    /// <returns>Publish results.</returns>
     public static IObservable<MqttClientPublishResult> PublishMessage(this IObservable<IMqttClient> client, IObservable<(string topic, byte[] payLoad)> message, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
         Observable.Create<MqttClientPublishResult>(observer =>
             client.CombineLatest(message, (cli, mess) => (cli, mess)).Subscribe(async c =>
@@ -190,31 +178,31 @@ public static class MqttdPublishExtensions
                                 .WithRetainFlag(retain)
                                 .Build();
 
-                var result = await c.cli.PublishAsync(applicationMessage, CancellationToken.None);
+                var result = await c.cli.PublishAsync(applicationMessage, CancellationToken.None).ConfigureAwait(false);
                 observer.OnNext(result);
             })).Retry();
 
     /// <summary>
-    /// Publishes the message.
+    /// Publishes the message using byte[] payloads with custom builder.
     /// </summary>
-    /// <param name="client">The client.</param>
-    /// <param name="message">The message.</param>
-    /// <param name="messageBuilder">The message builder.</param>
-    /// <param name="qos">The qos.</param>
-    /// <param name="retain">if set to <c>true</c> [retain].</param>
-    /// <returns>A Mqtt Client Publish Result.</returns>
+    /// <param name="client">Client observable.</param>
+    /// <param name="message">Stream of (topic, payload) tuples.</param>
+    /// <param name="messageBuilder">Callback to customize the MQTT application message.</param>
+    /// <param name="qos">Quality of Service.</param>
+    /// <param name="retain">Retain flag.</param>
+    /// <returns>Publish results.</returns>
     public static IObservable<MqttClientPublishResult> PublishMessage(this IObservable<IMqttClient> client, IObservable<(string topic, byte[] payLoad)> message, Action<MqttApplicationMessageBuilder> messageBuilder, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.ExactlyOnce, bool retain = true) =>
         Observable.Create<MqttClientPublishResult>(observer =>
             client.CombineLatest(message, (cli, mess) => (cli, mess)).Subscribe(async c =>
             {
-                var applicationMessage = Create.MqttFactory.CreateApplicationMessageBuilder()
+                var builder = Create.MqttFactory.CreateApplicationMessageBuilder()
                                 .WithTopic(c.mess.topic)
                                 .WithPayload(c.mess.payLoad)
                                 .WithQualityOfServiceLevel(qos)
                                 .WithRetainFlag(retain);
-                messageBuilder(applicationMessage);
+                messageBuilder(builder);
 
-                var result = await c.cli.PublishAsync(applicationMessage.Build(), CancellationToken.None);
+                var result = await c.cli.PublishAsync(builder.Build(), CancellationToken.None).ConfigureAwait(false);
                 observer.OnNext(result);
             })).Retry();
 }

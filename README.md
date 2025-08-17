@@ -211,6 +211,7 @@ var pub2 = Create.MqttClient()
 ### Binary payloads (byte[])
 ```csharp
 using System.Reactive.Subjects;
+using MQTTnet.Rx.Client;
 
 // Publish byte[] payloads with raw client
 var bytes = new Subject<(string topic, byte[] payload)>();
@@ -221,14 +222,15 @@ var pubBytes = Create.MqttClient()
 
 bytes.OnNext(("images/frame", new byte[] { 0x01, 0x02, 0x03 }));
 
-// Subscribe and access raw bytes
+// Subscribe and access raw bytes (zero-copy helpers)
 var subBytes = Create.MqttClient()
     .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
     .SubscribeToTopic("images/#")
     .Subscribe(m =>
     {
-        var data = m.ApplicationMessage.PayloadSegment.ToArray();
-        Console.WriteLine($"Got {data.Length} bytes from {m.ApplicationMessage.Topic}");
+        // Avoid ToArray: use Payload() or PayloadUtf8()
+        var payload = m.Payload(); // ReadOnlyMemory<byte>
+        Console.WriteLine($"Got {payload.Length} bytes from {m.ApplicationMessage.Topic}");
     });
 
 // Resilient client publish with byte[]
@@ -374,6 +376,17 @@ var server = Create.MqttServer(builder =>
 
 ---
 
+## 🧰 New helper APIs
+- PayloadExtensions
+  - e.Payload(): ReadOnlyMemory<byte> – zero-copy access to payload
+  - e.PayloadUtf8(): string – decode payload without ToArray
+  - observable.ToUtf8String(): project stream to UTF8 strings
+- ConnectionExtensions
+  - WhenReady(): emits resilient client when it is connected, useful to gate pipelines
+- SubscribeToTopics(params string[]): subscribe to multiple topics at once (raw and resilient)
+
+---
+
 ## 🏭 Diagnostics
 - Topic matching: SubscribeToTopic supports wildcards (+ and #). Internally, topics are matched using MqttTopicFilterComparer.
 - Duplicate subscriptions: SubscribeToTopic reference-counts identical topic filters per client and unsubscribes when the last observer disposes.
@@ -480,8 +493,11 @@ messages.OnNext(("demo/FromMilliseconds", "{" + $"payload:{Environment.TickCount
 - WithResilientClientOptions(Action<ResilientMqttClientOptionsBuilder>) starts the resilient client and emits it
 - PublishMessage(...) overloads for IMqttClient and IResilientMqttClient
 - SubscribeToTopic(string topic) for IMqttClient and IResilientMqttClient
+- SubscribeToTopics(params string[]) – multi-topic helper
 - DiscoverTopics(TimeSpan? expiry)
-- JSON: ToDictionary(), Observe(key), ToBool/ToInt16/ToInt32/ToInt64/ToSingle/ToDouble/ToString
+- JSON: ToDictionary(), ToObject<T>(), Observe(key), ToBool/ToInt16/ToInt32/ToInt64/ToSingle/ToDouble/ToString
+- Payload: Payload(), PayloadUtf8(), observable.ToUtf8String()
+- Connection: WhenReady()
 - Server: Create.MqttServer(Func<MqttServerOptionsBuilder, MqttServerOptions>) and many server event streams (ClientConnected, ClientDisconnected, InterceptingPublish, etc.)
 
 ---

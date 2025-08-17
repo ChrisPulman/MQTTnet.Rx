@@ -40,8 +40,7 @@ public static class Create
                 Interlocked.Increment(ref clientCount);
                 return Disposable.Create(() =>
                 {
-                    Interlocked.Decrement(ref clientCount);
-                    if (clientCount == 0)
+                    if (Interlocked.Decrement(ref clientCount) == 0)
                     {
                         mqttClient.Dispose();
                     }
@@ -63,8 +62,7 @@ public static class Create
                 Interlocked.Increment(ref clientCount);
                 return Disposable.Create(() =>
                 {
-                    Interlocked.Decrement(ref clientCount);
-                    if (clientCount == 0)
+                    if (Interlocked.Decrement(ref clientCount) == 0)
                     {
                         mqttClient.Dispose();
                     }
@@ -81,8 +79,8 @@ public static class Create
     public static IObservable<IMqttClient> WithClientOptions(this IObservable<IMqttClient> client, Action<MqttClientOptionsBuilder> optionsBuilder) =>
         Observable.Create<IMqttClient>(observer =>
         {
-            var mqttClientOptions = MqttFactory.CreateClientOptionsBuilder();
-            optionsBuilder(mqttClientOptions);
+            var options = MqttFactory.CreateClientOptionsBuilder();
+            optionsBuilder(options);
             var disposable = new CompositeDisposable();
             disposable.Add(client.Subscribe(c =>
             {
@@ -92,7 +90,7 @@ public static class Create
                 }
                 else
                 {
-                    disposable.Add(Observable.StartAsync(async token => await c.ConnectAsync(mqttClientOptions.Build(), token)).Subscribe(_ => observer.OnNext(c)));
+                    disposable.Add(Observable.StartAsync(async token => await c.ConnectAsync(options.Build(), token)).Subscribe(_ => observer.OnNext(c)));
                 }
             }));
             return disposable;
@@ -107,8 +105,8 @@ public static class Create
     public static IObservable<IResilientMqttClient> WithResilientClientOptions(this IObservable<IResilientMqttClient> client, Action<ResilientMqttClientOptionsBuilder> optionsBuilder) =>
         Observable.Create<IResilientMqttClient>(observer =>
         {
-            var mqttClientOptions = MqttFactory.CreateResilientClientOptionsBuilder();
-            optionsBuilder(mqttClientOptions);
+            var options = MqttFactory.CreateResilientClientOptionsBuilder();
+            optionsBuilder(options);
             var disposable = new CompositeDisposable();
             disposable.Add(client.Subscribe(c =>
             {
@@ -118,7 +116,7 @@ public static class Create
                 }
                 else
                 {
-                    disposable.Add(Observable.StartAsync(async () => await c.StartAsync(mqttClientOptions.Build())).Subscribe(_ => observer.OnNext(c)));
+                    disposable.Add(Observable.StartAsync(async () => await c.StartAsync(options.Build())).Subscribe(_ => observer.OnNext(c)));
                 }
             }));
             return disposable;
@@ -155,22 +153,11 @@ public static class Create
     public static ResilientMqttClientOptionsBuilder CreateResilientClientOptionsBuilder(this MqttClientFactory factory) => new();
 #pragma warning restore RCS1175 // Unused 'this' parameter.
 
-    /// <summary>
-    /// Creates the Resilient MQTT client.
-    /// </summary>
-    /// <param name="factory">The factory.</param>
-    /// <param name="mqttClient">The MQTT client.</param>
-    /// <returns>IResilientMqttClient.</returns>
-    /// <exception cref="ArgumentNullException">factory.</exception>
     private static ResilientMqttClient CreateResilientMqttClient(this MqttClientFactory factory, IMqttClient? mqttClient = null)
     {
         ArgumentNullException.ThrowIfNull(factory);
-
-        if (mqttClient == null)
-        {
-            return new ResilientMqttClient(factory.CreateMqttClient(), factory.DefaultLogger);
-        }
-
-        return new ResilientMqttClient(mqttClient, factory.DefaultLogger);
+        return mqttClient == null
+            ? new ResilientMqttClient(factory.CreateMqttClient(), factory.DefaultLogger)
+            : new ResilientMqttClient(mqttClient, factory.DefaultLogger);
     }
 }
