@@ -539,3 +539,14 @@ Each PLC package adds helpers to publish or subscribe PLC tags via MQTT using th
 - MQTTnet.Rx.TwinCAT: PublishTcPlcTag<T>(client, topic, plcVariable, configurePlc)
 
 Refer to those libraries for creating and configuring connected PLC clients, then use the Publish* helpers to push tag changes to MQTT. You can also combine SubscribeToTopic with your PLC client to write incoming values back to tags.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Contributing
+Issues and PRs are welcome.
+
+---
+
+**MQTTnet.Rx** - Empowering Industrial Automation with Reactive Technology ⚡🏭
