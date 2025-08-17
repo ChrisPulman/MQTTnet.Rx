@@ -208,6 +208,149 @@ var pub2 = Create.MqttClient()
     .Subscribe();
 ```
 
+### Binary payloads (byte[])
+```csharp
+using System.Reactive.Subjects;
+
+// Publish byte[] payloads with raw client
+var bytes = new Subject<(string topic, byte[] payload)>();
+var pubBytes = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .PublishMessage(bytes)
+    .Subscribe();
+
+bytes.OnNext(("images/frame", new byte[] { 0x01, 0x02, 0x03 }));
+
+// Subscribe and access raw bytes
+var subBytes = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("images/#")
+    .Subscribe(m =>
+    {
+        var data = m.ApplicationMessage.PayloadSegment.ToArray();
+        Console.WriteLine($"Got {data.Length} bytes from {m.ApplicationMessage.Topic}");
+    });
+
+// Resilient client publish with byte[]
+var pubBytesResilient = Create.ResilientMqttClient()
+    .WithResilientClientOptions(o => o.WithClientOptions(c => c.WithTcpServer("localhost", 1883)))
+    .PublishMessage(bytes)
+    .Subscribe();
+```
+
+### Retained messages (server-side and client behavior)
+- When publishing with retain = true, the broker stores the last payload for the topic and delivers it to new subscribers.
+- To clear a retained message, publish an empty payload with retain = true to that topic.
+- Broker events for diagnostics are exposed via MQTTnet.Rx.Server.
+
+```csharp
+using MQTTnet.Protocol;
+using MQTTnet.Rx.Server;
+
+// Publish retained and later clear it
+var msgsRetain = new Subject<(string topic, string payload)>();
+var pubRetained = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .PublishMessage(msgsRetain, qos: MqttQualityOfServiceLevel.AtLeastOnce, retain: true)
+    .Subscribe();
+
+msgsRetain.OnNext(("status/line1", "online"));
+// Clear the retained message (per MQTT spec -> empty payload + retain)
+msgsRetain.OnNext(("status/line1", string.Empty));
+
+// Server-side: observe retained message lifecycle
+var server = MQTTnet.Rx.Server.Create.MqttServer(b => b.WithDefaultEndpointPort(2883).WithDefaultEndpoint().Build())
+    .Subscribe(sub =>
+    {
+        sub.Disposable.Add(sub.Server.RetainedMessageChanged().Subscribe(e => Console.WriteLine($"Retained changed: {e.ApplicationMessage.Topic}")));
+        sub.Disposable.Add(sub.Server.RetainedMessagesCleared().Subscribe(_ => Console.WriteLine("All retained cleared")));
+        sub.Disposable.Add(sub.Server.LoadingRetainedMessage().Subscribe(_ => Console.WriteLine("Loading retained at startup")));
+    });
+```
+
+---
+
+## 🔐 TLS/SSL configuration (server and client)
+This section shows how to enable TLS on the MQTT broker and connect securely from clients using MQTTnet v5.
+
+### 1) Prepare certificates
+- Create or obtain a server certificate (PFX with private key). For development you can use a self-signed cert.
+- Optionally, create a client certificate (PFX) if you want mutual TLS (client authentication).
+- Ensure the issuing CA (or the self-signed cert) is trusted on the machines running the client(s).
+
+### 2) Enable TLS on the broker
+```csharp
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+using MQTTnet.Rx.Server;
+
+var serverCert = new X509Certificate2("server.pfx", "pfx-password");
+
+var server = Create.MqttServer(b =>
+        b.WithDefaultEndpoint(false)                // disable plain TCP endpoint
+         .WithEncryptedEndpoint()                   // enable TLS endpoint
+         .WithEncryptedEndpointPort(8883)          // standard MQTT over TLS port
+         .WithEncryptionCertificate(serverCert)    // use your server certificate
+         .WithEncryptionSslProtocol(SslProtocols.Tls12)
+         .Build())
+    .Subscribe(sub =>
+    {
+        sub.Disposable.Add(sub.Server.Started().Subscribe(_ => Console.WriteLine("Secure broker started on 8883")));
+        // Optional: validate connecting clients, enforce client certs, etc.
+        sub.Disposable.Add(sub.Server.ValidatingConnection().Subscribe(args =>
+        {
+            // Example: require TLS
+            if (!args.IsSecureConnection)
+            {
+                args.ReasonCode = MQTTnet.Protocol.MqttConnectReasonCode.ClientIdentifierNotValid;
+            }
+        }));
+    });
+```
+
+Notes:
+- WithDefaultEndpoint(false) disables the unsecured (tcp) listener; omit or set true to keep both.
+- WithEncryptionSslProtocol can be set to Tls13 if available on your platform.
+
+### 3) Connect a TLS client (server authentication)
+```csharp
+using System.Security.Authentication;
+using MQTTnet.Rx.Client;
+
+var client = Create.ResilientMqttClient()
+    .WithResilientClientOptions(o => o.WithClientOptions(c =>
+        c.WithTcpServer("your-broker-host", 8883)
+         .WithTlsOptions(tls =>
+            tls.WithSslProtocols(SslProtocols.Tls12)
+               .WithIgnoreCertificateChainErrors(false)
+               .WithIgnoreCertificateRevocationErrors(false)))))
+    .Subscribe();
+```
+
+### 4) Connect a TLS client with client certificate (mutual TLS)
+```csharp
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+using MQTTnet.Rx.Client;
+
+var clientCert = new X509Certificate2("client.pfx", "pfx-password");
+
+var client = Create.ResilientMqttClient()
+    .WithResilientClientOptions(o => o.WithClientOptions(c =>
+        c.WithTcpServer("your-broker-host", 8883)
+         .WithTlsOptions(tls =>
+            tls.WithSslProtocols(SslProtocols.Tls12)
+               .WithCertificates(new[] { clientCert })
+               // For development only: accept untrusted/invalid chains
+               .WithIgnoreCertificateChainErrors(true)
+               .WithIgnoreCertificateRevocationErrors(true)))))
+    .Subscribe();
+```
+
+Tips:
+- On production, install and trust the CA certificate instead of ignoring validation.
+- When using mutual TLS, validate the client certificate on the server (via ValidatingConnection or a custom connection validator).
+
 ---
 
 ## Server – Reactive MQTT broker
@@ -354,7 +497,6 @@ Issues and PRs are welcome.
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 
 ---
 
