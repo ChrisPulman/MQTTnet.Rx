@@ -12,7 +12,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.15.0" />
+    <PackageReference Include="Azure.Identity" Version="1.16.0" />
     <PackageReference Include="CP.Nuke.BuildTools" Version="1.0.94" />
     <PackageReference Include="Microsoft.Build.Tasks.Core" Version="17.14.8" />
     <PackageReference Include="Nerdbank.GitVersioning" Version="3.7.115" />
