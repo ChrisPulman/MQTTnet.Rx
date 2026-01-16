@@ -4,61 +4,61 @@
 namespace MQTTnet.Rx.Client;
 
 /// <summary>
-/// Resilient Mqtt Client Options.
+/// Provides configuration options for a resilient MQTT client, including connection settings, reconnection behavior,
+/// message handling, and storage.
 /// </summary>
+/// <remarks>Use this class to customize how the resilient MQTT client manages connections, handles message
+/// queuing, and interacts with persistent storage. Some properties, such as
+/// MaxTopicFiltersInSubscribeUnsubscribePackets, may need to be adjusted to comply with broker-specific limitations
+/// (for example, AWS limits this value to 8).</remarks>
 public sealed class ResilientMqttClientOptions
 {
     /// <summary>
-    /// Gets or sets the client options.
+    /// Gets or sets the options used to configure the MQTT client connection.
     /// </summary>
-    /// <value>
-    /// The client options.
-    /// </value>
     public MqttClientOptions? ClientOptions { get; set; }
 
     /// <summary>
-    /// Gets or sets the automatic reconnect delay.
+    /// Gets or sets the delay interval to wait before attempting to automatically reconnect after a disconnection.
     /// </summary>
-    /// <value>
-    /// The automatic reconnect delay.
-    /// </value>
+    /// <remarks>Set this property to control how long the system waits before initiating an automatic
+    /// reconnection attempt. Adjusting this value can help balance responsiveness and resource usage in environments
+    /// with frequent connection interruptions.</remarks>
     public TimeSpan AutoReconnectDelay { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
-    /// Gets or sets the connection check interval.
+    /// Gets or sets the interval at which the connection status is checked.
     /// </summary>
-    /// <value>
-    /// The connection check interval.
-    /// </value>
     public TimeSpan ConnectionCheckInterval { get; set; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// Gets or sets the storage.
+    /// Gets or sets the storage provider used for persisting MQTT client state and messages across sessions.
     /// </summary>
-    /// <value>
-    /// The storage.
-    /// </value>
+    /// <remarks>Set this property to enable reliable message delivery and session recovery in scenarios where
+    /// the client may disconnect or restart. If not set, message persistence and recovery features may be
+    /// unavailable.</remarks>
     public IResilientMqttClientStorage? Storage { get; set; }
 
     /// <summary>
-    /// Gets or sets the maximum pending messages.
+    /// Gets or sets the maximum number of messages that can be queued for processing before new messages are rejected
+    /// or delayed.
     /// </summary>
-    /// <value>
-    /// The maximum pending messages.
-    /// </value>
     public int MaxPendingMessages { get; set; } = int.MaxValue;
 
     /// <summary>
-    /// Gets or sets the pending messages overflow strategy.
+    /// Gets or sets the strategy to apply when the pending messages queue reaches its capacity.
     /// </summary>
-    /// <value>
-    /// The pending messages overflow strategy.
-    /// </value>
+    /// <remarks>Use this property to control how the client handles situations where the number of pending
+    /// messages exceeds the allowed limit. The selected strategy determines whether new messages are dropped, old
+    /// messages are removed, or another overflow behavior is applied. Choose a strategy that best fits your
+    /// application's reliability and throughput requirements.</remarks>
     public MqttPendingMessagesOverflowStrategy PendingMessagesOverflowStrategy { get; set; } = MqttPendingMessagesOverflowStrategy.DropNewMessage;
 
     /// <summary>
-    /// Gets or sets defines the maximum amount of topic filters which will be sent in a SUBSCRIBE/UNSUBSCRIBE packet.
-    /// Amazon Web Services (AWS) limits this number to 8. The default is int.MaxValue.
+    /// Gets or sets the maximum number of topic filters allowed in a single SUBSCRIBE or UNSUBSCRIBE packet.
     /// </summary>
+    /// <remarks>This property can be used to enforce protocol limits or application-specific constraints on
+    /// the number of topic filters that may be included in a single SUBSCRIBE or UNSUBSCRIBE operation. Setting this
+    /// value to a lower number may help prevent excessively large packets or resource exhaustion.</remarks>
     public int MaxTopicFiltersInSubscribeUnsubscribePackets { get; set; } = int.MaxValue;
 }

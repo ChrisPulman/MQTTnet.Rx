@@ -4,21 +4,13 @@
 namespace MQTTnet.Rx.Client;
 
 /// <summary>
-/// Application Message Skipped EventArgs.
+/// Provides data for the event that occurs when an application message is skipped during processing.
 /// </summary>
-/// <seealso cref="EventArgs" />
-/// <remarks>
-/// Initializes a new instance of the <see cref="ApplicationMessageSkippedEventArgs"/> class.
-/// </remarks>
-/// <param name="applicationMessage">The application message.</param>
-/// <exception cref="ArgumentNullException">applicationMessage.</exception>
+/// <param name="applicationMessage">The application message that was skipped. Cannot be null.</param>
 public sealed class ApplicationMessageSkippedEventArgs(ResilientMqttApplicationMessage applicationMessage) : EventArgs
 {
     /// <summary>
-    /// Gets the application message.
+    /// Gets the MQTT application message associated with this instance.
     /// </summary>
-    /// <value>
-    /// The application message.
-    /// </value>
     public ResilientMqttApplicationMessage ApplicationMessage { get; } = applicationMessage ?? throw new ArgumentNullException(nameof(applicationMessage));
 }

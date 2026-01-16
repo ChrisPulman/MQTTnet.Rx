@@ -7,16 +7,20 @@ using System.Reactive.Linq;
 namespace MQTTnet.Rx.Client;
 
 /// <summary>
-/// Connection helpers for resilient client to expose a ready (started+connected) stream.
+/// Provides extension methods for working with resilient MQTT client observables.
 /// </summary>
 public static class ConnectionExtensions
 {
     /// <summary>
-    /// Emits the resilient client only when it is started and connected.
-    /// Re-emits after reconnects. Useful to gate publish/subscribe pipelines.
+    /// Returns an observable sequence that emits the resilient MQTT client instance each time it is connected and ready
+    /// for use.
     /// </summary>
-    /// <param name="client">The resilient client observable.</param>
-    /// <returns>Observable of connected resilient clients.</returns>
+    /// <remarks>The returned observable is hot and shared among all subscribers. Subscribers will receive the
+    /// client instance each time it transitions to a connected state. This is useful for triggering actions that
+    /// require an active connection.</remarks>
+    /// <param name="client">An observable sequence of resilient MQTT client instances to monitor for readiness.</param>
+    /// <returns>An observable sequence that produces the client instance whenever it becomes connected. The sequence emits
+    /// immediately if the client is already connected, and on each subsequent connection event.</returns>
     public static IObservable<IResilientMqttClient> WhenReady(this IObservable<IResilientMqttClient> client) =>
         Observable.Create<IResilientMqttClient>(observer =>
         {
