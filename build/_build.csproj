@@ -19,7 +19,7 @@
     <PackageReference Include="NuGet.Packaging" Version="7.0.1" />
     <PackageReference Include="Nuke.Common" Version="10.1.0" />
     <PackageReference Include="System.Formats.Asn1" Version="10.0.1" />
-    <PackageReference Include="System.Text.Json" Version="10.0.1" />
+    <PackageReference Include="System.Text.Json" Version="10.0.2" />
   </ItemGroup>
 
   <ItemGroup>
