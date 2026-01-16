@@ -6,9 +6,13 @@ using MQTTnet.Packets;
 namespace MQTTnet.Rx.Client;
 
 /// <summary>
-/// IResilientMqttClient.
+/// Defines a resilient MQTT client interface that provides connection management, message publishing, subscription
+/// handling, and event notifications with support for automatic recovery and asynchronous operations.
 /// </summary>
-/// <seealso cref="IDisposable" />
+/// <remarks>This interface extends <see cref="IDisposable"/> and exposes both event-based and observable patterns
+/// for monitoring client state and message flow. It is designed for scenarios where robust MQTT connectivity and
+/// message delivery are required, including automatic reconnection and message queuing. Implementations are expected to
+/// handle transient failures and maintain reliable operation in unstable network environments.</remarks>
 public interface IResilientMqttClient : IDisposable
 {
     /// <summary>

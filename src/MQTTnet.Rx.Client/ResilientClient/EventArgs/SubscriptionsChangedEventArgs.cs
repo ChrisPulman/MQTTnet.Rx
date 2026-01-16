@@ -4,34 +4,20 @@
 namespace MQTTnet.Rx.Client;
 
 /// <summary>
-/// Subscriptions Changed EventArgs.
+/// Provides data for an event that occurs when MQTT client subscriptions have changed, including the results of
+/// subscribe and unsubscribe operations.
 /// </summary>
-/// <seealso cref="EventArgs" />
-/// <remarks>
-/// Initializes a new instance of the <see cref="SubscriptionsChangedEventArgs"/> class.
-/// </remarks>
-/// <param name="subscribeResult">The subscribe result.</param>
-/// <param name="unsubscribeResult">The unsubscribe result.</param>
-/// <exception cref="ArgumentNullException">
-/// subscribeResult
-/// or
-/// unsubscribeResult.
-/// </exception>
+/// <param name="subscribeResult">A list of results for each subscription attempt. Cannot be null.</param>
+/// <param name="unsubscribeResult">A list of results for each unsubscription attempt. Cannot be null.</param>
 public sealed class SubscriptionsChangedEventArgs(List<MqttClientSubscribeResult> subscribeResult, List<MqttClientUnsubscribeResult> unsubscribeResult) : EventArgs
 {
     /// <summary>
-    /// Gets the subscribe result.
+    /// Gets the results of each topic subscription attempt made by the client.
     /// </summary>
-    /// <value>
-    /// The subscribe result.
-    /// </value>
     public List<MqttClientSubscribeResult> SubscribeResult { get; } = subscribeResult ?? throw new ArgumentNullException(nameof(subscribeResult));
 
     /// <summary>
-    /// Gets the unsubscribe result.
+    /// Gets the results of the unsubscribe operation for each topic filter.
     /// </summary>
-    /// <value>
-    /// The unsubscribe result.
-    /// </value>
     public List<MqttClientUnsubscribeResult> UnsubscribeResult { get; } = unsubscribeResult ?? throw new ArgumentNullException(nameof(unsubscribeResult));
 }

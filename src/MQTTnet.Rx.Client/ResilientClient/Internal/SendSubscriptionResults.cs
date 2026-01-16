@@ -4,33 +4,19 @@
 namespace MQTTnet.Rx.Client.ResilientClient.Internal;
 
 /// <summary>
-/// SendSubscribeUnsubscribeResult.
+/// Represents the results of subscribe and unsubscribe operations for an MQTT client.
 /// </summary>
-/// <remarks>
-/// Initializes a new instance of the <see cref="SendSubscriptionResults"/> class.
-/// </remarks>
-/// <param name="subscribeResults">The subscribe results.</param>
-/// <param name="unsubscribeResults">The unsubscribe results.</param>
-/// <exception cref="ArgumentNullException">
-/// subscribeResults
-/// or
-/// unsubscribeResults.
-/// </exception>
+/// <param name="subscribeResults">A list of results for each subscribe operation performed. Cannot be null.</param>
+/// <param name="unsubscribeResults">A list of results for each unsubscribe operation performed. Cannot be null.</param>
 internal sealed class SendSubscriptionResults(List<MqttClientSubscribeResult> subscribeResults, List<MqttClientUnsubscribeResult> unsubscribeResults)
 {
     /// <summary>
-    /// Gets the subscribe results.
+    /// Gets the results of each topic subscription attempt made by the client.
     /// </summary>
-    /// <value>
-    /// The subscribe results.
-    /// </value>
     public List<MqttClientSubscribeResult> SubscribeResults { get; } = subscribeResults ?? throw new ArgumentNullException(nameof(subscribeResults));
 
     /// <summary>
-    /// Gets the unsubscribe results.
+    /// Gets the results of each unsubscribe operation performed by the client.
     /// </summary>
-    /// <value>
-    /// The unsubscribe results.
-    /// </value>
     public List<MqttClientUnsubscribeResult> UnsubscribeResults { get; } = unsubscribeResults ?? throw new ArgumentNullException(nameof(unsubscribeResults));
 }

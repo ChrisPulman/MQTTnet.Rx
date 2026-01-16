@@ -4,24 +4,19 @@
 namespace MQTTnet.Rx.Client;
 
 /// <summary>
-/// Intercepting Publish Message EventArgs.
+/// Provides data for an event that occurs when an MQTT publish message is intercepted before it is processed or
+/// forwarded.
 /// </summary>
-/// <seealso cref="EventArgs" />
+/// <param name="applicationMessage">The application message associated with the intercepted publish event. Cannot be null.</param>
 public sealed class InterceptingPublishMessageEventArgs(ResilientMqttApplicationMessage applicationMessage) : EventArgs
 {
     /// <summary>
-    /// Gets the application message.
+    /// Gets the MQTT application message associated with this instance.
     /// </summary>
-    /// <value>
-    /// The application message.
-    /// </value>
     public ResilientMqttApplicationMessage ApplicationMessage { get; } = applicationMessage ?? throw new ArgumentNullException(nameof(applicationMessage));
 
     /// <summary>
-    /// Gets or sets a value indicating whether [accept publish].
+    /// Gets or sets a value indicating whether publish requests are accepted.
     /// </summary>
-    /// <value>
-    ///   <c>true</c> if [accept publish]; otherwise, <c>false</c>.
-    /// </value>
     public bool AcceptPublish { get; set; } = true;
 }

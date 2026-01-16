@@ -4,27 +4,20 @@
 namespace MQTTnet.Rx.Client;
 
 /// <summary>
-/// Application Message Processed EventArgs.
+/// Provides data for the event that occurs after an application message has been processed, including the message and
+/// any exception that was thrown during processing.
 /// </summary>
-/// <seealso cref="EventArgs" />
-/// <remarks>
-/// Initializes a new instance of the <see cref="ApplicationMessageProcessedEventArgs"/> class.
-/// </remarks>
-/// <param name="applicationMessage">The application message.</param>
-/// <param name="exception">The exception.</param>
-/// <exception cref="ArgumentNullException">applicationMessage.</exception>
+/// <param name="applicationMessage">The application message that was processed. Cannot be null.</param>
+/// <param name="exception">The exception that occurred during message processing, or null if the message was processed successfully.</param>
 public sealed class ApplicationMessageProcessedEventArgs(ResilientMqttApplicationMessage applicationMessage, Exception? exception) : EventArgs
 {
     /// <summary>
-    /// Gets the application message.
+    /// Gets the MQTT application message associated with this instance.
     /// </summary>
-    /// <value>
-    /// The application message.
-    /// </value>
     public ResilientMqttApplicationMessage ApplicationMessage { get; } = applicationMessage ?? throw new ArgumentNullException(nameof(applicationMessage));
 
     /// <summary>
-    /// Gets then this is _null_ the message was processed successfully without any error.
+    /// Gets the exception that caused the current operation to fail, if any.
     /// </summary>
     public Exception? Exception { get; } = exception;
 }

@@ -4,24 +4,27 @@
 namespace MQTTnet.Rx.Client;
 
 /// <summary>
-/// ReconnectionResult.
+/// Specifies the outcome of a reconnection attempt to a remote service or resource.
 /// </summary>
+/// <remarks>Use this enumeration to determine the result of a reconnection operation, such as whether the
+/// connection was maintained, successfully re-established, recovered after a failure, or could not be restored. The
+/// specific meaning of each value may depend on the context in which the reconnection logic is used.</remarks>
 public enum ReconnectionResult
 {
     /// <summary>
-    /// The still connected.
+    /// Gets a value indicating whether the connection to the remote server is still active.
     /// </summary>
     StillConnected,
     /// <summary>
-    /// The reconnected.
+    /// Gets a value indicating whether the connection has been successfully re-established after a disconnection.
     /// </summary>
     Reconnected,
     /// <summary>
-    /// The recovered.
+    /// Indicates that the operation or entity has completed a recovery process.
     /// </summary>
     Recovered,
     /// <summary>
-    /// The not connected.
+    /// Indicates that the connection has not been established.
     /// </summary>
     NotConnected
 }

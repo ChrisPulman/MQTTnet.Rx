@@ -9,8 +9,14 @@ using Newtonsoft.Json;
 namespace MQTTnet.Rx.Client;
 
 /// <summary>
-/// Mqttd Subscribe Extensions.
+/// Provides extension methods for subscribing to MQTT topics, processing message streams, and deserializing payloads in
+/// observable sequences for both raw and resilient MQTT clients.
 /// </summary>
+/// <remarks>These extensions simplify working with MQTT message streams by enabling topic-based subscriptions,
+/// JSON deserialization, and type conversions using reactive programming patterns. Methods are designed to avoid
+/// duplicate broker subscriptions by reference counting per client and topic. Thread safety is maintained for shared
+/// resources. All methods return observables that can be composed with other reactive operators. Exceptions may be
+/// thrown for invalid arguments or deserialization failures; see individual method documentation for details.</remarks>
 public static class MqttdSubscribeExtensions
 {
     private static readonly object _sync = new();
@@ -19,20 +25,30 @@ public static class MqttdSubscribeExtensions
     private static readonly Dictionary<IMqttClient, Dictionary<string, SubscriptionHub>> _rawTopicHubs = [];
 
     /// <summary>
-    /// Converts to dictionary.
+    /// Converts an observable sequence of MQTT application message received events into an observable sequence of
+    /// dictionaries representing the deserialized JSON payloads.
     /// </summary>
-    /// <param name="message">The incoming messages whose payload contains JSON formatted key/value pairs.</param>
-    /// <returns>A dictionary of key/value pairs for each incoming message or null if deserialization fails.</returns>
+    /// <remarks>If a message payload is not valid JSON or is empty, the resulting dictionary will be <see
+    /// langword="null"/>. The returned observable retries on errors encountered during message processing.</remarks>
+    /// <param name="message">The observable sequence of <see cref="MqttApplicationMessageReceivedEventArgs"/> instances to convert. Each
+    /// event's payload is expected to be a JSON-encoded object.</param>
+    /// <returns>An observable sequence of dictionaries containing the deserialized JSON payloads from each received MQTT
+    /// application message. The dictionary is <see langword="null"/> if the payload is empty or cannot be deserialized.</returns>
     public static IObservable<Dictionary<string, object>?> ToDictionary(this IObservable<MqttApplicationMessageReceivedEventArgs> message) =>
         Observable.Create<Dictionary<string, object>?>(observer => message.Retry().Subscribe(m => observer.OnNext(JsonConvert.DeserializeObject<Dictionary<string, object>?>(m.ApplicationMessage.ConvertPayloadToString())))).Retry();
 
     /// <summary>
-    /// Deserializes JSON payload to the specified type.
+    /// Deserializes the payload of each received MQTT application message to an object of type T using JSON
+    /// deserialization.
     /// </summary>
-    /// <typeparam name="T">Type to deserialize to.</typeparam>
-    /// <param name="message">The incoming messages whose payload contains JSON.</param>
-    /// <param name="settings">Optional Json.NET serializer settings.</param>
-    /// <returns>An observable sequence of deserialized values.</returns>
+    /// <remarks>The payload of each MQTT message is expected to be a valid JSON string representing an object
+    /// of type T. If the payload cannot be deserialized to type T, the resulting value will be null. This method uses
+    /// Newtonsoft.Json for deserialization.</remarks>
+    /// <typeparam name="T">The type to which the message payload is deserialized.</typeparam>
+    /// <param name="message">An observable sequence of MQTT application message received event arguments whose payloads will be deserialized.</param>
+    /// <param name="settings">Optional JSON serializer settings to use during deserialization. If null, default settings are applied.</param>
+    /// <returns>An observable sequence of objects of type T, where each item represents the deserialized payload of a received
+    /// message. If deserialization fails, the result is null.</returns>
     public static IObservable<T?> ToObject<T>(this IObservable<MqttApplicationMessageReceivedEventArgs> message, JsonSerializerSettings? settings = null) =>
         message.Select(m =>
         {
@@ -41,11 +57,16 @@ public static class MqttdSubscribeExtensions
         });
 
     /// <summary>
-    /// Observes the specified key in a stream of dictionaries and emits its values.
+    /// Returns an observable sequence that emits the values associated with the specified key from the source
+    /// dictionary observable.
     /// </summary>
-    /// <param name="dictionary">The dictionary stream.</param>
-    /// <param name="key">The key to observe.</param>
-    /// <returns>An observable sequence of values for the key.</returns>
+    /// <remarks>The returned observable replays the most recent value for the specified key to new
+    /// subscribers. If the key is not present in a dictionary, no value is emitted for that dictionary. The observable
+    /// will automatically retry on error.</remarks>
+    /// <param name="dictionary">The source observable sequence of dictionaries to monitor for changes.</param>
+    /// <param name="key">The key whose associated values are to be observed in each dictionary. Cannot be null.</param>
+    /// <returns>An observable sequence that emits the value associated with the specified key each time it appears in the source
+    /// sequence. Emits <see langword="null"/> if the value is null.</returns>
     public static IObservable<object?> Observe(this IObservable<Dictionary<string, object>> dictionary, string key)
     {
         _dictJsonValues.TryGetValue(key, out var observable);
@@ -62,85 +83,126 @@ public static class MqttdSubscribeExtensions
     }
 
     /// <summary>
-    /// Maps an object sequence to bool.
+    /// Projects each element of an observable sequence to its Boolean representation.
     /// </summary>
-    /// <param name="observable">The source observable.</param>
-    /// <returns>Sequence of bool.</returns>
+    /// <remarks>The conversion uses <see cref="Convert.ToBoolean(object?)"/>. If an element in the source
+    /// sequence cannot be converted to a Boolean, an exception will be propagated to observers.</remarks>
+    /// <param name="observable">The source sequence whose elements will be converted to Boolean values.</param>
+    /// <returns>An observable sequence of Boolean values, where each value is the result of converting the corresponding element
+    /// in the source sequence to a Boolean.</returns>
     public static IObservable<bool> ToBool(this IObservable<object?> observable) => observable.Select(Convert.ToBoolean);
 
     /// <summary>
-    /// Maps an object sequence to byte.
+    /// Projects each element of an observable sequence to a byte value by converting each element using <see
+    /// cref="Convert.ToByte(object?)"/>.
     /// </summary>
-    /// <param name="observable">The source observable.</param>
-    /// <returns>Sequence of byte.</returns>
+    /// <remarks>If an element in the source sequence cannot be converted to a byte, the resulting observable
+    /// will propagate the exception to its observers. This method is typically used when the source sequence contains
+    /// numeric or convertible values represented as objects.</remarks>
+    /// <param name="observable">The source sequence whose elements will be converted to byte values. Each element must be convertible to <see
+    /// langword="byte"/>; otherwise, an exception is thrown.</param>
+    /// <returns>An observable sequence of byte values resulting from converting each element of the source sequence.</returns>
     public static IObservable<byte> ToByte(this IObservable<object?> observable) => observable.Select(Convert.ToByte);
 
     /// <summary>
-    /// Maps an object sequence to Int16.
+    /// Projects each element of an observable sequence to a 16-bit signed integer by converting each value to an Int16.
     /// </summary>
-    /// <param name="observable">The source observable.</param>
-    /// <returns>Sequence of Int16.</returns>
+    /// <remarks>If an element in the source sequence cannot be converted to Int16, an exception will be
+    /// propagated to observers. This method uses Convert.ToInt16 for the conversion, which supports a variety of input
+    /// types including numeric types and strings that represent numbers.</remarks>
+    /// <param name="observable">The source sequence whose elements will be converted to 16-bit signed integers. Each element must be convertible
+    /// to Int16.</param>
+    /// <returns>An observable sequence of 16-bit signed integers resulting from converting each element of the source sequence.</returns>
     public static IObservable<short> ToInt16(this IObservable<object?> observable) => observable.Select(Convert.ToInt16);
 
     /// <summary>
-    /// Maps an object sequence to Int32.
+    /// Projects each element of an observable sequence to its 32-bit signed integer representation.
     /// </summary>
-    /// <param name="observable">The source observable.</param>
-    /// <returns>Sequence of Int32.</returns>
+    /// <remarks>If an element in the source sequence is null or cannot be converted to an integer, the
+    /// resulting observable will propagate the corresponding exception to its observers.</remarks>
+    /// <param name="observable">The source sequence whose elements will be converted to 32-bit signed integers. Each element must be convertible
+    /// to an integer using Convert.ToInt32; otherwise, an exception is thrown.</param>
+    /// <returns>An observable sequence of 32-bit signed integers resulting from converting each element of the source sequence.</returns>
     public static IObservable<int> ToInt32(this IObservable<object?> observable) => observable.Select(Convert.ToInt32);
 
     /// <summary>
-    /// Maps an object sequence to Int64.
+    /// Projects each element of an observable sequence to a 64-bit signed integer by converting each value to an Int64.
     /// </summary>
-    /// <param name="observable">The source observable.</param>
-    /// <returns>Sequence of Int64.</returns>
+    /// <remarks>If an element in the source sequence cannot be converted to a 64-bit signed integer, the
+    /// resulting observable will signal an error. The conversion uses System.Convert.ToInt64, which supports standard
+    /// conversions for numeric and string types.</remarks>
+    /// <param name="observable">The source sequence whose elements will be converted to 64-bit signed integers. Cannot be null.</param>
+    /// <returns>An observable sequence of 64-bit signed integers resulting from converting each element of the source sequence.</returns>
     public static IObservable<long> ToInt64(this IObservable<object?> observable) => observable.Select(Convert.ToInt64);
 
     /// <summary>
-    /// Maps an object sequence to Single.
+    /// Projects each element of an observable sequence to a single-precision floating-point number.
     /// </summary>
-    /// <param name="observable">The source observable.</param>
-    /// <returns>Sequence of Single.</returns>
+    /// <remarks>If an element in the source sequence cannot be converted to <see cref="float"/>, an
+    /// exception will be propagated to observers. This method uses <see cref="System.Convert.ToSingle(object?)"/> for
+    /// conversion.</remarks>
+    /// <param name="observable">The source sequence whose elements will be converted to <see cref="float"/> values. Each element must be
+    /// convertible to <see cref="float"/>.</param>
+    /// <returns>An observable sequence of single-precision floating-point numbers obtained by converting each element of the
+    /// source sequence.</returns>
     public static IObservable<float> ToSingle(this IObservable<object?> observable) => observable.Select(Convert.ToSingle);
 
     /// <summary>
-    /// Maps an object sequence to Double.
+    /// Projects each element of an observable sequence to a double-precision floating-point number.
     /// </summary>
-    /// <param name="observable">The source observable.</param>
-    /// <returns>Sequence of Double.</returns>
+    /// <remarks>If an element in the source sequence cannot be converted to a double, an exception is
+    /// propagated to observers. This method uses <see cref="Convert.ToDouble(object?)"/> for conversion, which may
+    /// throw exceptions for invalid or null values.</remarks>
+    /// <param name="observable">The source sequence whose elements are to be converted to double values. Each element must be convertible to a
+    /// double using <see cref="Convert.ToDouble(object?)"/>.</param>
+    /// <returns>An observable sequence of double values resulting from converting each element of the source sequence.</returns>
     public static IObservable<double> ToDouble(this IObservable<object?> observable) => observable.Select(Convert.ToDouble);
 
     /// <summary>
-    /// Maps an object sequence to string.
+    /// Projects each element of an observable sequence to its string representation.
     /// </summary>
-    /// <param name="observable">The source observable.</param>
-    /// <returns>Sequence of string.</returns>
+    /// <param name="observable">The source sequence of objects to convert to strings. Cannot be null.</param>
+    /// <returns>An observable sequence of strings, where each element is the string representation of the corresponding element
+    /// in the source sequence. Returns null for elements that are null.</returns>
     public static IObservable<string?> ToString(this IObservable<object?> observable) => observable.Select(Convert.ToString);
 
     /// <summary>
-    /// Subscribe to multiple topics and merge messages for the raw client.
+    /// Subscribes each MQTT client in the observable sequence to the specified topics and returns a merged observable
+    /// of received application messages.
     /// </summary>
-    /// <param name="client">The raw client observable.</param>
-    /// <param name="topics">Topic filters.</param>
-    /// <returns>Merged stream of received messages matching the given topics.</returns>
+    /// <param name="client">An observable sequence of MQTT clients to subscribe to the specified topics.</param>
+    /// <param name="topics">An array of topic filters to which each client will subscribe. Each topic must be a valid MQTT topic string.</param>
+    /// <returns>An observable sequence that emits application message received events from all subscribed topics across all
+    /// clients.</returns>
     public static IObservable<MqttApplicationMessageReceivedEventArgs> SubscribeToTopics(this IObservable<IMqttClient> client, params string[] topics) =>
         topics.Select(t => client.SubscribeToTopic(t)).Merge();
 
     /// <summary>
-    /// Subscribe to multiple topics and merge messages for the resilient client.
+    /// Subscribes the MQTT client to multiple topics and returns an observable sequence of received application
+    /// messages.
     /// </summary>
-    /// <param name="client">The resilient client observable.</param>
-    /// <param name="topics">Topic filters.</param>
-    /// <returns>Merged stream of received messages matching the given topics.</returns>
+    /// <remarks>The returned observable merges message streams from all specified topics. Subscribing to the
+    /// same topic multiple times may result in duplicate messages, depending on the MQTT broker's behavior.</remarks>
+    /// <param name="client">The observable sequence of resilient MQTT clients to use for subscribing to topics.</param>
+    /// <param name="topics">An array of topic filters to subscribe to. Each topic specifies a filter for messages to receive.</param>
+    /// <returns>An observable sequence that emits an event argument object each time a message is received on any of the
+    /// subscribed topics.</returns>
     public static IObservable<MqttApplicationMessageReceivedEventArgs> SubscribeToTopics(this IObservable<IResilientMqttClient> client, params string[] topics) =>
         topics.Select(t => client.SubscribeToTopic(t)).Merge();
 
     /// <summary>
-    /// Subscribes to a topic (raw client). Ref-counted per client/topic to avoid duplicate broker subscriptions.
+    /// Subscribes to the specified MQTT topic for each client in the observable sequence and returns an observable
+    /// sequence of received application messages matching that topic.
     /// </summary>
-    /// <param name="client">The raw client observable.</param>
-    /// <param name="topic">Topic filter (supports + and # wildcards).</param>
-    /// <returns>Message stream matching the topic.</returns>
+    /// <remarks>The subscription is reference-counted: the MQTT broker subscription for a given client and
+    /// topic is established when the first observer subscribes, and is removed when the last observer unsubscribes.
+    /// Multiple observers to the same topic and client share a single broker subscription and message stream. The
+    /// returned observable is hot and will replay messages to all active subscribers. If the client disconnects or an
+    /// error occurs, the observable will automatically retry the subscription.</remarks>
+    /// <param name="client">An observable sequence of connected MQTT clients to subscribe to the topic.</param>
+    /// <param name="topic">The MQTT topic to subscribe to. Must be a valid topic string supported by the MQTT broker.</param>
+    /// <returns>An observable sequence that emits an event each time an application message is received on the specified topic
+    /// by any of the subscribed clients.</returns>
     public static IObservable<MqttApplicationMessageReceivedEventArgs> SubscribeToTopic(this IObservable<IMqttClient> client, string topic) =>
         Observable.Create<MqttApplicationMessageReceivedEventArgs>(observer =>
         {
@@ -236,11 +298,18 @@ public static class MqttdSubscribeExtensions
         }).Retry().Publish().RefCount();
 
     /// <summary>
-    /// Discovers topics seen by the client, with an optional expiry for inactive topics.
+    /// Discovers active MQTT topics observed by the client, emitting updates as topics are seen or expire.
     /// </summary>
-    /// <param name="client">The raw client observable.</param>
-    /// <param name="topicExpiry">Topic expiry; topics are removed if they do not publish a value within this time.</param>
-    /// <returns>A stream of topic lists with last-seen timestamps.</returns>
+    /// <remarks>The returned observable emits updates whenever the set of active topics changes, either due
+    /// to new topics being observed or existing topics expiring. Topics are considered active if they have been seen
+    /// within the specified expiry duration. The observable is shared among subscribers and automatically manages
+    /// subscriptions to the underlying client sequence.</remarks>
+    /// <param name="client">An observable sequence of connected MQTT clients to monitor for topic activity.</param>
+    /// <param name="topicExpiry">The duration after which a topic is considered expired if not seen again. If null, defaults to one hour. Must be
+    /// at least one second.</param>
+    /// <returns>An observable sequence that emits the current set of active topics, each paired with the time it was last seen.
+    /// The sequence is updated whenever topics are added or expire.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if topicExpiry is specified and is less than one second.</exception>
     public static IObservable<IEnumerable<(string Topic, DateTime LastSeen)>> DiscoverTopics(this IObservable<IMqttClient> client, TimeSpan? topicExpiry = null) =>
         Observable.Create<IEnumerable<(string Topic, DateTime LastSeen)>>(observer =>
         {
@@ -290,11 +359,18 @@ public static class MqttdSubscribeExtensions
         }).Retry().Publish().RefCount();
 
     /// <summary>
-    /// Discovers topics seen by the resilient client, with an optional expiry for inactive topics.
+    /// Discovers active MQTT topics observed by the client, emitting updates as topics are seen or expire.
     /// </summary>
-    /// <param name="client">The resilient client observable.</param>
-    /// <param name="topicExpiry">Topic expiry; topics are removed if they do not publish a value within this time.</param>
-    /// <returns>A stream of topic lists with last-seen timestamps.</returns>
+    /// <remarks>The returned observable emits a new collection whenever the set of active topics changes,
+    /// either due to new topics being observed or existing topics expiring. Topics are considered active if they have
+    /// been seen within the specified expiry duration. The method subscribes to all topics using the wildcard
+    /// '#'.</remarks>
+    /// <param name="client">The observable sequence of resilient MQTT clients to monitor for topic activity.</param>
+    /// <param name="topicExpiry">The duration after which a topic is considered expired if not seen again. If null, defaults to one hour. Must be
+    /// at least one second.</param>
+    /// <returns>An observable sequence that emits collections of topic names and their last seen timestamps. Each collection
+    /// represents the current set of active topics, updated as topics are discovered or expire.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown if topicExpiry is specified and is less than one second.</exception>
     public static IObservable<IEnumerable<(string Topic, DateTime LastSeen)>> DiscoverTopics(this IObservable<IResilientMqttClient> client, TimeSpan? topicExpiry = null) =>
         Observable.Create<IEnumerable<(string Topic, DateTime LastSeen)>>(observer =>
         {
@@ -344,11 +420,18 @@ public static class MqttdSubscribeExtensions
         }).Retry().Publish().RefCount();
 
     /// <summary>
-    /// Subscribes to a topic (resilient client). Ref-counted per client/topic to avoid duplicate broker subscriptions.
+    /// Subscribes to the specified MQTT topic for each resilient MQTT client in the observable sequence and returns an
+    /// observable sequence of received application messages.
     /// </summary>
-    /// <param name="client">The resilient client observable.</param>
-    /// <param name="topic">Topic filter (supports + and # wildcards).</param>
-    /// <returns>Message stream matching the topic.</returns>
+    /// <remarks>The subscription is reference-counted: the MQTT broker subscription is established when the
+    /// first observer subscribes and is removed when the last observer unsubscribes. If multiple observers subscribe to
+    /// the same topic on the same client, only a single broker subscription is maintained. The returned observable is
+    /// resilient and will automatically resubscribe in case of client reconnections.</remarks>
+    /// <param name="client">An observable sequence of resilient MQTT clients to subscribe with. Each client in the sequence will be used to
+    /// manage the topic subscription.</param>
+    /// <param name="topic">The MQTT topic to subscribe to. Must be a non-null, non-empty string. Supports MQTT topic wildcards.</param>
+    /// <returns>An observable sequence that emits an event each time an application message is received on the specified topic
+    /// by any of the resilient MQTT clients. The sequence completes when the subscription is disposed.</returns>
     public static IObservable<MqttApplicationMessageReceivedEventArgs> SubscribeToTopic(this IObservable<IResilientMqttClient> client, string topic) =>
         Observable.Create<MqttApplicationMessageReceivedEventArgs>(observer =>
         {
@@ -441,11 +524,15 @@ public static class MqttdSubscribeExtensions
         }).Retry().Publish().RefCount();
 
     /// <summary>
-    /// Filters allowing only the topics which match the specified topic.
+    /// Filters the observable sequence to include only messages whose topic matches the specified topic filter,
+    /// supporting MQTT wildcards.
     /// </summary>
-    /// <param name="observable">The observable source of messages.</param>
-    /// <param name="topic">The topic filter to match.</param>
-    /// <returns>A message stream where the topic matches the filter.</returns>
+    /// <remarks>This method uses a cache to optimize repeated topic matching and automatically retries the
+    /// sequence if an error occurs. The topic filter supports standard MQTT wildcard syntax.</remarks>
+    /// <param name="observable">The source sequence of MQTT application message received event arguments to filter.</param>
+    /// <param name="topic">The MQTT topic filter to match against each message's topic. May include MQTT wildcards such as '+' or '#'.</param>
+    /// <returns>An observable sequence that emits only those messages from the source whose topic matches the specified topic
+    /// filter.</returns>
     public static IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicIsMatch(this IObservable<MqttApplicationMessageReceivedEventArgs> observable, string topic)
     {
         // This is a simple cache to avoid re-evaluating the same topic multiple times.
@@ -466,9 +553,25 @@ public static class MqttdSubscribeExtensions
         }).Subscribe(observer)).Retry();
     }
 
+    /// <summary>
+    /// Determines whether the topic of the received MQTT application message matches the specified topic filter,
+    /// supporting wildcards.
+    /// </summary>
+    /// <remarks>This method uses MQTT topic filter comparison rules, including support for single-level ('+')
+    /// and multi-level ('#') wildcards, to determine if the message's topic matches the provided filter.</remarks>
+    /// <param name="message">The event arguments containing the received MQTT application message to evaluate. Cannot be null.</param>
+    /// <param name="topic">The topic filter to compare against the message's topic. May include MQTT wildcards ('+' or '#'). Cannot be
+    /// null.</param>
+    /// <returns>true if the message's topic matches the specified topic filter; otherwise, false.</returns>
     private static bool DetectCorrectTopicWithOrWithoutWildcard(this MqttApplicationMessageReceivedEventArgs message, string topic) =>
         MqttTopicFilterComparer.Compare(message.ApplicationMessage.Topic, topic) == MqttTopicFilterCompareResult.IsMatch;
 
+    /// <summary>
+    /// Manages a subscription's state and message stream for MQTT application message events.
+    /// </summary>
+    /// <remarks>This class encapsulates the message subject and related resources for a single subscription.
+    /// It is intended for internal use to coordinate message delivery and resource cleanup. Instances of this class are
+    /// not thread-safe.</remarks>
     private sealed class SubscriptionHub : IDisposable
     {
         public int Count { get; set; }
