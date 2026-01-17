@@ -42,7 +42,7 @@ partial class Build : NukeBuild
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     private readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
-    public static int Main() => Execute<Build>(x => x.Compile);
+    public static int Main() => Execute<Build>(x => x.Test);
 
     private AbsolutePath PackagesDirectory => RootDirectory / "output";
 
@@ -59,7 +59,7 @@ partial class Build : NukeBuild
             }
 
             PackagesDirectory.CreateOrCleanDirectory();
-            await this.InstallDotNetSdk("6.x.x", "8.x.x");
+            await this.InstallDotNetSdk("8.x.x", "9.x.x", "10.x.x");
         });
 
     private Target Restore => _ => _
@@ -72,6 +72,22 @@ partial class Build : NukeBuild
                 .SetProjectFile(Solution)
                 .SetConfiguration(Configuration)
                 .EnableNoRestore()));
+
+    private Target Test => _ => _
+        .DependsOn(Compile)
+        .Executes(() =>
+        {
+            var testProjects = Solution.GetTestProjects();
+            foreach (var project in testProjects!)
+            {
+                Log.Information("Testing {Project}", project.Name);
+            }
+            DotNetTest(s => s
+                .SetConfiguration(Configuration)
+                .EnableNoRestore()
+                .EnableNoBuild()
+                .CombineWith(testProjects, (testSettings, project) => testSettings.SetProjectFile(project)));
+        });
 
     private Target Pack => _ => _
     .After(Compile)
