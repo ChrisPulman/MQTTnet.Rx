@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.7.34003.232
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11408.102 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MQTTnet.Rx.ABPlc", "MQTTnet.Rx.ABPlc\MQTTnet.Rx.ABPlc.csproj", "{5DB1DAEB-5A4E-436C-8D23-AC185DD67276}"
 EndProject
@@ -33,6 +33,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestSingleClient", "TestSingleClient\TestSingleClient.csproj", "{1340E0BA-6642-4633-850E-E62F0C137DE8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MQTTnet.Rx.Server", "MQTTnet.Rx.Server\MQTTnet.Rx.Server.csproj", "{3E4A2891-40D3-4D4B-A67B-DD949B21C037}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MQTTnet.Rx.Client.Tests", "MQTTnet.Rx.Client.Tests\MQTTnet.Rx.Client.Tests.csproj", "{663CE5F5-CD26-ADDC-23A7-B9A942408A9D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -78,6 +80,10 @@ Global
 		{3E4A2891-40D3-4D4B-A67B-DD949B21C037}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E4A2891-40D3-4D4B-A67B-DD949B21C037}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E4A2891-40D3-4D4B-A67B-DD949B21C037}.Release|Any CPU.Build.0 = Release|Any CPU
+		{663CE5F5-CD26-ADDC-23A7-B9A942408A9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{663CE5F5-CD26-ADDC-23A7-B9A942408A9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{663CE5F5-CD26-ADDC-23A7-B9A942408A9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{663CE5F5-CD26-ADDC-23A7-B9A942408A9D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
