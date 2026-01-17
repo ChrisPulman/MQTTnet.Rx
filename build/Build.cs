@@ -10,6 +10,7 @@ using Serilog;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using Nuke.Common.Tools.PowerShell;
 using CP.BuildTools;
+using System.Linq;
 
 ////[GitHubActions(
 ////    "BuildOnly",
@@ -74,20 +75,30 @@ partial class Build : NukeBuild
                 .EnableNoRestore()));
 
     private Target Test => _ => _
-        .DependsOn(Compile)
-        .Executes(() =>
-        {
-            var testProjects = Solution.GetTestProjects();
-            foreach (var project in testProjects!)
-            {
-                Log.Information("Testing {Project}", project.Name);
-            }
-            DotNetTest(s => s
-                .SetConfiguration(Configuration)
-                .EnableNoRestore()
-                .EnableNoBuild()
-                .CombineWith(testProjects, (testSettings, project) => testSettings.SetProjectFile(project)));
-        });
+       .DependsOn(Compile)
+       .Executes(() =>
+       {
+           var testProjects = Solution.AllProjects.Where(x => x.GetProperty("IsTestProject") == "true").ToList();
+           foreach (var project in testProjects!)
+           {
+               Log.Information("Testing {Project}", project.Name);
+
+               // Run the test executable directly for each target framework
+               // Microsoft.Testing.Platform on .NET 10 SDK requires running the test executable directly
+               var projectDirectory = project.Directory;
+               var targetFrameworks = project.GetTargetFrameworks();
+
+               foreach (var tfm in targetFrameworks!)
+               {
+                   var testExePath = projectDirectory / "bin" / Configuration / tfm / $"{project.Name}.dll";
+                   if (testExePath.FileExists())
+                   {
+                       Log.Information("Running tests for {Project} ({Framework})", project.Name, tfm);
+                       DotNet($"exec {testExePath}");
+                   }
+               }
+           }
+       });
 
     private Target Pack => _ => _
     .After(Compile)
