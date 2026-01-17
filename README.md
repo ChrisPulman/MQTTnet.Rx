@@ -40,11 +40,13 @@
 # MQTTnet.Rx
 Reactive extensions and helpers for MQTTnet (v5) that make it simple to build event-driven MQTT clients and servers using IObservable streams.
 
-- Targets .NET 8 and .NET 9
+- Targets .NET 8, .NET 9, and .NET 10
 - Based on MQTTnet 5.x and System.Reactive
 - Client and Server wrappers with rich observable APIs
 - Auto-reconnect Resilient client (replacement for ManagedClient)
-- Topic discovery and JSON helpers
+- Topic discovery, filtering, and JSON helpers
+- Low-allocation memory-efficient extensions for high-throughput scenarios
+- Last Will and Testament (LWT) configuration helpers
 - Optional integration packages (Modbus, SerialPort, S7 PLC, Allen-Bradley PLC, TwinCAT)
 
 Note on ManagedClient: Support for ManagedClient is removed because MQTTnet v5 no longer includes it. Use the Resilient client in MQTTnet.Rx.Client instead.
@@ -135,7 +137,117 @@ var events = client.Subscribe(c =>
     var d1 = c.Connected.Subscribe(_ => Console.WriteLine("Connected"));
     var d2 = c.Disconnected.Subscribe(_ => Console.WriteLine("Disconnected"));
     var d3 = c.ApplicationMessageReceived.Subscribe(m => Console.WriteLine($"RX: {m.ApplicationMessage.Topic}"));
+    var d4 = c.ConnectingFailed.Subscribe(e => Console.WriteLine($"Connection failed: {e.Exception?.Message}"));
+    var d5 = c.ConnectionStateChanged.Subscribe(_ => Console.WriteLine($"State changed: Connected={c.IsConnected}"));
 });
+```
+
+---
+
+## Reactive Client Operations
+
+The library provides reactive wrappers for common MQTT client operations:
+
+### Ping and Keep-Alive
+```csharp
+// Send a single ping
+var pingSub = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .Ping()
+    .Subscribe(_ => Console.WriteLine("Pong received"));
+
+// Periodic pings to maintain connection
+var keepAliveSub = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .PingPeriodically(TimeSpan.FromSeconds(30))
+    .Subscribe(_ => Console.WriteLine("Keep-alive ping"));
+```
+
+### Subscribe and Unsubscribe Operations
+```csharp
+using MQTTnet.Protocol;
+
+var client = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883));
+
+// Subscribe to multiple topics with QoS
+var subResult = client
+    .Subscribe(new[] { "topic1", "topic2" }, MqttQualityOfServiceLevel.AtLeastOnce)
+    .Subscribe(result => Console.WriteLine($"Subscribed: {result.Items.Count} topics"));
+
+// Subscribe with custom topic filter
+var customSub = client
+    .Subscribe(f => f.WithTopic("sensors/#").WithQualityOfServiceLevel(MqttQualityOfServiceLevel.ExactlyOnce))
+    .Subscribe(result => Console.WriteLine("Custom subscription done"));
+
+// Unsubscribe from topics
+var unsubResult = client
+    .Unsubscribe("topic1", "topic2")
+    .Subscribe(result => Console.WriteLine($"Unsubscribed: {result.Items.Count} topics"));
+```
+
+### Connection Management
+```csharp
+var client = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883));
+
+// Monitor connection status
+var statusSub = client
+    .ConnectionStatus()
+    .Subscribe(isConnected => Console.WriteLine($"Connected: {isConnected}"));
+
+// Wait for connection with timeout
+var waitSub = client
+    .WaitForConnection(TimeSpan.FromSeconds(10))
+    .Subscribe(c => Console.WriteLine("Client is now connected"));
+
+// Disconnect gracefully
+var disconnectSub = client
+    .Disconnect(MqttClientDisconnectOptionsReason.NormalDisconnection)
+    .Subscribe(_ => Console.WriteLine("Disconnected"));
+
+// Reconnect using previous options
+var reconnectSub = client
+    .Reconnect()
+    .Subscribe(_ => Console.WriteLine("Reconnected"));
+```
+
+### Publish Operations
+```csharp
+using MQTTnet.Protocol;
+
+var client = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883));
+
+// Simple publish with string payload
+var pub1 = client
+    .Publish("topic/test", "Hello World", MqttQualityOfServiceLevel.AtLeastOnce, retain: false)
+    .Subscribe(result => Console.WriteLine($"Published: {result.ReasonCode}"));
+
+// Publish with byte array payload
+var pub2 = client
+    .Publish("topic/binary", new byte[] { 0x01, 0x02, 0x03 })
+    .Subscribe(result => Console.WriteLine($"Published binary: {result.ReasonCode}"));
+
+// Publish with custom message builder
+var pub3 = client
+    .Publish(builder => builder
+        .WithTopic("topic/custom")
+        .WithPayload("Custom message")
+        .WithUserProperty("app", "demo")
+        .WithContentType("text/plain"))
+    .Subscribe(result => Console.WriteLine($"Published custom: {result.ReasonCode}"));
+
+// Publish multiple messages from an observable stream
+var messageStream = Observable.Interval(TimeSpan.FromSeconds(1))
+    .Select(i => Create.MqttFactory.CreateApplicationMessageBuilder()
+        .WithTopic($"topic/seq/{i}")
+        .WithPayload($"Message {i}")
+        .Build());
+
+var pub4 = client
+    .PublishMany(messageStream)
+    .Subscribe(result => Console.WriteLine($"Published from stream: {result.ReasonCode}"));
 ```
 
 ---
@@ -168,19 +280,240 @@ var temperature = Create.MqttClient()
     .Subscribe(t => Console.WriteLine($"Temp: {t:0.0}"));
 ```
 
-Discover topics seen by the client (with optional expiry window):
+### Type Conversion Helpers
+```csharp
+// Available conversion methods for Observe() results:
+.ToBool()    // Convert to boolean
+.ToByte()    // Convert to byte
+.ToInt16()   // Convert to short
+.ToInt32()   // Convert to int
+.ToInt64()   // Convert to long
+.ToSingle()  // Convert to float
+.ToDouble()  // Convert to double
+```
+
+### Deserialize to Typed Objects
+```csharp
+using Newtonsoft.Json;
+
+public class SensorReading
+{
+    public string SensorId { get; set; }
+    public double Temperature { get; set; }
+    public DateTime Timestamp { get; set; }
+}
+
+var readings = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("sensors/+/reading")
+    .ToObject<SensorReading>()
+    .Subscribe(reading => Console.WriteLine($"Sensor {reading?.SensorId}: {reading?.Temperature}°C"));
+
+// With custom JSON settings
+var settings = new JsonSerializerSettings { DateFormatString = "yyyy-MM-ddTHH:mm:ssZ" };
+var readingsCustom = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("sensors/+/reading")
+    .ToObject<SensorReading>(settings)
+    .Subscribe(reading => Console.WriteLine($"Custom: {reading?.Timestamp}"));
+```
+
+---
+
+## 📋 Topic Filtering Extensions
+
+Advanced topic filtering and extraction capabilities:
+
+### Match Multiple Topic Patterns
+```csharp
+// Match any of several patterns
+var multiMatch = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("#")
+    .WhereTopicMatchesAny("sensors/+/temp", "devices/+/status", "alerts/#")
+    .Subscribe(m => Console.WriteLine($"Matched: {m.ApplicationMessage.Topic}"));
+
+// Exclude specific patterns
+var excluded = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("sensors/#")
+    .WhereTopicIsNotMatch("sensors/+/debug")
+    .Subscribe(m => Console.WriteLine($"Non-debug: {m.ApplicationMessage.Topic}"));
+```
+
+### Extract Values from Topic Patterns
+```csharp
+// Extract named values from topic levels
+var extracted = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("sensors/+/readings/+")
+    .ExtractTopicValues("sensors/{sensorId}/readings/{type}")
+    .Subscribe(x =>
+    {
+        Console.WriteLine($"Sensor: {x.Values["sensorId"]}, Type: {x.Values["type"]}");
+        Console.WriteLine($"Payload: {x.Message.ApplicationMessage.ConvertPayloadToString()}");
+    });
+```
+
+### Filter by Topic Level Count
+```csharp
+// Only messages with exactly 3 topic levels
+var threeLevel = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("#")
+    .WhereTopicLevelCount(3)
+    .Subscribe(m => Console.WriteLine($"3-level topic: {m.ApplicationMessage.Topic}"));
+```
+
+### Extract Specific Topic Levels
+```csharp
+// Get the second topic level (index 1)
+var deviceIds = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("devices/+/status")
+    .SelectTopicLevel(1)
+    .Distinct()
+    .Subscribe(deviceId => Console.WriteLine($"Device ID: {deviceId}"));
+```
+
+### Group Messages by Topic
+```csharp
+// Group messages by their full topic
+var grouped = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("sensors/#")
+    .GroupByTopic()
+    .Subscribe(group =>
+    {
+        Console.WriteLine($"New group for topic: {group.Key}");
+        group.Subscribe(m => Console.WriteLine($"  Message: {m.ApplicationMessage.ConvertPayloadToString()}"));
+    });
+
+// Group by a specific topic level
+var groupedByLevel = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("sensors/+/+")
+    .GroupByTopicLevel(1) // Group by sensor ID
+    .Subscribe(group =>
+    {
+        Console.WriteLine($"Messages for sensor: {group.Key}");
+        group.Subscribe(m => Console.WriteLine($"  {m.ApplicationMessage.Topic}"));
+    });
+```
+
+---
+
+## 🚀 Memory-Efficient Extensions
+
+For high-throughput scenarios, use the low-allocation extensions in `MQTTnet.Rx.Client.MemoryEfficient`:
 
 ```csharp
-var discovery = Create.MqttClient()
+using MQTTnet.Rx.Client.MemoryEfficient;
+
+var client = Create.MqttClient()
     .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
-    .DiscoverTopics(TimeSpan.FromMinutes(5))
-    .Subscribe(topics =>
+    .SubscribeToTopic("data/#");
+
+// Zero-copy payload access with pooled buffers
+var pooledSub = client
+    .ToPooledPayload()
+    .Subscribe(data =>
     {
-        Console.WriteLine("Known topics:");
-        foreach (var (topic, lastSeen) in topics)
-        {
-            Console.WriteLine($" - {topic} (last seen: {lastSeen:O})");
-        }
+        // Process the buffer
+        Console.WriteLine($"Received {data.Length} bytes");
+        
+        // IMPORTANT: Return the buffer to the pool when done
+        data.ReturnBuffer();
+    });
+
+// Get payload length without allocation
+var lengthSub = client
+    .GetPayloadLength()
+    .Subscribe(len => Console.WriteLine($"Payload size: {len} bytes"));
+
+// Convert to byte array (when you need to keep the data)
+var arraySub = client
+    .ToPayloadArray()
+    .Subscribe(bytes => Console.WriteLine($"Array: {bytes.Length} bytes"));
+
+// Low-allocation UTF-8 string decoding
+var stringSub = client
+    .ToUtf8StringLowAlloc()
+    .Subscribe(s => Console.WriteLine($"Message: {s}"));
+```
+
+### Batching and Throttling
+```csharp
+using MQTTnet.Rx.Client.MemoryEfficient;
+
+// Batch messages by time window
+var batchedByTime = client
+    .BatchProcess(
+        TimeSpan.FromSeconds(1),
+        batch => $"Processed {batch.Count} messages")
+    .Subscribe(result => Console.WriteLine(result));
+
+// Batch messages by count
+var batchedByCount = client
+    .BatchProcess(
+        count: 100,
+        batch => batch.Sum(m => m.ApplicationMessage.Payload.Length))
+    .Subscribe(totalBytes => Console.WriteLine($"Batch total: {totalBytes} bytes"));
+
+// Throttle high-frequency messages
+var throttled = client
+    .ThrottleMessages(TimeSpan.FromMilliseconds(100))
+    .Subscribe(m => Console.WriteLine($"Throttled: {m.ApplicationMessage.Topic}"));
+
+// Sample messages at intervals
+var sampled = client
+    .SampleMessages(TimeSpan.FromSeconds(1))
+    .Subscribe(m => Console.WriteLine($"Sample: {m.ApplicationMessage.Topic}"));
+```
+
+### Back-Pressure Handling
+```csharp
+using MQTTnet.Rx.Client.MemoryEfficient;
+
+// Drop messages when subscriber is slow
+var dropSub = client
+    .WithBackPressureDrop(onDrop: m => Console.WriteLine($"Dropped: {m.ApplicationMessage.Topic}"))
+    .Subscribe(m => 
+    {
+        // Slow processing
+        Thread.Sleep(100);
+        Console.WriteLine($"Processed: {m.ApplicationMessage.Topic}");
+    });
+
+// Queue messages with overflow handling
+var queueSub = client
+    .WithBackPressureQueue(
+        maxQueueSize: 1000,
+        onOverflow: m => Console.WriteLine($"Queue overflow, dropped: {m.ApplicationMessage.Topic}"))
+    .Subscribe(m => Console.WriteLine($"Queued: {m.ApplicationMessage.Topic}"));
+```
+
+### Efficient Topic Filtering
+```csharp
+using MQTTnet.Rx.Client.MemoryEfficient;
+
+// Span-based prefix matching (no string allocation)
+var prefixSub = client
+    .WhereTopicStartsWith("sensors/")
+    .Subscribe(m => Console.WriteLine($"Sensor message: {m.ApplicationMessage.Topic}"));
+
+// Span-based suffix matching
+var suffixSub = client
+    .WhereTopicEndsWith("/status")
+    .Subscribe(m => Console.WriteLine($"Status message: {m.ApplicationMessage.Topic}"));
+
+// Observe on thread pool to avoid blocking MQTT client
+var threadPoolSub = client
+    .ObserveOnThreadPool()
+    .Subscribe(m => 
+    {
+        // Heavy processing won't block MQTT receive loop
+        ProcessMessage(m);
     });
 ```
 
@@ -229,7 +562,7 @@ var subBytes = Create.MqttClient()
     .Subscribe(m =>
     {
         // Avoid ToArray: use Payload() or PayloadUtf8()
-        var payload = m.Payload(); // ReadOnlyMemory<byte>
+        var payload = m.Payload(); // ReadOnlySequence<byte>
         Console.WriteLine($"Got {payload.Length} bytes from {m.ApplicationMessage.Topic}");
     });
 
@@ -240,34 +573,55 @@ var pubBytesResilient = Create.ResilientMqttClient()
     .Subscribe();
 ```
 
-### Retained messages (server-side and client behavior)
-- When publishing with retain = true, the broker stores the last payload for the topic and delivers it to new subscribers.
-- To clear a retained message, publish an empty payload with retain = true to that topic.
-- Broker events for diagnostics are exposed via MQTTnet.Rx.Server.
+---
+
+## 🔔 Last Will and Testament (LWT)
+
+Configure Last Will messages that are published when the client disconnects unexpectedly:
 
 ```csharp
 using MQTTnet.Protocol;
-using MQTTnet.Rx.Server;
+using MQTTnet.Rx.Client;
 
-// Publish retained and later clear it
-var msgsRetain = new Subject<(string topic, string payload)>();
-var pubRetained = Create.MqttClient()
-    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
-    .PublishMessage(msgsRetain, qos: MqttQualityOfServiceLevel.AtLeastOnce, retain: true)
+// Simple string LWT
+var client1 = Create.MqttClient()
+    .WithClientOptions(c => c
+        .WithTcpServer("localhost", 1883)
+        .WithClientId("device-001")
+        .WithLastWill("devices/device-001/status", "offline", MqttQualityOfServiceLevel.AtLeastOnce, retain: true))
     .Subscribe();
 
-msgsRetain.OnNext(("status/line1", "online"));
-// Clear the retained message (per MQTT spec -> empty payload + retain)
-msgsRetain.OnNext(("status/line1", string.Empty));
+// Binary LWT
+var client2 = Create.MqttClient()
+    .WithClientOptions(c => c
+        .WithTcpServer("localhost", 1883)
+        .WithLastWill("devices/device-002/status", new byte[] { 0x00 }))
+    .Subscribe();
 
-// Server-side: observe retained message lifecycle
-var server = MQTTnet.Rx.Server.Create.MqttServer(b => b.WithDefaultEndpointPort(2883).WithDefaultEndpoint().Build())
-    .Subscribe(sub =>
-    {
-        sub.Disposable.Add(sub.Server.RetainedMessageChanged().Subscribe(e => Console.WriteLine($"Retained changed: {e.ApplicationMessage.Topic}")));
-        sub.Disposable.Add(sub.Server.RetainedMessagesCleared().Subscribe(_ => Console.WriteLine("All retained cleared")));
-        sub.Disposable.Add(sub.Server.LoadingRetainedMessage().Subscribe(_ => Console.WriteLine("Loading retained at startup")));
-    });
+// JSON LWT with typed object
+public class DeviceStatus
+{
+    public string Status { get; set; }
+    public DateTime Timestamp { get; set; }
+}
+
+var client3 = Create.MqttClient()
+    .WithClientOptions(c => c
+        .WithTcpServer("localhost", 1883)
+        .WithLastWillJson("devices/device-003/status", new DeviceStatus 
+        { 
+            Status = "offline", 
+            Timestamp = DateTime.UtcNow 
+        }))
+    .Subscribe();
+
+// LWT with delay (will delay message delivery)
+var client4 = Create.MqttClient()
+    .WithClientOptions(c => c
+        .WithTcpServer("localhost", 1883)
+        .WithLastWill("devices/device-004/status", "offline")
+        .WithWillDelayInterval(30)) // 30 second delay
+    .Subscribe();
 ```
 
 ---
@@ -325,7 +679,15 @@ var client = Create.ResilientMqttClient()
          .WithTlsOptions(tls =>
             tls.WithSslProtocols(SslProtocols.Tls12)
                .WithIgnoreCertificateChainErrors(false)
-               .WithIgnoreCertificateRevocationErrors(false)))))
+               .WithIgnoreCertificateRevocationErrors(false))))
+    .Subscribe();
+
+// Using the helper extensions
+var client2 = Create.MqttClient()
+    .WithClientOptions(c => c
+        .WithTcpServer("your-broker-host", 8883)
+        .WithTlsEnabled()
+        .WithTlsProtocols(SslProtocols.Tls12))
     .Subscribe();
 ```
 
@@ -345,13 +707,92 @@ var client = Create.ResilientMqttClient()
                .WithCertificates(new[] { clientCert })
                // For development only: accept untrusted/invalid chains
                .WithIgnoreCertificateChainErrors(true)
-               .WithIgnoreCertificateRevocationErrors(true)))))
+               .WithIgnoreCertificateRevocationErrors(true))))
+    .Subscribe();
+
+// Using the helper extensions
+var client2 = Create.MqttClient()
+    .WithClientOptions(c => c
+        .WithTcpServer("your-broker-host", 8883)
+        .WithTlsClientCertificate(clientCert))
+    .Subscribe();
+
+// With custom certificate validation
+var client3 = Create.MqttClient()
+    .WithClientOptions(c => c
+        .WithTcpServer("your-broker-host", 8883)
+        .WithTlsCertificateValidation(args =>
+        {
+            // Custom validation logic
+            Console.WriteLine($"Validating cert: {args.Certificate.Subject}");
+            return true; // Accept
+        }))
     .Subscribe();
 ```
 
 Tips:
 - On production, install and trust the CA certificate instead of ignoring validation.
 - When using mutual TLS, validate the client certificate on the server (via ValidatingConnection or a custom connection validator).
+
+---
+
+## 🔄 WhenReady – Gate Pipelines on Connection
+
+Use `WhenReady()` to ensure operations only proceed when the resilient client is connected:
+
+```csharp
+using MQTTnet.Rx.Client;
+
+var client = Create.ResilientMqttClient()
+    .WithResilientClientOptions(o => o.WithClientOptions(c => c.WithTcpServer("localhost", 1883)));
+
+// Only process when connected
+var readySub = client
+    .WhenReady()
+    .Subscribe(c =>
+    {
+        Console.WriteLine("Client ready, starting operations...");
+        // Start publishing, subscribing, etc.
+    });
+
+// Combine with other operations
+var safePub = client
+    .WhenReady()
+    .SelectMany(c => c.ApplicationMessageReceived)
+    .Subscribe(m => Console.WriteLine($"Safe receive: {m.ApplicationMessage.Topic}"));
+```
+
+---
+
+## Retained messages (server-side and client behavior)
+- When publishing with retain = true, the broker stores the last payload for the topic and delivers it to new subscribers.
+- To clear a retained message, publish an empty payload with retain = true to that topic.
+- Broker events for diagnostics are exposed via MQTTnet.Rx.Server.
+
+```csharp
+using MQTTnet.Protocol;
+using MQTTnet.Rx.Server;
+
+// Publish retained and later clear it
+var msgsRetain = new Subject<(string topic, string payload)>();
+var pubRetained = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .PublishMessage(msgsRetain, qos: MqttQualityOfServiceLevel.AtLeastOnce, retain: true)
+    .Subscribe();
+
+msgsRetain.OnNext(("status/line1", "online"));
+// Clear the retained message (per MQTT spec -> empty payload + retain)
+msgsRetain.OnNext(("status/line1", string.Empty));
+
+// Server-side: observe retained message lifecycle
+var server = MQTTnet.Rx.Server.Create.MqttServer(b => b.WithDefaultEndpointPort(2883).WithDefaultEndpoint().Build())
+    .Subscribe(sub =>
+    {
+        sub.Disposable.Add(sub.Server.RetainedMessageChanged().Subscribe(e => Console.WriteLine($"Retained changed: {e.ApplicationMessage.Topic}")));
+        sub.Disposable.Add(sub.Server.RetainedMessagesCleared().Subscribe(_ => Console.WriteLine("All retained cleared")));
+        sub.Disposable.Add(sub.Server.LoadingRetainedMessage().Subscribe(_ => Console.WriteLine("Loading retained at startup")));
+    });
+```
 
 ---
 
@@ -376,14 +817,38 @@ var server = Create.MqttServer(builder =>
 
 ---
 
-## 🧰 New helper APIs
-- PayloadExtensions
-  - e.Payload(): ReadOnlyMemory<byte> – zero-copy access to payload
-  - e.PayloadUtf8(): string – decode payload without ToArray
-  - observable.ToUtf8String(): project stream to UTF8 strings
-- ConnectionExtensions
-  - WhenReady(): emits resilient client when it is connected, useful to gate pipelines
-- SubscribeToTopics(params string[]): subscribe to multiple topics at once (raw and resilient)
+## 🧰 Payload Extensions
+
+Zero-copy and efficient payload access:
+
+```csharp
+using MQTTnet.Rx.Client;
+
+var client = Create.MqttClient()
+    .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
+    .SubscribeToTopic("data/#");
+
+// ReadOnlySequence<byte> - zero-copy access
+var seqSub = client
+    .Subscribe(e =>
+    {
+        var payload = e.Payload(); // ReadOnlySequence<byte>
+        Console.WriteLine($"Payload length: {payload.Length}");
+    });
+
+// UTF-8 string without ToArray()
+var utf8Sub = client
+    .Subscribe(e =>
+    {
+        var text = e.PayloadUtf8(); // Efficient UTF-8 decoding
+        Console.WriteLine($"Text: {text}");
+    });
+
+// Observable projection to UTF-8 strings
+var stringSub = client
+    .ToUtf8String()
+    .Subscribe(text => Console.WriteLine($"Message: {text}"));
+```
 
 ---
 
@@ -539,6 +1004,95 @@ Each PLC package adds helpers to publish or subscribe PLC tags via MQTT using th
 - MQTTnet.Rx.TwinCAT: PublishTcPlcTag<T>(client, topic, plcVariable, configurePlc)
 
 Refer to those libraries for creating and configuring connected PLC clients, then use the Publish* helpers to push tag changes to MQTT. You can also combine SubscribeToTopic with your PLC client to write incoming values back to tags.
+
+---
+
+## 📖 API Reference Summary
+
+### Create (Factory Methods)
+| Method | Description |
+|--------|-------------|
+| `Create.MqttClient()` | Creates a shared raw MQTT client observable |
+| `Create.ResilientMqttClient()` | Creates a shared resilient MQTT client observable |
+| `Create.MqttFactory` | Gets the default MqttClientFactory instance |
+| `.WithClientOptions()` | Configures and connects the raw client |
+| `.WithResilientClientOptions()` | Configures and starts the resilient client |
+
+### Subscribe Extensions
+| Method | Description |
+|--------|-------------|
+| `.SubscribeToTopic(topic)` | Subscribe to a single topic with wildcards |
+| `.SubscribeToTopics(topics...)` | Subscribe to multiple topics |
+| `.ToDictionary()` | Parse JSON payload to Dictionary |
+| `.ToObject<T>()` | Deserialize JSON to typed object |
+| `.Observe(key)` | Observe a specific key from Dictionary stream |
+
+### Publish Extensions
+| Method | Description |
+|--------|-------------|
+| `.PublishMessage(messages)` | Publish from observable stream |
+| `.Publish(topic, payload)` | Publish single message |
+| `.PublishMany(messages)` | Publish multiple messages |
+
+### Topic Filter Extensions
+| Method | Description |
+|--------|-------------|
+| `.WhereTopicIsMatch(filter)` | Filter by MQTT topic pattern |
+| `.WhereTopicMatchesAny(filters...)` | Match any of multiple patterns |
+| `.WhereTopicIsNotMatch(filter)` | Exclude matching topics |
+| `.ExtractTopicValues(pattern)` | Extract named values from topic |
+| `.WhereTopicLevelCount(count)` | Filter by topic level count |
+| `.SelectTopicLevel(index)` | Extract specific topic level |
+| `.GroupByTopic()` | Group messages by topic |
+| `.GroupByTopicLevel(index)` | Group by specific topic level |
+
+### Memory-Efficient Extensions
+| Method | Description |
+|--------|-------------|
+| `.ToPooledPayload()` | Get payload with pooled buffer |
+| `.GetPayloadLength()` | Get payload length |
+| `.ToPayloadArray()` | Convert to byte array |
+| `.ToUtf8StringLowAlloc()` | Low-allocation UTF-8 decoding |
+| `.BatchProcess(timeSpan, processor)` | Batch by time window |
+| `.BatchProcess(count, processor)` | Batch by count |
+| `.ThrottleMessages(duration)` | Throttle message rate |
+| `.SampleMessages(interval)` | Sample at intervals |
+| `.WithBackPressureDrop()` | Drop when slow |
+| `.WithBackPressureQueue()` | Queue with overflow handling |
+| `.WhereTopicStartsWith(prefix)` | Span-based prefix filter |
+| `.WhereTopicEndsWith(suffix)` | Span-based suffix filter |
+| `.ObserveOnThreadPool()` | Move processing to thread pool |
+
+### Payload Extensions
+| Method | Description |
+|--------|-------------|
+| `.Payload()` | Get ReadOnlySequence<byte> |
+| `.PayloadUtf8()` | Get UTF-8 string |
+| `.ToUtf8String()` | Observable projection to strings |
+
+### Connection Extensions
+| Method | Description |
+|--------|-------------|
+| `.WhenReady()` | Emit when client is connected |
+| `.ConnectionStatus()` | Observable of connection state |
+| `.WaitForConnection(timeout)` | Wait for connection |
+| `.Ping()` | Send ping request |
+| `.PingPeriodically(interval)` | Periodic keep-alive pings |
+| `.Disconnect(reason)` | Graceful disconnect |
+| `.Reconnect()` | Reconnect with previous options |
+
+### Type Conversion
+| Method | Description |
+|--------|-------------|
+| `.ToBool()` | Convert to boolean |
+| `.ToByte()` | Convert to byte |
+| `.ToInt16()` | Convert to short |
+| `.ToInt32()` | Convert to int |
+| `.ToInt64()` | Convert to long |
+| `.ToSingle()` | Convert to float |
+| `.ToDouble()` | Convert to double |
+
+---
 
 ## 📄 License
 
