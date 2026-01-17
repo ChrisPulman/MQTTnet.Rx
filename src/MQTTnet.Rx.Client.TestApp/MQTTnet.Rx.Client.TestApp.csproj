@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.SerialPort\MQTTnet.Rx.SerialPort.csproj" />
   </ItemGroup>
 
 </Project>
