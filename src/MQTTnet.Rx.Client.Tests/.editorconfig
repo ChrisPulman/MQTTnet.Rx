@@ -1,0 +1,12 @@
+# Test project specific settings
+# Relaxed rules for test methods
+
+[*.cs]
+# Disable SA1615 (return value should be documented) for test methods
+dotnet_diagnostic.SA1615.severity = none
+
+# Disable SA1201 (element ordering) - events can follow properties in test mocks
+dotnet_diagnostic.SA1201.severity = none
+
+# Disable SA1122 (use string.Empty) - "" is acceptable in tests
+dotnet_diagnostic.SA1122.severity = none
