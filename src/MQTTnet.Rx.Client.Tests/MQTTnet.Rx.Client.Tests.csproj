@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
     <OutputType>Exe</OutputType>
     <!-- Disable SA1615 (return value should be documented) for test methods -->
     <NoWarn>$(NoWarn);SA1615</NoWarn>

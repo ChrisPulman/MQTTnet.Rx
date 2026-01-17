@@ -10,6 +10,7 @@ using Serilog;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
 using Nuke.Common.Tools.PowerShell;
 using CP.BuildTools;
+using System.Linq;
 
 ////[GitHubActions(
 ////    "BuildOnly",
@@ -42,7 +43,7 @@ partial class Build : NukeBuild
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     private readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
-    public static int Main() => Execute<Build>(x => x.Compile);
+    public static int Main() => Execute<Build>(x => x.Test);
 
     private AbsolutePath PackagesDirectory => RootDirectory / "output";
 
@@ -59,7 +60,7 @@ partial class Build : NukeBuild
             }
 
             PackagesDirectory.CreateOrCleanDirectory();
-            await this.InstallDotNetSdk("6.x.x", "8.x.x");
+            await this.InstallDotNetSdk("8.x.x", "9.x.x", "10.x.x");
         });
 
     private Target Restore => _ => _
@@ -72,6 +73,32 @@ partial class Build : NukeBuild
                 .SetProjectFile(Solution)
                 .SetConfiguration(Configuration)
                 .EnableNoRestore()));
+
+    private Target Test => _ => _
+       .DependsOn(Compile)
+       .Executes(() =>
+       {
+           var testProjects = Solution.AllProjects.Where(x => x.GetProperty("IsTestProject") == "true").ToList();
+           foreach (var project in testProjects!)
+           {
+               Log.Information("Testing {Project}", project.Name);
+
+               // Run the test executable directly for each target framework
+               // Microsoft.Testing.Platform on .NET 10 SDK requires running the test executable directly
+               var projectDirectory = project.Directory;
+               var targetFrameworks = project.GetTargetFrameworks();
+
+               foreach (var tfm in targetFrameworks!)
+               {
+                   var testExePath = projectDirectory / "bin" / Configuration / tfm / $"{project.Name}.dll";
+                   if (testExePath.FileExists())
+                   {
+                       Log.Information("Running tests for {Project} ({Framework})", project.Name, tfm);
+                       DotNet($"exec {testExePath}");
+                   }
+               }
+           }
+       });
 
     private Target Pack => _ => _
     .After(Compile)
