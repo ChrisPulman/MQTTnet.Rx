@@ -8,7 +8,6 @@ using ModbusRx.Device;
 using ModbusRx.Reactive;
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client;
-using Newtonsoft.Json;
 
 namespace MQTTnet.Rx.Modbus;
 
@@ -461,12 +460,12 @@ public static class Create
     /// <summary>
     /// Serializes the specified object to a JSON string.
     /// </summary>
-    /// <remarks>This method uses the default serialization settings of Json.NET. The output may vary
+    /// <remarks>This method uses System.Text.Json for serialization. The output may vary
     /// depending on the object's structure and any custom serialization attributes applied.</remarks>
     /// <param name="value">The object to serialize. Can be null.</param>
     /// <returns>A JSON-formatted string representing the serialized object, or "null" if the value is null.</returns>
     public static string Serialize(this object? value) =>
-        JsonConvert.SerializeObject(value);
+        System.Text.Json.JsonSerializer.Serialize(value);
 
     /// <summary>
     /// Deserializes the JSON string to an object of the specified type.
@@ -475,7 +474,7 @@ public static class Create
     /// <param name="value">The JSON string to deserialize. Cannot be null.</param>
     /// <returns>An instance of type T deserialized from the JSON string, or null if the JSON is null or empty.</returns>
     public static T? DeSerialize<T>(this string value) =>
-        JsonConvert.DeserializeObject<T>(value);
+        System.Text.Json.JsonSerializer.Deserialize<T>(value);
 
     /// <summary>
     /// Subscribes to an MQTT topic and writes received values to a single Modbus register using the specified writer
