@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Text;
+using System.Text.Json;
 using MQTTnet.Protocol;
-using Newtonsoft.Json;
 
 namespace MQTTnet.Rx.Client;
 
@@ -77,7 +77,7 @@ public static class LastWillExtensions
     /// <param name="payload">The object to serialize as JSON for the payload.</param>
     /// <param name="qos">The quality of service level. Default is AtLeastOnce.</param>
     /// <param name="retain">Whether to retain the message. Default is true.</param>
-    /// <param name="settings">Optional JSON serializer settings.</param>
+    /// <param name="options">Optional JSON serializer settings.</param>
     /// <returns>The configured options builder for method chaining.</returns>
     public static MqttClientOptionsBuilder WithLastWillJson<T>(
         this MqttClientOptionsBuilder builder,
@@ -85,14 +85,12 @@ public static class LastWillExtensions
         T payload,
         MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce,
         bool retain = true,
-        JsonSerializerSettings? settings = null)
+        JsonSerializerOptions? options = null)
     {
         ArgumentNullException.ThrowIfNull(builder);
         ArgumentNullException.ThrowIfNull(topic);
 
-        var json = settings is null
-            ? JsonConvert.SerializeObject(payload)
-            : JsonConvert.SerializeObject(payload, settings);
+        var json = JsonSerializer.Serialize(payload, options);
 
         return builder.WithLastWill(topic, json, qos, retain);
     }

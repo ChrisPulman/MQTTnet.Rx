@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System;
+using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using MQTTnet;
@@ -15,8 +16,8 @@ disposable =
 MQTTnet.Rx.Server.Create.MqttServer(builder => builder.WithDefaultEndpointPort(serverPort).WithDefaultEndpoint().Build())
       .Subscribe(async sub =>
       {
-          sub.Disposable.Add(sub.Server.ClientConnected().Subscribe(args => Console.WriteLine($"SERVER: ClientConnectedAsync => clientId:{args.ClientId}")));
-          sub.Disposable.Add(sub.Server.ClientDisconnected().Subscribe(args => Console.WriteLine($"SERVER: ClientDisconnectedAsync => clientId:{args.ClientId}")));
+          sub.Server.ClientConnected().Subscribe(args => Console.WriteLine($"SERVER: ClientConnectedAsync => clientId:{args.ClientId}")).DisposeWith(sub.Disposable);
+          sub.Server.ClientDisconnected().Subscribe(args => Console.WriteLine($"SERVER: ClientDisconnectedAsync => clientId:{args.ClientId}")).DisposeWith(sub.Disposable);
 
           var obsClient1 = MQTTnet.Rx.Client.Create.ResilientMqttClient()
                           .WithResilientClientOptions(options =>
@@ -30,14 +31,13 @@ MQTTnet.Rx.Server.Create.MqttServer(builder => builder.WithDefaultEndpointPort(s
                                               c.WithTcpServer("localhost", serverPort)
                                                .WithClientId("Client02"))
                                          .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
-          sub.Disposable.Add(
           obsClient1.Subscribe(i =>
-          {
-              sub.Disposable.Add(i.Connected.Subscribe((_) =>
-                  Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Connected with server.")));
-              sub.Disposable.Add(i.Disconnected.Subscribe((_) =>
-                  Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Disconnected with server.")));
-          }));
+            {
+                sub.Disposable.Add(i.Connected.Subscribe((_) =>
+                    Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Connected with server.")));
+                sub.Disposable.Add(i.Disconnected.Subscribe((_) =>
+                    Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Disconnected with server.")));
+            }).DisposeWith(sub.Disposable);
 
           var s1 = obsClient1.SubscribeToTopic("FromMilliseconds/#")
                    .Subscribe(r => Console.WriteLine($"\tCLIENT S1 #: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
@@ -56,13 +56,13 @@ MQTTnet.Rx.Server.Create.MqttServer(builder => builder.WithDefaultEndpointPort(s
 
           Subject<(string topic, string payload)> message = new();
 
-          sub.Disposable.Add(Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds/1/xyz/abc", "{" + $"payload: {i}" + "}"))));
-          sub.Disposable.Add(obsClient1.PublishMessage(message).Subscribe());
+          Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds/1/xyz/abc", "{" + $"payload: {i}" + "}"))).DisposeWith(sub.Disposable);
+          obsClient1.PublishMessage(message).Subscribe().DisposeWith(sub.Disposable);
 
           Subject<(string topic, string payload)> message1 = new();
 
-          sub.Disposable.Add(Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds/2/zyx/abc", "{" + $"payload: {i}" + "}"))));
-          sub.Disposable.Add(obsClient1.PublishMessage(message1).Subscribe());
+          Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds/2/zyx/abc", "{" + $"payload: {i}" + "}"))).DisposeWith(sub.Disposable);
+          obsClient1.PublishMessage(message1).Subscribe().DisposeWith(sub.Disposable);
 
           await Task.Delay(3000);
           s2.Dispose();

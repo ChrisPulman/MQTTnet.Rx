@@ -4,7 +4,7 @@
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace MQTTnet.Rx.Client;
 
@@ -19,7 +19,11 @@ namespace MQTTnet.Rx.Client;
 /// thrown for invalid arguments or deserialization failures; see individual method documentation for details.</remarks>
 public static class MqttdSubscribeExtensions
 {
+#if NET9_0_OR_GREATER
+    private static readonly System.Threading.Lock _sync = new();
+#else
     private static readonly object _sync = new();
+#endif
     private static readonly Dictionary<string, IObservable<object?>> _dictJsonValues = [];
     private static readonly Dictionary<IResilientMqttClient, Dictionary<string, SubscriptionHub>> _resilientTopicHubs = [];
     private static readonly Dictionary<IMqttClient, Dictionary<string, SubscriptionHub>> _rawTopicHubs = [];
@@ -34,8 +38,39 @@ public static class MqttdSubscribeExtensions
     /// event's payload is expected to be a JSON-encoded object.</param>
     /// <returns>An observable sequence of dictionaries containing the deserialized JSON payloads from each received MQTT
     /// application message. The dictionary is <see langword="null"/> if the payload is empty or cannot be deserialized.</returns>
-    public static IObservable<Dictionary<string, object>?> ToDictionary(this IObservable<MqttApplicationMessageReceivedEventArgs> message) =>
-        Observable.Create<Dictionary<string, object>?>(observer => message.Retry().Subscribe(m => observer.OnNext(JsonConvert.DeserializeObject<Dictionary<string, object>?>(m.ApplicationMessage.ConvertPayloadToString())))).Retry();
+    public static IObservable<Dictionary<string, object?>?> ToDictionary(this IObservable<MqttApplicationMessageReceivedEventArgs> message) =>
+        Observable.Create<Dictionary<string, object?>?>(observer =>
+            message.Retry().Subscribe(m =>
+            {
+                var json = m.ApplicationMessage.ConvertPayloadToString();
+                if (string.IsNullOrWhiteSpace(json))
+                {
+                    observer.OnNext(null);
+                    return;
+                }
+
+                try
+                {
+                    using var doc = JsonDocument.Parse(json);
+                    if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                    {
+                        observer.OnNext(null);
+                        return;
+                    }
+
+                    var result = new Dictionary<string, object?>(StringComparer.Ordinal);
+                    foreach (var prop in doc.RootElement.EnumerateObject())
+                    {
+                        result[prop.Name] = DeserializeJsonElement(prop.Value);
+                    }
+
+                    observer.OnNext(result);
+                }
+                catch
+                {
+                    observer.OnNext(null);
+                }
+            })).Retry();
 
     /// <summary>
     /// Deserializes the payload of each received MQTT application message to an object of type T using JSON
@@ -43,17 +78,24 @@ public static class MqttdSubscribeExtensions
     /// </summary>
     /// <remarks>The payload of each MQTT message is expected to be a valid JSON string representing an object
     /// of type T. If the payload cannot be deserialized to type T, the resulting value will be null. This method uses
-    /// Newtonsoft.Json for deserialization.</remarks>
+    /// System.Text.Json for deserialization.</remarks>
     /// <typeparam name="T">The type to which the message payload is deserialized.</typeparam>
     /// <param name="message">An observable sequence of MQTT application message received event arguments whose payloads will be deserialized.</param>
-    /// <param name="settings">Optional JSON serializer settings to use during deserialization. If null, default settings are applied.</param>
+    /// <param name="options">Optional JSON serializer options to use during deserialization. If null, default options are applied.</param>
     /// <returns>An observable sequence of objects of type T, where each item represents the deserialized payload of a received
     /// message. If deserialization fails, the result is null.</returns>
-    public static IObservable<T?> ToObject<T>(this IObservable<MqttApplicationMessageReceivedEventArgs> message, JsonSerializerSettings? settings = null) =>
+    public static IObservable<T?> ToObject<T>(this IObservable<MqttApplicationMessageReceivedEventArgs> message, JsonSerializerOptions? options = null) =>
         message.Select(m =>
         {
             var json = m.ApplicationMessage.ConvertPayloadToString();
-            return settings is null ? JsonConvert.DeserializeObject<T>(json) : JsonConvert.DeserializeObject<T>(json, settings);
+            try
+            {
+                return JsonSerializer.Deserialize<T>(json, options);
+            }
+            catch
+            {
+                return default;
+            }
         });
 
     /// <summary>
@@ -565,6 +607,57 @@ public static class MqttdSubscribeExtensions
     /// <returns>true if the message's topic matches the specified topic filter; otherwise, false.</returns>
     private static bool DetectCorrectTopicWithOrWithoutWildcard(this MqttApplicationMessageReceivedEventArgs message, string topic) =>
         MqttTopicFilterComparer.Compare(message.ApplicationMessage.Topic, topic) == MqttTopicFilterCompareResult.IsMatch;
+
+    private static object? DeserializeJsonElement(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                return element.GetString();
+            case JsonValueKind.Number:
+                if (element.TryGetInt64(out var l))
+                {
+                    return l;
+                }
+
+                if (element.TryGetDouble(out var d))
+                {
+                    return d;
+                }
+
+                return element.GetRawText();
+            case JsonValueKind.True:
+                return true;
+            case JsonValueKind.False:
+                return false;
+            case JsonValueKind.Null:
+                return null;
+            case JsonValueKind.Object:
+            {
+                var dict = new Dictionary<string, object?>(StringComparer.Ordinal);
+                foreach (var prop in element.EnumerateObject())
+                {
+                    dict[prop.Name] = DeserializeJsonElement(prop.Value);
+                }
+
+                return dict;
+            }
+
+            case JsonValueKind.Array:
+            {
+                var list = new List<object?>();
+                foreach (var item in element.EnumerateArray())
+                {
+                    list.Add(DeserializeJsonElement(item));
+                }
+
+                return list;
+            }
+
+            default:
+                return element.GetRawText();
+        }
+    }
 
     /// <summary>
     /// Manages a subscription's state and message stream for MQTT application message events.

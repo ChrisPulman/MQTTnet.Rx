@@ -2,8 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
+using System.Text.Json;
 using MQTTnet.Rx.Client.Tests.Helpers;
-using Newtonsoft.Json;
 using TUnit.Assertions.Extensions;
 using TUnit.Core;
 
@@ -81,9 +81,9 @@ public class MqttdSubscribeExtensionsTests
     public async Task ToObject_UsesCustomSettings()
     {
         // Arrange
-        var settings = new JsonSerializerSettings
+        var options = new JsonSerializerOptions
         {
-            NullValueHandling = NullValueHandling.Ignore
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         };
 
         var json = """{"Name":"Test","Value":100}""";
@@ -96,7 +96,7 @@ public class MqttdSubscribeExtensionsTests
 
         // Act
         using var subscription = messages.ToObservable()
-            .ToObject<TestPayload>(settings)
+            .ToObject<TestPayload>(options)
             .Subscribe(obj => results.Add(obj));
 
         await Task.Delay(50);

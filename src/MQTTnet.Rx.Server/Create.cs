@@ -3,6 +3,7 @@
 
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Text.Json;
 using MQTTnet.Server;
 
 namespace MQTTnet.Rx.Server;
@@ -52,6 +53,69 @@ public static class Create
             Interlocked.Increment(ref serverCount);
             if (serverCount == 1)
             {
+                await mqttServer.StartAsync();
+            }
+
+            observer.OnNext((mqttServer, disposable));
+            return Disposable.Create(async () =>
+            {
+                Interlocked.Decrement(ref serverCount);
+                if (serverCount == 0)
+                {
+                    await mqttServer.StopAsync();
+                    mqttServer.Dispose();
+                }
+
+                disposable.Dispose();
+            });
+        }).Retry();
+    }
+
+    /// <summary>
+    /// Creates an observable sequence that provides an MQTT server instance with support for persisting retained
+    /// messages to disk.
+    /// </summary>
+    /// <remarks>The observable ensures that retained messages are loaded from and saved to disk using a JSON
+    /// file named 'RetainedMessages.json' in the specified directory or temp directory if no path is given. The MQTT server is started when the first
+    /// subscription is made and stopped when all subscriptions are disposed. This method is intended for scenarios
+    /// where retained message persistence is required across server restarts.</remarks>
+    /// <param name="builder">A delegate that configures and returns the options for the MQTT server. Cannot be null.</param>
+    /// <param name="retainedMessageDirectory">The directory path where retained messages are stored as a JSON file. If null, the system's temporary directory
+    /// is used.</param>
+    /// <returns>An observable sequence that emits a tuple containing the created MQTT server and a disposable resource for
+    /// managing the server's lifetime. The server persists retained messages to the specified directory.</returns>
+    public static IObservable<(MqttServer Server, CompositeDisposable Disposable)> MqttServerWithRetainedMessages(Func<MqttServerOptionsBuilder, MqttServerOptions> builder, string? retainedMessageDirectory = null)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        var mqttServer = MqttFactory.CreateMqttServer(builder(MqttFactory.CreateServerOptionsBuilder()));
+        IDisposable retainedDisposable;
+        var serverCount = 0;
+        return Observable.Create<(MqttServer Server, CompositeDisposable Disposable)>(async observer =>
+        {
+            var disposable = new CompositeDisposable();
+            Interlocked.Increment(ref serverCount);
+            if (serverCount == 1)
+            {
+                var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), "RetainedMessages.json");
+                retainedDisposable = mqttServer.LoadingRetainedMessage().Subscribe(async e =>
+                {
+                    try
+                    {
+                        var models = await JsonSerializer.DeserializeAsync<List<MqttRetainedMessageModel>>(File.OpenRead(storePath)) ?? [];
+                        e.LoadedRetainedMessages = models.ConvertAll(m => m.ToApplicationMessage());
+                        Console.WriteLine("Retained messages loaded.");
+                    }
+                    catch (FileNotFoundException)
+                    {
+                        // Ignore because nothing is stored yet.
+                        Console.WriteLine("No retained messages stored yet.");
+                    }
+                    catch (Exception exception)
+                    {
+                        Console.WriteLine(exception);
+                    }
+                });
                 await mqttServer.StartAsync();
             }
 
