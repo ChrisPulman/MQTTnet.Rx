@@ -188,8 +188,13 @@ public sealed class MockMqttClient : IMqttClient
     /// <param name="cancellationToken">A cancellation token that can be used to cancel the reconnect operation.</param>
     /// <returns>A task that represents the asynchronous reconnect operation. The task result contains the outcome of the
     /// connection attempt.</returns>
-    public Task<MqttClientConnectResult> ReconnectAsync(CancellationToken cancellationToken = default)
+    public Task<MqttClientConnectResult> ReconnectAsync(in CancellationToken cancellationToken = default)
     {
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return Task.FromCanceled<MqttClientConnectResult>(cancellationToken);
+        }
+
         _isConnected = true;
         return Task.FromResult(new MqttClientConnectResult());
     }

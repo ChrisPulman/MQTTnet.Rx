@@ -22,13 +22,13 @@ public class MqttdSubscribeExtensionsTests
     public async Task ToDictionary_ConvertsJsonToDictionary()
     {
         // Arrange
-        var json = """{"name":"sensor1","value":25.5}""";
+        const string json = """{"name":"sensor1","value":25.5}""";
         var messages = new[]
         {
             TestDataHelpers.CreateMessageReceivedArgs("topic", json)
         };
 
-        var results = new List<Dictionary<string, object>?>();
+        var results = new List<Dictionary<string, object?>?>();
 
         // Act
         using var subscription = messages.ToObservable()
@@ -40,7 +40,7 @@ public class MqttdSubscribeExtensionsTests
         // Assert
         await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0]).IsNotNull();
-        await Assert.That(results[0]!["name"].ToString()).IsEqualTo("sensor1");
+        await Assert.That(results?[0]?["name"]).IsEqualTo("sensor1");
     }
 
     /// <summary>
@@ -86,7 +86,7 @@ public class MqttdSubscribeExtensionsTests
             DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
         };
 
-        var json = """{"Name":"Test","Value":100}""";
+        const string json = """{"Name":"Test","Value":100}""";
         var messages = new[]
         {
             TestDataHelpers.CreateMessageReceivedArgs("topic", json)

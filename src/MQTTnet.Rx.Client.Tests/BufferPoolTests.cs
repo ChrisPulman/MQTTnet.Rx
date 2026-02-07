@@ -60,12 +60,8 @@ public class BufferPoolTests
     /// Tests that Return with null does not throw.
     /// </summary>
     [Test]
-    public async Task Return_WithNull_DoesNotThrow()
-    {
-        // Act & Assert - should not throw
-        BufferPool.Return(null);
-        await Assert.That(true).IsTrue(); // If we get here, no exception was thrown
-    }
+    public async Task Return_WithNull_DoesNotThrow() =>
+        await Assert.That(() => BufferPool.Return(null)).ThrowsNothing(); // Ensure that no exception was thrown
 
     /// <summary>
     /// Tests that Return with clearArray clears the buffer.
@@ -216,9 +212,6 @@ public class BufferPoolTests
     /// Tests that DefaultBufferSize returns expected value.
     /// </summary>
     [Test]
-    public async Task DefaultBufferSize_ReturnsExpectedValue()
-    {
-        // Assert
+    public async Task DefaultBufferSize_ReturnsExpectedValue() =>
         await Assert.That(BufferPool.DefaultBufferSize).IsEqualTo(4096);
-    }
 }
