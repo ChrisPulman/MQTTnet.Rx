@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MQTTnet" Version="5.0.1.1416" />
+    <PackageReference Include="MQTTnet" Version="5.1.0.1559" />
     <PackageReference Include="System.Reactive" Version="6.1.0" />
   </ItemGroup>
 

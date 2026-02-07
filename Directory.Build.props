@@ -13,7 +13,7 @@
     <Nullable>enable</Nullable>
     <PackageIcon>logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Compatability with Net 8 / 9</PackageReleaseNotes>
+    <PackageReleaseNotes>Compatability with Net 8 / 9 / 10</PackageReleaseNotes>
     <PackageTags>MQTT;MQTTnet;S7Plc;Allen;Bradley;Rockwell;Modbus;S7;Seimens;Serial;Beckhoff;TwinCat;rx;reactive;extensions;observable;LINQ;net;netstandard</PackageTags>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
