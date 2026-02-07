@@ -58,7 +58,7 @@ public class PayloadExtensionsTests
     public async Task PayloadUtf8_DecodesString()
     {
         // Arrange
-        var originalText = "Hello, World! ?????";
+        const string originalText = "Hello, World! ?????";
         var args = TestDataHelpers.CreateMessageReceivedArgs("topic", originalText);
 
         // Act
@@ -93,7 +93,7 @@ public class PayloadExtensionsTests
     public async Task PayloadUtf8_HandlesSingleSegment()
     {
         // Arrange
-        var text = "Simple text";
+        const string text = "Simple text";
         var args = TestDataHelpers.CreateMessageReceivedArgs("topic", text);
 
         // Act
@@ -128,7 +128,7 @@ public class PayloadExtensionsTests
         await Task.Delay(50);
 
         // Assert
-        await Assert.That(results).HasCount().EqualTo(3);
+        await Assert.That(results).Count().IsEqualTo(3);
         await Assert.That(results[0]).IsEqualTo("Message 1");
         await Assert.That(results[1]).IsEqualTo("Message 2");
         await Assert.That(results[2]).IsEqualTo("Message 3");
@@ -142,7 +142,7 @@ public class PayloadExtensionsTests
     public async Task ToUtf8String_HandlesUnicode()
     {
         // Arrange
-        var unicodeText = "?? Rocket emoji and ???";
+        const string unicodeText = "?? Rocket emoji and ???";
         var messages = new[]
         {
             TestDataHelpers.CreateMessageReceivedArgs("topic", unicodeText)
@@ -158,7 +158,7 @@ public class PayloadExtensionsTests
         await Task.Delay(50);
 
         // Assert
-        await Assert.That(results).HasCount().EqualTo(1);
+        await Assert.That(results).Count().IsEqualTo(1);
         await Assert.That(results[0]).IsEqualTo(unicodeText);
     }
 
@@ -216,7 +216,7 @@ public class PayloadExtensionsTests
         await Task.Delay(50);
 
         // Assert
-        await Assert.That(results).HasCount().EqualTo(2);
+        await Assert.That(results).Count().IsEqualTo(2);
         await Assert.That(results).Contains("25.5");
         await Assert.That(results).Contains("60.0");
     }
