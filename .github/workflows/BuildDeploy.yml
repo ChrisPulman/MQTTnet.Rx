@@ -52,7 +52,7 @@ jobs:
         env:
           NuGetApiKey: ${{ secrets.NUGET_API_KEY }}
       - name: 'Publish: output'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: output
           path: output
