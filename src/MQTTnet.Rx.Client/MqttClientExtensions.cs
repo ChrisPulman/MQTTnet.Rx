@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using MQTTnet.Diagnostics.PacketInspection;
+using ReactiveUI.Extensions.Async;
 
 namespace MQTTnet.Rx.Client;
 
@@ -29,6 +30,16 @@ public static class MqttClientExtensions
             handler => client.ApplicationMessageReceivedAsync -= handler);
 
     /// <summary>
+    /// Returns an asynchronous observable sequence that signals when the MQTT client receives an application message.
+    /// </summary>
+    /// <param name="client">The MQTT client instance to observe for incoming application messages.</param>
+    /// <returns>An asynchronous observable sequence of received application message events.</returns>
+    public static IObservableAsync<MqttApplicationMessageReceivedEventArgs> ObserveApplicationMessageReceivedAsync(this IMqttClient client) =>
+        CreateObservable.FromAsyncEventAsync<MqttApplicationMessageReceivedEventArgs>(
+            handler => client.ApplicationMessageReceivedAsync += handler,
+            handler => client.ApplicationMessageReceivedAsync -= handler);
+
+    /// <summary>
     /// Returns an observable sequence that signals when the MQTT client establishes a connection to the broker.
     /// </summary>
     /// <remarks>The returned observable emits a value for each successful connection, including initial
@@ -39,6 +50,16 @@ public static class MqttClientExtensions
     /// notification contains event data describing the connection.</returns>
     public static IObservable<MqttClientConnectedEventArgs> Connected(this IMqttClient client) =>
         CreateObservable.FromAsyncEvent<MqttClientConnectedEventArgs>(
+            handler => client.ConnectedAsync += handler,
+            handler => client.ConnectedAsync -= handler);
+
+    /// <summary>
+    /// Returns an asynchronous observable sequence that signals when the MQTT client connects to the broker.
+    /// </summary>
+    /// <param name="client">The MQTT client instance to monitor.</param>
+    /// <returns>An asynchronous observable sequence of connection events.</returns>
+    public static IObservableAsync<MqttClientConnectedEventArgs> ObserveConnectedAsync(this IMqttClient client) =>
+        CreateObservable.FromAsyncEventAsync<MqttClientConnectedEventArgs>(
             handler => client.ConnectedAsync += handler,
             handler => client.ConnectedAsync -= handler);
 
@@ -57,6 +78,16 @@ public static class MqttClientExtensions
             handler => client.ConnectingAsync -= handler);
 
     /// <summary>
+    /// Returns an asynchronous observable sequence that signals when the MQTT client begins connecting.
+    /// </summary>
+    /// <param name="client">The MQTT client instance to monitor.</param>
+    /// <returns>An asynchronous observable sequence of connecting events.</returns>
+    public static IObservableAsync<MqttClientConnectingEventArgs> ObserveConnectingAsync(this IMqttClient client) =>
+        CreateObservable.FromAsyncEventAsync<MqttClientConnectingEventArgs>(
+            handler => client.ConnectingAsync += handler,
+            handler => client.ConnectingAsync -= handler);
+
+    /// <summary>
     /// Returns an observable sequence that signals when the MQTT client is disconnected.
     /// </summary>
     /// <remarks>The observable completes when the client is disposed. Subscribers receive notifications for
@@ -70,6 +101,16 @@ public static class MqttClientExtensions
             handler => client.DisconnectedAsync -= handler);
 
     /// <summary>
+    /// Returns an asynchronous observable sequence that signals when the MQTT client is disconnected.
+    /// </summary>
+    /// <param name="client">The MQTT client instance to monitor.</param>
+    /// <returns>An asynchronous observable sequence of disconnection events.</returns>
+    public static IObservableAsync<MqttClientDisconnectedEventArgs> ObserveDisconnectedAsync(this IMqttClient client) =>
+        CreateObservable.FromAsyncEventAsync<MqttClientDisconnectedEventArgs>(
+            handler => client.DisconnectedAsync += handler,
+            handler => client.DisconnectedAsync -= handler);
+
+    /// <summary>
     /// Creates an observable sequence that emits events when MQTT packets are inspected by the client.
     /// </summary>
     /// <remarks>Subscribers receive a notification each time the <see cref="IMqttClient.InspectPacketAsync"/>
@@ -79,6 +120,16 @@ public static class MqttClientExtensions
     /// inspected MQTT packet.</returns>
     public static IObservable<InspectMqttPacketEventArgs> InspectPackage(this IMqttClient client) =>
         CreateObservable.FromAsyncEvent<InspectMqttPacketEventArgs>(
+            handler => client.InspectPacketAsync += handler,
+            handler => client.InspectPacketAsync -= handler);
+
+    /// <summary>
+    /// Creates an asynchronous observable sequence that emits events when MQTT packets are inspected by the client.
+    /// </summary>
+    /// <param name="client">The MQTT client instance for which to observe packet inspection events.</param>
+    /// <returns>An asynchronous observable sequence of inspected MQTT packet events.</returns>
+    public static IObservableAsync<InspectMqttPacketEventArgs> ObserveInspectPackageAsync(this IMqttClient client) =>
+        CreateObservable.FromAsyncEventAsync<InspectMqttPacketEventArgs>(
             handler => client.InspectPacketAsync += handler,
             handler => client.InspectPacketAsync -= handler);
 }

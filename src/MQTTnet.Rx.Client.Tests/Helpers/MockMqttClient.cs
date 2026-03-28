@@ -33,6 +33,26 @@ public sealed class MockMqttClient : IMqttClient
     /// </summary>
     public IReadOnlyList<string> Unsubscriptions => _unsubscriptions;
 
+    /// <summary>
+    /// Gets the number of times ConnectAsync was invoked.
+    /// </summary>
+    public int ConnectCount { get; private set; }
+
+    /// <summary>
+    /// Gets the number of times DisconnectAsync was invoked.
+    /// </summary>
+    public int DisconnectCount { get; private set; }
+
+    /// <summary>
+    /// Gets the number of times PingAsync was invoked.
+    /// </summary>
+    public int PingCount { get; private set; }
+
+    /// <summary>
+    /// Gets the number of times ReconnectAsync was invoked.
+    /// </summary>
+    public int ReconnectCount { get; private set; }
+
     /// <inheritdoc/>
     public event Func<MqttApplicationMessageReceivedEventArgs, Task>? ApplicationMessageReceivedAsync;
 
@@ -125,6 +145,7 @@ public sealed class MockMqttClient : IMqttClient
     {
         Options = options;
         _isConnected = true;
+        ConnectCount++;
         return Task.FromResult(new MqttClientConnectResult());
     }
 
@@ -132,11 +153,16 @@ public sealed class MockMqttClient : IMqttClient
     public Task DisconnectAsync(MqttClientDisconnectOptions options, CancellationToken cancellationToken = default)
     {
         _isConnected = false;
+        DisconnectCount++;
         return Task.CompletedTask;
     }
 
     /// <inheritdoc/>
-    public Task PingAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
+    public Task PingAsync(CancellationToken cancellationToken = default)
+    {
+        PingCount++;
+        return Task.CompletedTask;
+    }
 
     /// <inheritdoc/>
     public Task<MqttClientPublishResult> PublishAsync(MqttApplicationMessage applicationMessage, CancellationToken cancellationToken = default)
@@ -196,6 +222,7 @@ public sealed class MockMqttClient : IMqttClient
         }
 
         _isConnected = true;
+        ReconnectCount++;
         return Task.FromResult(new MqttClientConnectResult());
     }
 }

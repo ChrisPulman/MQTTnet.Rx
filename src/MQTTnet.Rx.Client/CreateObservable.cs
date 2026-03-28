@@ -1,8 +1,11 @@
 ﻿// Copyright (c) Chris Pulman. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+using System.Reactive;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using ReactiveUI.Extensions.Async;
+using ReactiveUI.Extensions.Async.Disposables;
 
 namespace MQTTnet.Rx.Client;
 
@@ -39,4 +42,48 @@ internal static class CreateObservable
             })
             .Publish()
             .RefCount();
+
+    /// <summary>
+    /// Creates an asynchronous observable sequence from an asynchronous event pattern.
+    /// </summary>
+    /// <typeparam name="T">The type of event data to observe.</typeparam>
+    /// <param name="addHandler">Attaches the asynchronous event handler.</param>
+    /// <param name="removeHandler">Detaches the asynchronous event handler.</param>
+    /// <returns>A shared asynchronous observable sequence for the specified event.</returns>
+    internal static IObservableAsync<T> FromAsyncEventAsync<T>(Action<Func<T, Task>> addHandler, Action<Func<T, Task>> removeHandler) =>
+        ObservableAsync.Create<T>((observer, cancellationToken) =>
+            {
+                Task Delegate(T args) => observer.OnNextAsync(args, cancellationToken).AsTask();
+
+                addHandler(Delegate);
+
+                return new ValueTask<IAsyncDisposable>(DisposableAsync.Create(() =>
+                {
+                    removeHandler(Delegate);
+                    return default;
+                }));
+            })
+            .Publish()
+            .RefCount();
+
+    /// <summary>
+    /// Wraps an asynchronous operation that returns a value as an asynchronous observable sequence.
+    /// </summary>
+    /// <typeparam name="T">The value type returned by the operation.</typeparam>
+    /// <param name="taskFactory">The asynchronous operation to execute.</param>
+    /// <returns>An asynchronous observable sequence that emits the operation result.</returns>
+    internal static IObservableAsync<T> FromAsyncTask<T>(Func<CancellationToken, Task<T>> taskFactory) =>
+        ObservableAsync.FromAsync(cancellationToken => new ValueTask<T>(taskFactory(cancellationToken)));
+
+    /// <summary>
+    /// Wraps an asynchronous operation as an asynchronous observable sequence that emits a unit value on completion.
+    /// </summary>
+    /// <param name="taskFactory">The asynchronous operation to execute.</param>
+    /// <returns>An asynchronous observable sequence that emits <see cref="Unit.Default"/> when the operation completes.</returns>
+    internal static IObservableAsync<Unit> FromAsyncTask(Func<CancellationToken, Task> taskFactory) =>
+        ObservableAsync.FromAsync(async cancellationToken =>
+        {
+            await taskFactory(cancellationToken).ConfigureAwait(false);
+            return Unit.Default;
+        });
 }

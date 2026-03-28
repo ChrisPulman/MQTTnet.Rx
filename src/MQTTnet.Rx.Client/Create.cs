@@ -4,6 +4,8 @@
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using MQTTnet.Rx.Client.ResilientClient.Internal;
+using ReactiveUI.Extensions.Async;
+using ReactiveUI.Extensions.Async.Disposables;
 
 namespace MQTTnet.Rx.Client;
 
@@ -59,6 +61,31 @@ public static class Create
     }
 
     /// <summary>
+    /// Creates an asynchronous observable sequence that provides a shared instance of an MQTT client.
+    /// </summary>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    public static IObservableAsync<IMqttClient> MqttClientAsync()
+    {
+        var mqttClient = MqttFactory.CreateMqttClient();
+        var clientCount = 0;
+        return ObservableAsync.Create<IMqttClient>(async (observer, cancellationToken) =>
+            {
+                await observer.OnNextAsync(mqttClient, cancellationToken).ConfigureAwait(false);
+                Interlocked.Increment(ref clientCount);
+
+                return DisposableAsync.Create(() =>
+                {
+                    if (Interlocked.Decrement(ref clientCount) == 0)
+                    {
+                        mqttClient.Dispose();
+                    }
+
+                    return default;
+                });
+            }).Retry();
+    }
+
+    /// <summary>
     /// Creates an observable sequence that provides a resilient MQTT client instance, automatically handling
     /// reconnections and resource management.
     /// </summary>
@@ -83,6 +110,31 @@ public static class Create
                     {
                         mqttClient.Dispose();
                     }
+                });
+            }).Retry();
+    }
+
+    /// <summary>
+    /// Creates an asynchronous observable sequence that provides a shared resilient MQTT client instance.
+    /// </summary>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="IResilientMqttClient"/> instance.</returns>
+    public static IObservableAsync<IResilientMqttClient> ResilientMqttClientAsync()
+    {
+        var mqttClient = MqttFactory.CreateResilientMqttClient();
+        var clientCount = 0;
+        return ObservableAsync.Create<IResilientMqttClient>(async (observer, cancellationToken) =>
+            {
+                await observer.OnNextAsync(mqttClient, cancellationToken).ConfigureAwait(false);
+                Interlocked.Increment(ref clientCount);
+
+                return DisposableAsync.Create(() =>
+                {
+                    if (Interlocked.Decrement(ref clientCount) == 0)
+                    {
+                        mqttClient.Dispose();
+                    }
+
+                    return default;
                 });
             }).Retry();
     }
@@ -118,6 +170,38 @@ public static class Create
         });
 
     /// <summary>
+    /// Configures each MQTT client in the asynchronous observable sequence with the specified client options before connecting.
+    /// </summary>
+    /// <param name="client">An asynchronous observable sequence of MQTT clients to be configured and connected.</param>
+    /// <param name="optionsBuilder">A delegate that configures the MQTT client options using the provided options builder.</param>
+    /// <returns>An asynchronous observable sequence of configured and connected MQTT clients.</returns>
+    public static IObservableAsync<IMqttClient> WithClientOptions(this IObservableAsync<IMqttClient> client, Action<MqttClientOptionsBuilder> optionsBuilder)
+    {
+        if (client is null)
+        {
+            throw new ArgumentNullException(nameof(client));
+        }
+
+        if (optionsBuilder is null)
+        {
+            throw new ArgumentNullException(nameof(optionsBuilder));
+        }
+
+        var options = MqttFactory.CreateClientOptionsBuilder();
+        optionsBuilder(options);
+
+        return client.Select(async (c, cancellationToken) =>
+        {
+            if (!c.IsConnected)
+            {
+                await c.ConnectAsync(options.Build(), cancellationToken).ConfigureAwait(false);
+            }
+
+            return c;
+        });
+    }
+
+    /// <summary>
     /// Configures each resilient MQTT client in the observable sequence using the specified options builder before
     /// starting the client if it is not already started.
     /// </summary>
@@ -147,6 +231,38 @@ public static class Create
             }));
             return disposable;
         });
+
+    /// <summary>
+    /// Configures each resilient MQTT client in the asynchronous observable sequence using the specified options builder.
+    /// </summary>
+    /// <param name="client">An asynchronous observable sequence of resilient MQTT clients to configure.</param>
+    /// <param name="optionsBuilder">A delegate that configures each resilient client instance.</param>
+    /// <returns>An asynchronous observable sequence of configured resilient MQTT clients.</returns>
+    public static IObservableAsync<IResilientMqttClient> WithResilientClientOptions(this IObservableAsync<IResilientMqttClient> client, Action<ResilientMqttClientOptionsBuilder> optionsBuilder)
+    {
+        if (client is null)
+        {
+            throw new ArgumentNullException(nameof(client));
+        }
+
+        if (optionsBuilder is null)
+        {
+            throw new ArgumentNullException(nameof(optionsBuilder));
+        }
+
+        var options = MqttFactory.CreateResilientClientOptionsBuilder();
+        optionsBuilder(options);
+
+        return client.Select(async (c, _) =>
+        {
+            if (!c.IsStarted)
+            {
+                await c.StartAsync(options.Build()).ConfigureAwait(false);
+            }
+
+            return c;
+        });
+    }
 
     /// <summary>
     /// Configures the underlying MQTT client options using the specified builder action.

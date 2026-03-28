@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using MQTTnet.Packets;
+using ReactiveUI.Extensions.Async;
 
 namespace MQTTnet.Rx.Client;
 
@@ -67,10 +68,20 @@ public interface IResilientMqttClient : IDisposable
     IObservable<ApplicationMessageProcessedEventArgs> ApplicationMessageProcessed { get; }
 
     /// <summary>
+    /// Gets application messages processed as an asynchronous observable sequence.
+    /// </summary>
+    IObservableAsync<ApplicationMessageProcessedEventArgs> ApplicationMessageProcessedAsyncObservable { get; }
+
+    /// <summary>
     /// Gets connected to the specified client.
     /// </summary>
     /// <returns>A Mqtt Client Connected Event Args.</returns>
     IObservable<MqttClientConnectedEventArgs> Connected { get; }
+
+    /// <summary>
+    /// Gets connected notifications as an asynchronous observable sequence.
+    /// </summary>
+    IObservableAsync<MqttClientConnectedEventArgs> ConnectedAsyncObservable { get; }
 
     /// <summary>
     /// Gets disconnected from the specified client.
@@ -79,10 +90,20 @@ public interface IResilientMqttClient : IDisposable
     IObservable<MqttClientDisconnectedEventArgs> Disconnected { get; }
 
     /// <summary>
+    /// Gets disconnected notifications as an asynchronous observable sequence.
+    /// </summary>
+    IObservableAsync<MqttClientDisconnectedEventArgs> DisconnectedAsyncObservable { get; }
+
+    /// <summary>
     /// Gets connecting failed.
     /// </summary>
     /// <returns>A Connecting Failed Event Args.</returns>
     IObservable<ConnectingFailedEventArgs> ConnectingFailed { get; }
+
+    /// <summary>
+    /// Gets connection failures as an asynchronous observable sequence.
+    /// </summary>
+    IObservableAsync<ConnectingFailedEventArgs> ConnectingFailedAsyncObservable { get; }
 
     /// <summary>
     /// Gets connection state changed.
@@ -91,10 +112,20 @@ public interface IResilientMqttClient : IDisposable
     IObservable<EventArgs> ConnectionStateChanged { get; }
 
     /// <summary>
+    /// Gets connection state changes as an asynchronous observable sequence.
+    /// </summary>
+    IObservableAsync<EventArgs> ConnectionStateChangedAsyncObservable { get; }
+
+    /// <summary>
     /// Gets synchronizing subscriptions failed.
     /// </summary>
     /// <returns>A Resilient Process Failed Event Args.</returns>
     IObservable<ResilientProcessFailedEventArgs> SynchronizingSubscriptionsFailed { get; }
+
+    /// <summary>
+    /// Gets subscription synchronization failures as an asynchronous observable sequence.
+    /// </summary>
+    IObservableAsync<ResilientProcessFailedEventArgs> SynchronizingSubscriptionsFailedAsyncObservable { get; }
 
     /// <summary>
     /// Gets application messages processed.
@@ -103,10 +134,20 @@ public interface IResilientMqttClient : IDisposable
     IObservable<ApplicationMessageSkippedEventArgs> ApplicationMessageSkipped { get; }
 
     /// <summary>
+    /// Gets skipped application messages as an asynchronous observable sequence.
+    /// </summary>
+    IObservableAsync<ApplicationMessageSkippedEventArgs> ApplicationMessageSkippedAsyncObservable { get; }
+
+    /// <summary>
     /// Gets application messages received.
     /// </summary>
     /// <returns>A Mqtt Application Message Received Event Args.</returns>
     IObservable<MqttApplicationMessageReceivedEventArgs> ApplicationMessageReceived { get; }
+
+    /// <summary>
+    /// Gets received application messages as an asynchronous observable sequence.
+    /// </summary>
+    IObservableAsync<MqttApplicationMessageReceivedEventArgs> ApplicationMessageReceivedAsyncObservable { get; }
 
     /// <summary>
     /// Gets the internal client.

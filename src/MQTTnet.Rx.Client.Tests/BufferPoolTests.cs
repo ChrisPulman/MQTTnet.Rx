@@ -2,8 +2,6 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using MQTTnet.Rx.Client.MemoryEfficient;
-using TUnit.Assertions.Extensions;
-using TUnit.Core;
 
 namespace MQTTnet.Rx.Client.Tests;
 

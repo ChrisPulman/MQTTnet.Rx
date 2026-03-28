@@ -488,6 +488,7 @@ dotnet_diagnostic.RCS1006.severity=error
 dotnet_diagnostic.RCS1005.severity=error
 dotnet_diagnostic.RCS1020.severity=error
 dotnet_diagnostic.RCS1049.severity=warning
+dotnet_diagnostic.RCS1047.severity=none
 dotnet_diagnostic.RCS1058.severity=warning
 dotnet_diagnostic.RCS1068.severity=warning
 dotnet_diagnostic.RCS1073.severity=warning

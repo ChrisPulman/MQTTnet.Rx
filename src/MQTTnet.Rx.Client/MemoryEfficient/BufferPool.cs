@@ -64,7 +64,7 @@ public static class BufferPool
     /// </summary>
     /// <param name="sequence">The sequence to copy from.</param>
     /// <returns>A new byte array containing the copied data.</returns>
-    public static byte[] ToArray(ReadOnlySequence<byte> sequence)
+    public static byte[] ToArray(in ReadOnlySequence<byte> sequence)
     {
         if (sequence.IsEmpty)
         {
@@ -87,7 +87,7 @@ public static class BufferPool
     /// <param name="sequence">The sequence to copy from.</param>
     /// <param name="bytesWritten">When this method returns, contains the number of bytes written to the buffer.</param>
     /// <returns>A rented byte array containing the copied data. The caller must return this to the pool.</returns>
-    public static byte[] CopyToRented(ReadOnlySequence<byte> sequence, out int bytesWritten)
+    public static byte[] CopyToRented(in ReadOnlySequence<byte> sequence, out int bytesWritten)
     {
         if (sequence.IsEmpty)
         {
