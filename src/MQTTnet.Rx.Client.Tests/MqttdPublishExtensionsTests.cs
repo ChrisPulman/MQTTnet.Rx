@@ -6,8 +6,6 @@ using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client.Tests.Helpers;
-using TUnit.Assertions.Extensions;
-using TUnit.Core;
 
 namespace MQTTnet.Rx.Client.Tests;
 

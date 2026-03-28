@@ -4,8 +4,6 @@
 using System.Reactive.Linq;
 using MQTTnet.Rx.Client.MemoryEfficient;
 using MQTTnet.Rx.Client.Tests.Helpers;
-using TUnit.Assertions.Extensions;
-using TUnit.Core;
 
 namespace MQTTnet.Rx.Client.Tests;
 

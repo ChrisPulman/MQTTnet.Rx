@@ -201,19 +201,6 @@ public static partial class TopicFilterExtensions
         });
     }
 
-    /// <summary>
-    /// Creates a compiled regex from an MQTT topic filter pattern.
-    /// </summary>
-    private static Regex CreateTopicRegex(string topicFilter)
-    {
-        // Escape special regex characters except + and #
-        var pattern = Regex.Escape(topicFilter)
-            .Replace(@"\+", "[^/]+") // + matches single level
-            .Replace(@"\#", ".*");     // # matches multiple levels
-
-        return new Regex("^" + pattern + "$", RegexOptions.Compiled);
-    }
-
     [GeneratedRegex(@"\{(\w+)\}")]
     private static partial Regex PlaceholderRegex();
 }

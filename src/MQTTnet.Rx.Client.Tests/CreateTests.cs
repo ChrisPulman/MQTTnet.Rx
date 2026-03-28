@@ -3,8 +3,7 @@
 
 using System.Reactive.Linq;
 using MQTTnet.Rx.Client.Tests.Helpers;
-using TUnit.Assertions.Extensions;
-using TUnit.Core;
+using ReactiveUI.Extensions.Async;
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -98,6 +97,19 @@ public class CreateTests
     }
 
     /// <summary>
+    /// Tests that MqttClientAsync returns an async observable that emits a client.
+    /// </summary>
+    [Test]
+    public async Task MqttClientAsync_ReturnsObservableThatEmitsClient()
+    {
+        // Arrange & Act
+        var receivedClient = await Create.MqttClientAsync().FirstAsync(TimeSpan.FromSeconds(1));
+
+        // Assert
+        await Assert.That(receivedClient).IsNotNull();
+    }
+
+    /// <summary>
     /// Tests that ResilientMqttClient returns an observable that emits a resilient client.
     /// </summary>
     [Test]
@@ -165,6 +177,27 @@ public class CreateTests
         await Task.Delay(100);
 
         // Assert
+        await Assert.That(mockClient.Options).IsNotNull();
+        await Assert.That(mockClient.Options?.ChannelOptions).IsNotNull();
+    }
+
+    /// <summary>
+    /// Tests that WithClientOptions configures the client for asynchronous observable sources.
+    /// </summary>
+    [Test]
+    public async Task WithClientOptionsAsync_ConfiguresClient()
+    {
+        // Arrange
+        var mockClient = new MockMqttClient();
+        var clientObservable = ObservableAsync.Return<IMqttClient>(mockClient);
+
+        // Act
+        var configuredClient = await clientObservable
+            .WithClientOptions(options => options.WithTcpServer("test.mqtt.broker", 1883))
+            .FirstAsync(TimeSpan.FromSeconds(1));
+
+        // Assert
+        await Assert.That(configuredClient).IsSameReferenceAs(mockClient);
         await Assert.That(mockClient.Options).IsNotNull();
         await Assert.That(mockClient.Options?.ChannelOptions).IsNotNull();
     }

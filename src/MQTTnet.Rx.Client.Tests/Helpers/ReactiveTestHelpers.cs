@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using Microsoft.Reactive.Testing;
+using ReactiveUI.Extensions.Async;
 
 namespace MQTTnet.Rx.Client.Tests.Helpers;
 
@@ -61,6 +62,49 @@ public static class ReactiveTestHelpers
             onNext: v => tcs.TrySetResult(v),
             onError: ex => tcs.TrySetException(ex),
             onCompleted: () => tcs.TrySetException(new InvalidOperationException("Observable completed without producing a value.")));
+
+        return await tcs.Task.ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Subscribes to an asynchronous observable and returns the first value or throws on timeout.
+    /// </summary>
+    /// <typeparam name="T">The type of the value.</typeparam>
+    /// <param name="observable">The asynchronous observable to subscribe to.</param>
+    /// <param name="timeout">The timeout duration.</param>
+    /// <returns>The first value.</returns>
+    public static async Task<T> FirstAsync<T>(
+        this IObservableAsync<T> observable,
+        TimeSpan timeout)
+    {
+        if (observable is null)
+        {
+            throw new ArgumentNullException(nameof(observable));
+        }
+
+        var tcs = new TaskCompletionSource<T>();
+        using var cts = new CancellationTokenSource(timeout);
+
+        using var registration = cts.Token.Register(() =>
+            tcs.TrySetException(new TimeoutException("Observable did not produce a value within the timeout.")));
+
+        await using var subscription = await observable.SubscribeAsync(
+            (value, _) =>
+            {
+                tcs.TrySetResult(value);
+                return ValueTask.CompletedTask;
+            },
+            (exception, _) =>
+            {
+                tcs.TrySetException(exception);
+                return ValueTask.CompletedTask;
+            },
+            _ =>
+            {
+                tcs.TrySetException(new InvalidOperationException("Observable completed without producing a value."));
+                return ValueTask.CompletedTask;
+            },
+            cts.Token).ConfigureAwait(false);
 
         return await tcs.Task.ConfigureAwait(false);
     }

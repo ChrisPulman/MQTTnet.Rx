@@ -2,10 +2,8 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 using System.Reactive.Linq;
-using MQTTnet.Diagnostics.PacketInspection;
 using MQTTnet.Rx.Client.Tests.Helpers;
-using TUnit.Assertions.Extensions;
-using TUnit.Core;
+using ReactiveUI.Extensions.Async;
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -202,6 +200,52 @@ public class MqttClientExtensionsTests
 
         // Assert
         await Assert.That(receivedAfterDispose).IsEqualTo(1);
+    }
+
+    /// <summary>
+    /// Tests that ObserveApplicationMessageReceivedAsync returns an async observable that emits when messages are received.
+    /// </summary>
+    [Test]
+    public async Task ObserveApplicationMessageReceivedAsync_EmitsWhenMessageReceived()
+    {
+        // Arrange
+        var mockClient = new MockMqttClient();
+
+        // Act
+        var receivedTask = mockClient.ObserveApplicationMessageReceivedAsync().FirstAsync(TimeSpan.FromSeconds(1));
+        await mockClient.SimulateMessageReceived("test/topic", "test payload");
+        var receivedMessage = await receivedTask;
+
+        // Assert
+        await Assert.That(receivedMessage.ApplicationMessage.Topic).IsEqualTo("test/topic");
+    }
+
+    /// <summary>
+    /// Tests that ObserveConnectedAsync stops emitting after the async subscription is disposed.
+    /// </summary>
+    [Test]
+    public async Task ObserveConnectedAsync_DisposesHandlersOnAsyncUnsubscribe()
+    {
+        // Arrange
+        var mockClient = new MockMqttClient();
+        var connectedCount = 0;
+
+        // Act
+        var subscription = await mockClient.ObserveConnectedAsync().SubscribeAsync(
+            (args, _) =>
+            {
+                connectedCount++;
+                return ValueTask.CompletedTask;
+            },
+            CancellationToken.None);
+
+        await mockClient.SimulateConnected();
+        await subscription.DisposeAsync();
+        await mockClient.SimulateConnected();
+        await Task.Delay(50);
+
+        // Assert
+        await Assert.That(connectedCount).IsEqualTo(1);
     }
 
     /// <summary>

@@ -6,6 +6,7 @@ using MQTTnet.Exceptions;
 using MQTTnet.Internal;
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
+using ReactiveUI.Extensions.Async;
 
 namespace MQTTnet.Rx.Client.ResilientClient.Internal;
 
@@ -200,6 +201,14 @@ internal sealed class ResilientMqttClient : Disposable, IResilientMqttClient
             handler => ApplicationMessageProcessedAsync -= handler);
 
     /// <summary>
+    /// Gets an asynchronous observable sequence that signals when an application message has been processed.
+    /// </summary>
+    public IObservableAsync<ApplicationMessageProcessedEventArgs> ApplicationMessageProcessedAsyncObservable =>
+        CreateObservable.FromAsyncEventAsync<ApplicationMessageProcessedEventArgs>(
+            handler => ApplicationMessageProcessedAsync += handler,
+            handler => ApplicationMessageProcessedAsync -= handler);
+
+    /// <summary>
     /// Gets an observable sequence that signals when the client successfully connects to the MQTT broker.
     /// </summary>
     /// <remarks>Subscribers receive a notification each time a connection to the broker is established. The
@@ -211,12 +220,28 @@ internal sealed class ResilientMqttClient : Disposable, IResilientMqttClient
             handler => ConnectedAsync -= handler);
 
     /// <summary>
+    /// Gets an asynchronous observable sequence that signals when the client successfully connects to the MQTT broker.
+    /// </summary>
+    public IObservableAsync<MqttClientConnectedEventArgs> ConnectedAsyncObservable =>
+        CreateObservable.FromAsyncEventAsync<MqttClientConnectedEventArgs>(
+            handler => ConnectedAsync += handler,
+            handler => ConnectedAsync -= handler);
+
+    /// <summary>
     /// Gets an observable sequence that signals when the client is disconnected from the MQTT broker.
     /// </summary>
     /// <remarks>Subscribers receive a notification each time the client disconnects, along with details about
     /// the disconnection event. The sequence completes when the underlying client is disposed.</remarks>
     public IObservable<MqttClientDisconnectedEventArgs> Disconnected =>
         CreateObservable.FromAsyncEvent<MqttClientDisconnectedEventArgs>(
+            handler => DisconnectedAsync += handler,
+            handler => DisconnectedAsync -= handler);
+
+    /// <summary>
+    /// Gets an asynchronous observable sequence that signals when the client is disconnected from the MQTT broker.
+    /// </summary>
+    public IObservableAsync<MqttClientDisconnectedEventArgs> DisconnectedAsyncObservable =>
+        CreateObservable.FromAsyncEventAsync<MqttClientDisconnectedEventArgs>(
             handler => DisconnectedAsync += handler,
             handler => DisconnectedAsync -= handler);
 
@@ -232,6 +257,14 @@ internal sealed class ResilientMqttClient : Disposable, IResilientMqttClient
             handler => ConnectingFailedAsync -= handler);
 
     /// <summary>
+    /// Gets an asynchronous observable sequence that signals when a connection attempt fails.
+    /// </summary>
+    public IObservableAsync<ConnectingFailedEventArgs> ConnectingFailedAsyncObservable =>
+        CreateObservable.FromAsyncEventAsync<ConnectingFailedEventArgs>(
+            handler => ConnectingFailedAsync += handler,
+            handler => ConnectingFailedAsync -= handler);
+
+    /// <summary>
     /// Gets an observable sequence that signals when the connection state changes.
     /// </summary>
     /// <remarks>Subscribers are notified each time the connection state transitions, such as when connecting
@@ -242,10 +275,26 @@ internal sealed class ResilientMqttClient : Disposable, IResilientMqttClient
             handler => ConnectionStateChangedAsync -= handler);
 
     /// <summary>
+    /// Gets an asynchronous observable sequence that signals when the connection state changes.
+    /// </summary>
+    public IObservableAsync<EventArgs> ConnectionStateChangedAsyncObservable =>
+        CreateObservable.FromAsyncEventAsync<EventArgs>(
+            handler => ConnectionStateChangedAsync += handler,
+            handler => ConnectionStateChangedAsync -= handler);
+
+    /// <summary>
     /// Gets an observable sequence that signals when a failure occurs during the synchronization of subscriptions.
     /// </summary>
     public IObservable<ResilientProcessFailedEventArgs> SynchronizingSubscriptionsFailed =>
         CreateObservable.FromAsyncEvent<ResilientProcessFailedEventArgs>(
+            handler => SynchronizingSubscriptionsFailedAsync += handler,
+            handler => SynchronizingSubscriptionsFailedAsync -= handler);
+
+    /// <summary>
+    /// Gets an asynchronous observable sequence that signals when subscription synchronization fails.
+    /// </summary>
+    public IObservableAsync<ResilientProcessFailedEventArgs> SynchronizingSubscriptionsFailedAsyncObservable =>
+        CreateObservable.FromAsyncEventAsync<ResilientProcessFailedEventArgs>(
             handler => SynchronizingSubscriptionsFailedAsync += handler,
             handler => SynchronizingSubscriptionsFailedAsync -= handler);
 
@@ -260,6 +309,14 @@ internal sealed class ResilientMqttClient : Disposable, IResilientMqttClient
             handler => ApplicationMessageSkippedAsync -= handler);
 
     /// <summary>
+    /// Gets an asynchronous observable sequence that signals when an application message is skipped.
+    /// </summary>
+    public IObservableAsync<ApplicationMessageSkippedEventArgs> ApplicationMessageSkippedAsyncObservable =>
+        CreateObservable.FromAsyncEventAsync<ApplicationMessageSkippedEventArgs>(
+            handler => ApplicationMessageSkippedAsync += handler,
+            handler => ApplicationMessageSkippedAsync -= handler);
+
+    /// <summary>
     /// Gets an observable sequence that signals when an application message is received from the MQTT broker.
     /// </summary>
     /// <remarks>Subscribers to this observable are notified each time an application message is received. The
@@ -267,6 +324,14 @@ internal sealed class ResilientMqttClient : Disposable, IResilientMqttClient
     /// handling of incoming MQTT messages using the observer pattern.</remarks>
     public IObservable<MqttApplicationMessageReceivedEventArgs> ApplicationMessageReceived =>
         CreateObservable.FromAsyncEvent<MqttApplicationMessageReceivedEventArgs>(
+            handler => ApplicationMessageReceivedAsync += handler,
+            handler => ApplicationMessageReceivedAsync -= handler);
+
+    /// <summary>
+    /// Gets an asynchronous observable sequence that signals when an application message is received.
+    /// </summary>
+    public IObservableAsync<MqttApplicationMessageReceivedEventArgs> ApplicationMessageReceivedAsyncObservable =>
+        CreateObservable.FromAsyncEventAsync<MqttApplicationMessageReceivedEventArgs>(
             handler => ApplicationMessageReceivedAsync += handler,
             handler => ApplicationMessageReceivedAsync -= handler);
 

@@ -15,10 +15,7 @@ public readonly record struct BufferScope : IDisposable
     /// Initializes a new instance of the <see cref="BufferScope"/> struct.
     /// </summary>
     /// <param name="minimumLength">The minimum length of the buffer to rent.</param>
-    public BufferScope(int minimumLength = 0)
-    {
-        Buffer = BufferPool.Rent(minimumLength);
-    }
+    public BufferScope(int minimumLength = 0) => Buffer = BufferPool.Rent(minimumLength);
 
     /// <summary>
     /// Gets the rented buffer.
