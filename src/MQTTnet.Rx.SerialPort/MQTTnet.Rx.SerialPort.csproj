@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SerialPortRx" Version="4.0.1" />
+    <PackageReference Include="SerialPortRx" Version="4.0.11" />
   </ItemGroup>
 
   <ItemGroup>
