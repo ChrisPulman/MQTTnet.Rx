@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="S7PlcRx" Version="2.3.44" />
+    <PackageReference Include="S7PlcRx" Version="3.0.0" />
   </ItemGroup>
 
   <ItemGroup>
