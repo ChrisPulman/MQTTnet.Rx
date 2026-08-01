@@ -13,7 +13,7 @@
     <Nullable>enable</Nullable>
     <PackageIcon>logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Compatability with Net 8 / 9 / 10</PackageReleaseNotes>
+    <PackageReleaseNotes>Compatability with Net 8 / 9 / 10 / 11</PackageReleaseNotes>
     <PackageTags>MQTT;MQTTnet;S7Plc;Allen;Bradley;Rockwell;Modbus;S7;Seimens;Serial;Beckhoff;TwinCat;rx;reactive;extensions;observable;LINQ;net;netstandard</PackageTags>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
@@ -28,7 +28,7 @@
     <!-- Include PDB in the built .nupkg -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
     <IncludePackageReferencesDuringMarkupCompilation>true</IncludePackageReferencesDuringMarkupCompilation>
-    <MQTTnetRxTargetFrameworks>net8.0;net9.0;net10.0</MQTTnetRxTargetFrameworks>
+    <MQTTnetRxTargetFrameworks>net8.0;net9.0;net10.0;net11.0</MQTTnetRxTargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
@@ -43,10 +43,10 @@
   </ItemGroup>
   
   <ItemGroup>
-    <!--<Compile Update="**\*.cs" DependentUpon="I%(Filename).cs" />-->
-    <PackageReference Include="stylecop.analyzers" Version="1.2.0-beta.556" PrivateAssets="all" />
+    <PackageReference Include="StyleSharp.Analyzers" Version="3.40.1" />
+    <PackageReference Include="PerformanceSharp.Analyzers" Version="3.40.1" />
+    <PackageReference Include="SecuritySharp.Analyzers" Version="3.40.1" />
     <PackageReference Include="Roslynator.Analyzers" Version="4.15.0" PrivateAssets="All" />
-    <AdditionalFiles Include="$(MSBuildThisFileDirectory)stylecop.json" Link="stylecop.json" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
