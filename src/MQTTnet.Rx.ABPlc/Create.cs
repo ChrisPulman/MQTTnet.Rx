@@ -1,125 +1,108 @@
-﻿// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
-using ABPlcRx;
+using IoT.Driver.ABPlcRx;
 using MQTTnet.Rx.Client;
 
 namespace MQTTnet.Rx.ABPlc;
 
-/// <summary>
-/// Provides extension methods for publishing and subscribing to Allen-Bradley PLC tags over MQTT using reactive
-/// streams.
-/// </summary>
-/// <remarks>The Create class contains static methods that integrate Allen-Bradley PLC communication with
-/// MQTT clients in a reactive programming model. These methods are intended for use with IObservable-based MQTT
-/// client implementations, enabling seamless data flow between PLC tags and MQTT topics. All methods are static and
-/// are designed to be used as extension methods.</remarks>
+/// <summary>Provides compatible static MQTT helpers for Allen-Bradley PLC tags.</summary>
 public static class Create
 {
-    /// <summary>
-    /// Publishes the value of an Allen-Bradley PLC tag to the specified MQTT topic as an observable sequence.
-    /// </summary>
-    /// <remarks>The observable emits a publish result each time the specified PLC tag value is
-    /// observed and published. The PLC connection must be properly configured in the provided action before
-    /// publishing. This method requires that the PLC and MQTT client are both available and properly
-    /// initialized.</remarks>
-    /// <typeparam name="T">The type of the PLC tag value to observe and publish.</typeparam>
-    /// <param name="client">An observable sequence of MQTT clients used to publish the message.</param>
-    /// <param name="topic">The MQTT topic to which the PLC tag value will be published. Cannot be null.</param>
-    /// <param name="plcVariable">The name of the PLC variable (tag) to observe and publish. Cannot be null.</param>
-    /// <param name="configurePlc">An action to configure the PLC connection before publishing. Cannot be null.</param>
-    /// <returns>An observable sequence of results for each publish operation, representing the outcome of publishing the PLC
-    /// tag value to the MQTT topic.</returns>
-    public static IObservable<MqttClientPublishResult> PublishABPlcTag<T>(this IObservable<IMqttClient> client, string topic, string plcVariable, Action<IABPlcRx> configurePlc)
+    /// <summary>Publishes an Allen-Bradley PLC tag value to an MQTT topic.</summary>
+    /// <typeparam name="T">The PLC tag value type.</typeparam>
+    /// <param name="client">The MQTT client sequence.</param>
+    /// <param name="topic">The MQTT topic to publish to.</param>
+    /// <param name="plcVariable">The PLC variable to observe.</param>
+    /// <param name="plc">The configured PLC connection.</param>
+    /// <param name="typeWitness">Optional values used only to infer <typeparamref name="T"/>.</param>
+    /// <returns>A sequence of MQTT publish results.</returns>
+    public static IObservable<MqttClientPublishResult> PublishABPlcTag<T>(
+        IObservable<IMqttClient> client,
+        string topic,
+        string plcVariable,
+        IABPlcRx plc,
+        params T[] typeWitness)
     {
         ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(configurePlc);
-
-        var plc = default(IABPlcRx)!;
-        configurePlc?.Invoke(plc);
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
+        ArgumentException.ThrowIfNullOrWhiteSpace(plcVariable);
         ArgumentNullException.ThrowIfNull(plc);
+        ArgumentNullException.ThrowIfNull(typeWitness);
 
-        return client.PublishMessage(plc.Observe<T>(plcVariable).Select(payLoad => (topic, payLoad: payLoad!.ToString()!)));
+        return client.PublishABPlcTag(topic, plcVariable, plc, typeWitness);
     }
 
-    /// <summary>
-    /// Subscribes to an MQTT topic and updates an Allen-Bradley PLC variable with the deserialized payload from
-    /// each received message.
-    /// </summary>
-    /// <remarks>The configurePlc action must assign a non-null IABPlcRx instance; otherwise, an
-    /// exception is thrown. This method enables reactive integration between MQTT message streams and Allen-Bradley
-    /// PLC variables.</remarks>
-    /// <typeparam name="T">The type to which the MQTT message payload is deserialized before being written to the PLC variable.</typeparam>
-    /// <param name="client">The observable sequence of MQTT client connections used to subscribe to the specified topic.</param>
-    /// <param name="topic">The MQTT topic to subscribe to for receiving messages.</param>
-    /// <param name="plcVariable">The name of the Allen-Bradley PLC variable to update with the received payload.</param>
-    /// <param name="configurePlc">An action that configures the PLC receiver instance before subscription. Must assign a valid IABPlcRx
-    /// instance.</param>
-    /// <param name="payloadFactory">A function that converts the received message payload string into an instance of type T for writing to the
-    /// PLC variable.</param>
-    public static void SubscribeABPlcTag<T>(this IObservable<IMqttClient> client, string topic, string plcVariable, Action<IABPlcRx> configurePlc, Func<string, T> payloadFactory)
+    /// <summary>Publishes an Allen-Bradley PLC tag value through a resilient MQTT client.</summary>
+    /// <typeparam name="T">The PLC tag value type.</typeparam>
+    /// <param name="client">The resilient MQTT client sequence.</param>
+    /// <param name="topic">The MQTT topic to publish to.</param>
+    /// <param name="plcVariable">The PLC variable to observe.</param>
+    /// <param name="plc">The configured PLC connection.</param>
+    /// <param name="typeWitness">Optional values used only to infer <typeparamref name="T"/>.</param>
+    /// <returns>A sequence of resilient MQTT publish results.</returns>
+    public static IObservable<ApplicationMessageProcessedEventArgs> PublishABPlcTag<T>(
+        IObservable<IResilientMqttClient> client,
+        string topic,
+        string plcVariable,
+        IABPlcRx plc,
+        params T[] typeWitness)
     {
         ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(configurePlc);
-
-        var plc = default(IABPlcRx)!;
-        configurePlc?.Invoke(plc);
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
+        ArgumentException.ThrowIfNullOrWhiteSpace(plcVariable);
         ArgumentNullException.ThrowIfNull(plc);
+        ArgumentNullException.ThrowIfNull(typeWitness);
 
-        client.SubscribeToTopic(topic).Subscribe(message => plc.Value(plcVariable, payloadFactory(message.ApplicationMessage.ConvertPayloadToString())!));
+        return client.PublishABPlcTag(topic, plcVariable, plc, typeWitness);
     }
 
-    /// <summary>
-    /// Publishes the value of an Allen-Bradley PLC tag to the specified MQTT topic as an observable message stream.
-    /// </summary>
-    /// <remarks>The method observes the specified PLC tag and publishes its value to the given MQTT
-    /// topic whenever it changes. The PLC connection must be properly configured within the configurePlc action.
-    /// The returned observable emits an event for each message published.</remarks>
-    /// <typeparam name="T">The type of the PLC tag value to observe and publish.</typeparam>
-    /// <param name="client">The observable sequence of resilient MQTT clients used to publish messages.</param>
-    /// <param name="topic">The MQTT topic to which the PLC tag value will be published. Cannot be null.</param>
-    /// <param name="plcVariable">The name of the PLC variable (tag) to observe and publish. Cannot be null.</param>
-    /// <param name="configurePlc">An action to configure the PLC connection before publishing. Cannot be null and must assign a valid IABPlcRx
-    /// instance.</param>
-    /// <returns>An observable sequence of ApplicationMessageProcessedEventArgs representing the result of each published
-    /// message.</returns>
-    public static IObservable<ApplicationMessageProcessedEventArgs> PublishABPlcTag<T>(this IObservable<IResilientMqttClient> client, string topic, string plcVariable, Action<IABPlcRx> configurePlc)
+    /// <summary>Subscribes to an MQTT topic and writes received values to an Allen-Bradley PLC tag.</summary>
+    /// <typeparam name="T">The PLC tag value type.</typeparam>
+    /// <param name="client">The MQTT client sequence.</param>
+    /// <param name="topic">The MQTT topic to subscribe to.</param>
+    /// <param name="plcVariable">The PLC variable to update.</param>
+    /// <param name="plc">The configured PLC connection.</param>
+    /// <param name="payloadFactory">Converts an MQTT payload into a PLC tag value.</param>
+    /// <returns>A disposable that ends the MQTT-to-PLC subscription.</returns>
+    public static IDisposable SubscribeABPlcTag<T>(
+        IObservable<IMqttClient> client,
+        string topic,
+        string plcVariable,
+        IABPlcRx plc,
+        Func<string, T> payloadFactory)
     {
         ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(configurePlc);
-
-        var plc = default(IABPlcRx)!;
-        configurePlc?.Invoke(plc);
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
+        ArgumentException.ThrowIfNullOrWhiteSpace(plcVariable);
         ArgumentNullException.ThrowIfNull(plc);
+        ArgumentNullException.ThrowIfNull(payloadFactory);
 
-        return client.PublishMessage(plc.Observe<T>(plcVariable).Select(payLoad => (topic, payLoad: payLoad!.ToString()!)));
+        return client.SubscribeABPlcTag(topic, plcVariable, plc, payloadFactory);
     }
 
-    /// <summary>
-    /// Subscribes to an MQTT topic and updates an Allen-Bradley PLC variable with values produced from incoming
-    /// messages.
-    /// </summary>
-    /// <remarks>The PLC interface instance must be assigned within the configurePlc action;
-    /// otherwise, an exception is thrown. This method enables reactive updates to PLC variables based on MQTT
-    /// message streams.</remarks>
-    /// <typeparam name="T">The type of the value produced from the MQTT message payload and written to the PLC variable.</typeparam>
-    /// <param name="client">The observable sequence of resilient MQTT clients used to subscribe to the specified topic.</param>
-    /// <param name="topic">The MQTT topic to subscribe to for receiving messages.</param>
-    /// <param name="plcVariable">The name of the Allen-Bradley PLC variable to update with values from incoming messages.</param>
-    /// <param name="configurePlc">An action that configures the PLC interface before subscription. The provided IABPlcRx instance must be
-    /// initialized within this action.</param>
-    /// <param name="payloadFactory">A function that converts the MQTT message payload (as a string) to the value of type T to be written to the
-    /// PLC variable.</param>
-    public static void SubscribeABPlcTag<T>(this IObservable<IResilientMqttClient> client, string topic, string plcVariable, Action<IABPlcRx> configurePlc, Func<string, T> payloadFactory)
+    /// <summary>Subscribes to a topic and writes values to a configured Allen-Bradley PLC connection.</summary>
+    /// <typeparam name="T">The PLC tag value type.</typeparam>
+    /// <param name="client">The resilient MQTT client sequence.</param>
+    /// <param name="topic">The MQTT topic to subscribe to.</param>
+    /// <param name="plcVariable">The PLC variable to update.</param>
+    /// <param name="plc">The configured PLC connection.</param>
+    /// <param name="payloadFactory">Converts an MQTT payload into a PLC tag value.</param>
+    /// <returns>A disposable that ends the MQTT-to-PLC subscription.</returns>
+    public static IDisposable SubscribeABPlcTag<T>(
+        IObservable<IResilientMqttClient> client,
+        string topic,
+        string plcVariable,
+        IABPlcRx plc,
+        Func<string, T> payloadFactory)
     {
         ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(configurePlc);
-
-        var plc = default(IABPlcRx)!;
-        configurePlc?.Invoke(plc);
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
+        ArgumentException.ThrowIfNullOrWhiteSpace(plcVariable);
         ArgumentNullException.ThrowIfNull(plc);
+        ArgumentNullException.ThrowIfNull(payloadFactory);
 
-        client.SubscribeToTopic(topic).Subscribe(message => plc.Value(plcVariable, payloadFactory(message.ApplicationMessage.ConvertPayloadToString())!));
+        return client.SubscribeABPlcTag(topic, plcVariable, plc, payloadFactory);
     }
 }

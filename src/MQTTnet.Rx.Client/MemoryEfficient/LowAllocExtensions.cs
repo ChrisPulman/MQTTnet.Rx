@@ -1,76 +1,289 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Concurrency;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
+using System.Buffers;
 using System.Text;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Reactive;
+using ReactiveUI.Primitives.Reactive.Signals;
+using IScheduler = System.Reactive.Concurrency.IScheduler;
+using RxLinq = System.Reactive.Linq;
 
 namespace MQTTnet.Rx.Client.MemoryEfficient;
 
-/// <summary>
-/// Provides low-allocation reactive extensions for MQTT message processing.
-/// </summary>
-/// <remarks>
-/// These extension methods are designed to minimize memory allocations in high-throughput
-/// scenarios by using pooled buffers, spans, and efficient data transformations.
-/// </remarks>
+/// <summary>Provides low-allocation reactive extensions for MQTT message processing.</summary>
+/// <remarks>These extension methods minimize allocations in high-throughput scenarios by using pooled buffers, spans,
+/// and efficient data transformations.</remarks>
 public static class LowAllocExtensions
 {
-    /// <summary>
-    /// Projects each MQTT message to its payload as a pooled buffer, minimizing allocations.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <returns>
-    /// An observable sequence of tuples containing the rented buffer, bytes written, and a return action.
-    /// The caller must invoke the return action when done with the buffer.
-    /// </returns>
-    /// <remarks>
-    /// Important: The return action must be called to return the buffer to the pool.
-    /// </remarks>
-    public static IObservable<(byte[] Buffer, int Length, Action ReturnBuffer)> ToPooledPayload(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source) =>
-        source.Select(e =>
+    /// <summary>The default maximum payload size to allocate on the stack.</summary>
+    private const int DefaultMaximumStackSize = 256;
+
+    /// <summary>The default maximum number of messages to queue for back-pressure handling.</summary>
+    private const int DefaultMaximumQueueSize = 1000;
+
+    /// <summary>Provides low-allocation operations for an MQTT application message source.</summary>
+    /// <param name="source">The source of received MQTT application messages.</param>
+    extension(IObservable<MqttApplicationMessageReceivedEventArgs> source)
+    {
+        /// <summary>Projects each MQTT message to its payload as a pooled buffer, minimizing allocations.</summary>
+        /// <returns>An observable sequence of tuples containing the rented buffer, bytes written, and a return
+        /// action.</returns>
+        /// <remarks>The caller must invoke the return action when done with the buffer.</remarks>
+        public IObservable<(byte[] Buffer, int Length, Action ReturnBuffer)> ToPooledPayload() =>
+            source.Select(static e =>
+            {
+                var payload = e.ApplicationMessage.Payload;
+                var buffer = BufferPool.CopyToRented(payload, out var length);
+                return (buffer, length, new Action(() => BufferPool.Return(buffer)));
+            });
+
+        /// <summary>Processes each MQTT message payload and returns the payload length.</summary>
+        /// <returns>An observable sequence of payload lengths.</returns>
+        public IObservable<int> GetPayloadLength() =>
+            source.Select(static e => (int)e.ApplicationMessage.Payload.Length);
+
+        /// <summary>Processes each MQTT message payload and returns the payload as a byte array.</summary>
+        /// <returns>An observable sequence of byte arrays.</returns>
+        public IObservable<byte[]> ToPayloadArray() =>
+            source.Select(static e => BufferPool.ToArray(e.ApplicationMessage.Payload));
+
+        /// <summary>Decodes each MQTT message payload as UTF-8 using stack allocation for small payloads.</summary>
+        /// <returns>An observable sequence of decoded strings.</returns>
+        public IObservable<string> ToUtf8StringLowAlloc() =>
+            source.ToUtf8StringLowAlloc(DefaultMaximumStackSize);
+
+        /// <summary>Decodes each MQTT message payload as UTF-8 using stack allocation for small payloads.</summary>
+        /// <param name="maxStackSize">The largest payload, in bytes, to allocate on the stack; larger payloads use a
+        /// pooled buffer.</param>
+        /// <returns>An observable sequence of decoded strings.</returns>
+        public IObservable<string> ToUtf8StringLowAlloc(int maxStackSize) =>
+            source.Select(new Utf8PayloadDecoder(maxStackSize).Decode);
+
+        /// <summary>Batches MQTT messages by time window and processes them together for efficiency.</summary>
+        /// <typeparam name="TResult">The type of the result produced by the batch processor.</typeparam>
+        /// <param name="timeSpan">The time window for batching messages.</param>
+        /// <param name="batchProcessor">A function that processes a batch of messages.</param>
+        /// <returns>An observable sequence of batch processing results.</returns>
+        public IObservable<TResult> BatchProcess<TResult>(
+            TimeSpan timeSpan,
+            Func<IList<MqttApplicationMessageReceivedEventArgs>, TResult> batchProcessor) =>
+            source.BatchProcess(timeSpan, batchProcessor, scheduler: null);
+
+        /// <summary>Batches MQTT messages by time window and processes them together for efficiency.</summary>
+        /// <typeparam name="TResult">The type of the result produced by the batch processor.</typeparam>
+        /// <param name="timeSpan">The time window for batching messages.</param>
+        /// <param name="batchProcessor">A function that processes a batch of messages.</param>
+        /// <param name="scheduler">Optional scheduler for timing. Uses the default scheduler if null.</param>
+        /// <returns>An observable sequence of batch processing results.</returns>
+        public IObservable<TResult> BatchProcess<TResult>(
+            TimeSpan timeSpan,
+            Func<IList<MqttApplicationMessageReceivedEventArgs>, TResult> batchProcessor,
+            IScheduler? scheduler) =>
+            (scheduler is null ? source.Buffer(timeSpan) : source.Buffer(timeSpan, scheduler))
+                .Where(static batch => batch.Count > 0)
+                .Select(batchProcessor);
+
+        /// <summary>Batches MQTT messages by count and processes them together for efficiency.</summary>
+        /// <typeparam name="TResult">The type of the result produced by the batch processor.</typeparam>
+        /// <param name="count">The number of messages per batch.</param>
+        /// <param name="batchProcessor">A function that processes a batch of messages.</param>
+        /// <returns>An observable sequence of batch processing results.</returns>
+        public IObservable<TResult> BatchProcess<TResult>(
+            int count,
+            Func<IList<MqttApplicationMessageReceivedEventArgs>, TResult> batchProcessor) =>
+            source.Buffer(count).Where(static batch => batch.Count > 0).Select(batchProcessor);
+
+        /// <summary>Throttles MQTT messages, dropping intermediate messages within the specified duration.</summary>
+        /// <param name="dueTime">The duration to throttle messages.</param>
+        /// <returns>An observable sequence with throttled messages.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> ThrottleMessages(
+            TimeSpan dueTime) => source.Throttle(dueTime);
+
+        /// <summary>Throttles MQTT messages, dropping intermediate messages within the specified duration.</summary>
+        /// <param name="dueTime">The duration to throttle messages.</param>
+        /// <param name="scheduler">Optional scheduler for timing.</param>
+        /// <returns>An observable sequence with throttled messages.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> ThrottleMessages(
+            TimeSpan dueTime,
+            IScheduler? scheduler) =>
+            scheduler is null ? source.Throttle(dueTime) : source.Throttle(dueTime, scheduler);
+
+        /// <summary>Samples MQTT messages at the specified interval, taking only the most recent message.</summary>
+        /// <param name="interval">The sampling interval.</param>
+        /// <returns>An observable sequence with sampled messages.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> SampleMessages(
+            TimeSpan interval) => source.Sample(interval);
+
+        /// <summary>Samples MQTT messages at the specified interval, taking only the most recent message.</summary>
+        /// <param name="interval">The sampling interval.</param>
+        /// <param name="scheduler">Optional scheduler for timing.</param>
+        /// <returns>An observable sequence with sampled messages.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> SampleMessages(
+            TimeSpan interval,
+            IScheduler? scheduler) => scheduler is null ? source.Sample(interval) : source.Sample(interval, scheduler);
+
+        /// <summary>Groups MQTT messages by topic for parallel processing.</summary>
+        /// <returns>An observable sequence of grouped messages by topic.</returns>
+        public IObservable<RxLinq.IGroupedObservable<
+            string,
+            MqttApplicationMessageReceivedEventArgs
+        >> GroupByTopic() => source.GroupBy(static e => e.ApplicationMessage.Topic);
+
+        /// <summary>Filters MQTT messages using efficient span-based topic matching.</summary>
+        /// <param name="topicPrefix">The topic prefix to match.</param>
+        /// <returns>An observable sequence containing only messages matching the topic prefix.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicStartsWith(
+            string topicPrefix) =>
+            source.Where(e => e.ApplicationMessage.Topic.AsSpan().StartsWith(topicPrefix.AsSpan()));
+
+        /// <summary>Filters MQTT messages using efficient span-based topic matching.</summary>
+        /// <param name="topicSuffix">The topic suffix to match.</param>
+        /// <returns>An observable sequence containing only messages matching the topic suffix.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicEndsWith(
+            string topicSuffix) =>
+            source.Where(e => e.ApplicationMessage.Topic.AsSpan().EndsWith(topicSuffix.AsSpan()));
+
+        /// <summary>Observes messages on a thread pool thread to avoid blocking the MQTT client.</summary>
+        /// <returns>An observable sequence observed on a thread pool thread.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> ObserveOnThreadPool() =>
+            source.ObserveOnTaskPool();
+
+        /// <summary>Adds back-pressure handling by dropping messages when the subscriber is slow.</summary>
+        /// <returns>An observable sequence with back-pressure handling.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WithBackPressureDrop() =>
+            source.WithBackPressureDrop(onDrop: null);
+
+        /// <summary>Adds back-pressure handling by dropping messages when the subscriber is slow.</summary>
+        /// <param name="onDrop">Optional callback when a message is dropped.</param>
+        /// <returns>An observable sequence with back-pressure handling.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WithBackPressureDrop(
+            Action<MqttApplicationMessageReceivedEventArgs>? onDrop) =>
+            Signal.Create<MqttApplicationMessageReceivedEventArgs>(observer =>
+            {
+                var gate = new object();
+                var isProcessing = false;
+
+                return source.Subscribe(
+                    message =>
+                    {
+                        lock (gate)
+                        {
+                            if (isProcessing)
+                            {
+                                onDrop?.Invoke(message);
+                                return;
+                            }
+
+                            isProcessing = true;
+                        }
+
+                        try
+                        {
+                            observer.OnNext(message);
+                        }
+                        finally
+                        {
+                            lock (gate)
+                            {
+                                isProcessing = false;
+                            }
+                        }
+                    },
+                    observer.OnError,
+                    observer.OnCompleted);
+            });
+
+        /// <summary>Adds back-pressure handling by queueing messages up to the default limit.</summary>
+        /// <returns>An observable sequence with bounded queueing.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WithBackPressureQueue() =>
+            source.WithBackPressureQueue(DefaultMaximumQueueSize, onOverflow: null);
+
+        /// <summary>Adds back-pressure handling by queueing messages up to a limit.</summary>
+        /// <param name="maxQueueSize">Maximum number of messages to queue.</param>
+        /// <returns>An observable sequence with bounded queueing.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WithBackPressureQueue(
+            int maxQueueSize) => source.WithBackPressureQueue(maxQueueSize, onOverflow: null);
+
+        /// <summary>Adds back-pressure handling by queueing messages up to a limit.</summary>
+        /// <param name="maxQueueSize">Maximum number of messages to queue.</param>
+        /// <param name="onOverflow">Optional callback when the queue overflows.</param>
+        /// <returns>An observable sequence with bounded queueing.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WithBackPressureQueue(
+            int maxQueueSize,
+            Action<MqttApplicationMessageReceivedEventArgs>? onOverflow) =>
+            Signal.Create<MqttApplicationMessageReceivedEventArgs>(observer =>
+            {
+                var queue = new Queue<MqttApplicationMessageReceivedEventArgs>();
+                var gate = new object();
+                var isProcessing = false;
+                var disposable = new MultipleDisposable();
+
+                void ProcessQueue()
+                {
+                    while (true)
+                    {
+                        MqttApplicationMessageReceivedEventArgs? message;
+                        lock (gate)
+                        {
+                            if (queue.Count == 0)
+                            {
+                                isProcessing = false;
+                                return;
+                            }
+
+                            message = queue.Dequeue();
+                        }
+
+                        observer.OnNext(message);
+                    }
+                }
+
+                disposable.Add(
+                    source.Subscribe(
+                        message =>
+                        {
+                            lock (gate)
+                            {
+                                if (queue.Count >= maxQueueSize)
+                                {
+                                    onOverflow?.Invoke(message);
+                                    return;
+                                }
+
+                                queue.Enqueue(message);
+
+                                if (isProcessing)
+                                {
+                                    return;
+                                }
+
+                                isProcessing = true;
+                            }
+
+                            ProcessQueue();
+                        },
+                        observer.OnError,
+                        observer.OnCompleted));
+
+                return disposable;
+            });
+    }
+
+    /// <summary>Decodes MQTT message payloads using stack allocation when it is safe to do so.</summary>
+    /// <param name="maxStackSize">The maximum requested size for a stack-allocated payload buffer.</param>
+    private sealed class Utf8PayloadDecoder(int maxStackSize)
+    {
+        /// <summary>The largest payload size that is safe to allocate on the stack.</summary>
+        private const int MaximumSafeStackAllocationSize = 1024;
+
+        /// <summary>Decodes the payload of an MQTT application message.</summary>
+        /// <param name="eventArgs">The MQTT application message event arguments.</param>
+        /// <returns>The UTF-8 decoded payload.</returns>
+        public string Decode(MqttApplicationMessageReceivedEventArgs eventArgs)
         {
-            var payload = e.ApplicationMessage.Payload;
-            var buffer = BufferPool.CopyToRented(payload, out var length);
-            return (buffer, length, new Action(() => BufferPool.Return(buffer)));
-        });
-
-    /// <summary>
-    /// Processes each MQTT message payload and returns the payload length.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <returns>An observable sequence of payload lengths.</returns>
-    public static IObservable<int> GetPayloadLength(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source) =>
-        source.Select(e => (int)e.ApplicationMessage.Payload.Length);
-
-    /// <summary>
-    /// Processes each MQTT message payload and returns the payload as a byte array.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <returns>An observable sequence of byte arrays.</returns>
-    public static IObservable<byte[]> ToPayloadArray(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source) =>
-        source.Select(e => BufferPool.ToArray(e.ApplicationMessage.Payload));
-
-    /// <summary>
-    /// Decodes each MQTT message payload as UTF-8 using stack allocation for small payloads.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="maxStackSize">
-    /// Maximum payload size (in bytes) to allocate on the stack. Larger payloads use pooled buffers.
-    /// Default is 256 bytes.
-    /// </param>
-    /// <returns>An observable sequence of decoded strings.</returns>
-    public static IObservable<string> ToUtf8StringLowAlloc(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        int maxStackSize = 256) =>
-        source.Select(e =>
-        {
-            var payload = e.ApplicationMessage.Payload;
-
+            var payload = eventArgs.ApplicationMessage.Payload;
             if (payload.IsEmpty)
             {
                 return string.Empty;
@@ -81,9 +294,14 @@ public static class LowAllocExtensions
                 return Encoding.UTF8.GetString(payload.FirstSpan);
             }
 
-            var length = (int)payload.Length;
+            var payloadLength = (int)payload.Length;
+            if (payloadLength <= maxStackSize && payloadLength <= MaximumSafeStackAllocationSize)
+            {
+                Span<byte> stackBuffer = stackalloc byte[payloadLength];
+                payload.CopyTo(stackBuffer);
+                return Encoding.UTF8.GetString(stackBuffer);
+            }
 
-            // Large payload: use pooled buffer
             var buffer = BufferPool.CopyToRented(payload, out var bytesWritten);
             try
             {
@@ -93,222 +311,6 @@ public static class LowAllocExtensions
             {
                 BufferPool.Return(buffer);
             }
-        });
-
-    /// <summary>
-    /// Batches MQTT messages by time window and processes them together for efficiency.
-    /// </summary>
-    /// <typeparam name="TResult">The type of the result produced by the batch processor.</typeparam>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="timeSpan">The time window for batching messages.</param>
-    /// <param name="batchProcessor">A function that processes a batch of messages.</param>
-    /// <param name="scheduler">Optional scheduler for timing. Uses default scheduler if null.</param>
-    /// <returns>An observable sequence of batch processing results.</returns>
-    public static IObservable<TResult> BatchProcess<TResult>(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        TimeSpan timeSpan,
-        Func<IList<MqttApplicationMessageReceivedEventArgs>, TResult> batchProcessor,
-        IScheduler? scheduler = null) =>
-        (scheduler is null
-            ? source.Buffer(timeSpan)
-            : source.Buffer(timeSpan, scheduler))
-        .Where(batch => batch.Count > 0)
-        .Select(batchProcessor);
-
-    /// <summary>
-    /// Batches MQTT messages by count and processes them together for efficiency.
-    /// </summary>
-    /// <typeparam name="TResult">The type of the result produced by the batch processor.</typeparam>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="count">The number of messages per batch.</param>
-    /// <param name="batchProcessor">A function that processes a batch of messages.</param>
-    /// <returns>An observable sequence of batch processing results.</returns>
-    public static IObservable<TResult> BatchProcess<TResult>(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        int count,
-        Func<IList<MqttApplicationMessageReceivedEventArgs>, TResult> batchProcessor) =>
-        source.Buffer(count)
-            .Where(batch => batch.Count > 0)
-            .Select(batchProcessor);
-
-    /// <summary>
-    /// Throttles MQTT messages, dropping intermediate messages within the specified duration.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="dueTime">The duration to throttle messages.</param>
-    /// <param name="scheduler">Optional scheduler for timing.</param>
-    /// <returns>An observable sequence with throttled messages.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> ThrottleMessages(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        TimeSpan dueTime,
-        IScheduler? scheduler = null) =>
-        scheduler is null
-            ? source.Throttle(dueTime)
-            : source.Throttle(dueTime, scheduler);
-
-    /// <summary>
-    /// Samples MQTT messages at the specified interval, taking only the most recent message.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="interval">The sampling interval.</param>
-    /// <param name="scheduler">Optional scheduler for timing.</param>
-    /// <returns>An observable sequence with sampled messages.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> SampleMessages(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        TimeSpan interval,
-        IScheduler? scheduler = null) =>
-        scheduler is null
-            ? source.Sample(interval)
-            : source.Sample(interval, scheduler);
-
-    /// <summary>
-    /// Groups MQTT messages by topic for parallel processing.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <returns>An observable sequence of grouped messages by topic.</returns>
-    public static IObservable<IGroupedObservable<string, MqttApplicationMessageReceivedEventArgs>> GroupByTopic(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source) =>
-        source.GroupBy(e => e.ApplicationMessage.Topic);
-
-    /// <summary>
-    /// Filters MQTT messages using efficient span-based topic matching.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="topicPrefix">The topic prefix to match.</param>
-    /// <returns>An observable sequence containing only messages matching the topic prefix.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicStartsWith(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        string topicPrefix) =>
-        source.Where(e => e.ApplicationMessage.Topic.AsSpan().StartsWith(topicPrefix.AsSpan()));
-
-    /// <summary>
-    /// Filters MQTT messages using efficient span-based topic matching.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="topicSuffix">The topic suffix to match.</param>
-    /// <returns>An observable sequence containing only messages matching the topic suffix.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicEndsWith(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        string topicSuffix) =>
-        source.Where(e => e.ApplicationMessage.Topic.AsSpan().EndsWith(topicSuffix.AsSpan()));
-
-    /// <summary>
-    /// Observes messages on a thread pool thread to avoid blocking the MQTT client.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <returns>An observable sequence observed on a thread pool thread.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> ObserveOnThreadPool(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source) =>
-        source.ObserveOn(ThreadPoolScheduler.Instance);
-
-    /// <summary>
-    /// Adds back-pressure handling by dropping messages when the subscriber is slow.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="onDrop">Optional callback when a message is dropped.</param>
-    /// <returns>An observable sequence with back-pressure handling.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> WithBackPressureDrop(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        Action<MqttApplicationMessageReceivedEventArgs>? onDrop = null) =>
-        Observable.Create<MqttApplicationMessageReceivedEventArgs>(observer =>
-        {
-            var gate = new object();
-            var isProcessing = false;
-
-            return source.Subscribe(
-                message =>
-                {
-                    lock (gate)
-                    {
-                        if (isProcessing)
-                        {
-                            onDrop?.Invoke(message);
-                            return;
-                        }
-
-                        isProcessing = true;
-                    }
-
-                    try
-                    {
-                        observer.OnNext(message);
-                    }
-                    finally
-                    {
-                        lock (gate)
-                        {
-                            isProcessing = false;
-                        }
-                    }
-                },
-                observer.OnError,
-                observer.OnCompleted);
-        });
-
-    /// <summary>
-    /// Adds back-pressure handling by queueing messages up to a limit.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="maxQueueSize">Maximum number of messages to queue.</param>
-    /// <param name="onOverflow">Optional callback when queue overflows.</param>
-    /// <returns>An observable sequence with bounded queueing.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> WithBackPressureQueue(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        int maxQueueSize = 1000,
-        Action<MqttApplicationMessageReceivedEventArgs>? onOverflow = null) =>
-        Observable.Create<MqttApplicationMessageReceivedEventArgs>(observer =>
-        {
-            var queue = new Queue<MqttApplicationMessageReceivedEventArgs>();
-            var gate = new object();
-            var isProcessing = false;
-            var disposable = new CompositeDisposable();
-
-            void ProcessQueue()
-            {
-                while (true)
-                {
-                    MqttApplicationMessageReceivedEventArgs? message;
-                    lock (gate)
-                    {
-                        if (queue.Count == 0)
-                        {
-                            isProcessing = false;
-                            return;
-                        }
-
-                        message = queue.Dequeue();
-                    }
-
-                    observer.OnNext(message);
-                }
-            }
-
-            disposable.Add(source.Subscribe(
-                message =>
-                {
-                    lock (gate)
-                    {
-                        if (queue.Count >= maxQueueSize)
-                        {
-                            onOverflow?.Invoke(message);
-                            return;
-                        }
-
-                        queue.Enqueue(message);
-
-                        if (isProcessing)
-                        {
-                            return;
-                        }
-
-                        isProcessing = true;
-                    }
-
-                    ProcessQueue();
-                },
-                observer.OnError,
-                observer.OnCompleted));
-
-            return disposable;
-        });
+        }
+    }
 }

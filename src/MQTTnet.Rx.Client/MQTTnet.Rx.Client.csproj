@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -7,9 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MQTTnet" Version="5.2.0.1603" />
-    <PackageReference Include="ReactiveUI.Extensions" Version="4.0.0" />
-    <PackageReference Include="System.Reactive" Version="7.0.0" />
+    <PackageReference Include="MQTTnet" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
   </ItemGroup>
-
 </Project>

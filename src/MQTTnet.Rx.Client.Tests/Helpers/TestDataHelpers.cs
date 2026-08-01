@@ -1,5 +1,6 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
 using System.Buffers;
 using System.Text;
@@ -7,14 +8,20 @@ using MQTTnet.Packets;
 
 namespace MQTTnet.Rx.Client.Tests.Helpers;
 
-/// <summary>
-/// Provides helper methods for creating test data.
-/// </summary>
+/// <summary>Provides helper methods for creating test data.</summary>
 public static class TestDataHelpers
 {
-    /// <summary>
-    /// Creates a mock MqttApplicationMessageReceivedEventArgs.
-    /// </summary>
+    /// <summary>Stores the default MQTT client identifier.</summary>
+    private const string DefaultClientId = "test-client";
+
+    /// <summary>Creates a mock MqttApplicationMessageReceivedEventArgs.</summary>
+    /// <param name="topic">The message topic.</param>
+    /// <param name="payload">The message payload.</param>
+    /// <returns>The event args.</returns>
+    public static MqttApplicationMessageReceivedEventArgs CreateMessageReceivedArgs(string topic, string payload) =>
+        CreateMessageReceivedArgs(topic, payload, DefaultClientId);
+
+    /// <summary>Creates a mock MqttApplicationMessageReceivedEventArgs.</summary>
     /// <param name="topic">The message topic.</param>
     /// <param name="payload">The message payload.</param>
     /// <param name="clientId">The client ID.</param>
@@ -22,28 +29,37 @@ public static class TestDataHelpers
     public static MqttApplicationMessageReceivedEventArgs CreateMessageReceivedArgs(
         string topic,
         string payload,
-        string clientId = "test-client")
+        string clientId)
     {
+        ArgumentNullException.ThrowIfNull(topic);
+        ArgumentNullException.ThrowIfNull(payload);
+        ArgumentNullException.ThrowIfNull(clientId);
+
         var payloadBytes = Encoding.UTF8.GetBytes(payload);
         var payloadSequence = new ReadOnlySequence<byte>(payloadBytes);
-        var message = new MqttApplicationMessage
+        MqttApplicationMessage message = new()
         {
             Topic = topic,
-            Payload = payloadSequence
+            Payload = payloadSequence,
         };
 
-        var publishPacket = new MqttPublishPacket
+        MqttPublishPacket publishPacket = new()
         {
             Topic = topic,
-            Payload = payloadSequence
+            Payload = payloadSequence,
         };
 
-        return new MqttApplicationMessageReceivedEventArgs(clientId, message, publishPacket, null);
+        return new(clientId, message, publishPacket, null);
     }
 
-    /// <summary>
-    /// Creates a mock MqttApplicationMessageReceivedEventArgs with byte payload.
-    /// </summary>
+    /// <summary>Creates a mock MqttApplicationMessageReceivedEventArgs with byte payload.</summary>
+    /// <param name="topic">The message topic.</param>
+    /// <param name="payload">The message payload as bytes.</param>
+    /// <returns>The event args.</returns>
+    public static MqttApplicationMessageReceivedEventArgs CreateMessageReceivedArgs(string topic, byte[] payload) =>
+        CreateMessageReceivedArgs(topic, payload, DefaultClientId);
+
+    /// <summary>Creates a mock MqttApplicationMessageReceivedEventArgs with byte payload.</summary>
     /// <param name="topic">The message topic.</param>
     /// <param name="payload">The message payload as bytes.</param>
     /// <param name="clientId">The client ID.</param>
@@ -51,27 +67,37 @@ public static class TestDataHelpers
     public static MqttApplicationMessageReceivedEventArgs CreateMessageReceivedArgs(
         string topic,
         byte[] payload,
-        string clientId = "test-client")
+        string clientId)
     {
+        ArgumentNullException.ThrowIfNull(topic);
+        ArgumentNullException.ThrowIfNull(payload);
+        ArgumentNullException.ThrowIfNull(clientId);
+
         var payloadSequence = new ReadOnlySequence<byte>(payload);
-        var message = new MqttApplicationMessage
+        MqttApplicationMessage message = new()
         {
             Topic = topic,
-            Payload = payloadSequence
+            Payload = payloadSequence,
         };
 
-        var publishPacket = new MqttPublishPacket
+        MqttPublishPacket publishPacket = new()
         {
             Topic = topic,
-            Payload = payloadSequence
+            Payload = payloadSequence,
         };
 
-        return new MqttApplicationMessageReceivedEventArgs(clientId, message, publishPacket, null);
+        return new(clientId, message, publishPacket, null);
     }
 
-    /// <summary>
-    /// Creates a mock MqttApplicationMessageReceivedEventArgs with JSON payload.
-    /// </summary>
+    /// <summary>Creates a mock MqttApplicationMessageReceivedEventArgs with JSON payload.</summary>
+    /// <typeparam name="T">The type of the payload object.</typeparam>
+    /// <param name="topic">The message topic.</param>
+    /// <param name="payload">The object to serialize as JSON.</param>
+    /// <returns>The event args.</returns>
+    public static MqttApplicationMessageReceivedEventArgs CreateJsonMessageReceivedArgs<T>(string topic, T payload) =>
+        CreateJsonMessageReceivedArgs(topic, payload, DefaultClientId);
+
+    /// <summary>Creates a mock MqttApplicationMessageReceivedEventArgs with JSON payload.</summary>
     /// <typeparam name="T">The type of the payload object.</typeparam>
     /// <param name="topic">The message topic.</param>
     /// <param name="payload">The object to serialize as JSON.</param>
@@ -80,9 +106,12 @@ public static class TestDataHelpers
     public static MqttApplicationMessageReceivedEventArgs CreateJsonMessageReceivedArgs<T>(
         string topic,
         T payload,
-        string clientId = "test-client")
+        string clientId)
     {
-        var json = Newtonsoft.Json.JsonConvert.SerializeObject(payload);
+        ArgumentNullException.ThrowIfNull(topic);
+        ArgumentNullException.ThrowIfNull(clientId);
+
+        var json = System.Text.Json.JsonSerializer.Serialize(payload);
         return CreateMessageReceivedArgs(topic, json, clientId);
     }
 }

@@ -1,29 +1,49 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
 using System.Text.Json;
 using MQTTnet.Rx.Client.Tests.Helpers;
+using ReactiveUI.Primitives.Reactive;
+using ReactiveUI.Primitives.Reactive.Signals;
 
 namespace MQTTnet.Rx.Client.Tests;
 
-/// <summary>
-/// Tests for the MqttdSubscribeExtensions class.
-/// </summary>
-public class MqttdSubscribeExtensionsTests
+/// <summary>Tests for the MqttdSubscribeExtensions class.</summary>
+public sealed class MqttdSubscribeExtensionsTests
 {
-    /// <summary>
-    /// Tests that ToDictionary converts JSON payload to dictionary.
-    /// </summary>
+    /// <summary>Gets the standard delay used to allow observable notifications to complete.</summary>
+    private const int ObservableNotificationDelayMilliseconds = 50;
+
+    /// <summary>Gets the delay used to allow topic subscriptions to complete.</summary>
+    private const int SubscriptionCompletionDelayMilliseconds = 100;
+
+    /// <summary>Gets the expected count when an observable produces one result.</summary>
+    private const int SingleResultCount = 1;
+
+    /// <summary>Gets the generic topic used by payload conversion tests.</summary>
+    private const string ConversionTopic = "topic";
+
+    /// <summary>Gets the topic used by message subscription tests.</summary>
+    private const string MessageTopic = "test/topic";
+
+    /// <summary>Gets the serializer settings used to ignore null values during serialization.</summary>
+    private static readonly JsonSerializerOptions IgnoreNullValuesSerializerOptions = new()
+    {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    /// <summary>Tests that ToDictionary converts a JSON payload to a dictionary.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToDictionary_ConvertsJsonToDictionary()
+    public async Task ToDictionary_ConvertsJsonToDictionaryAsync()
     {
         // Arrange
         const string json = """{"name":"sensor1","value":25.5}""";
+        const string expectedName = "sensor1";
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("topic", json)
+            TestDataHelpers.CreateMessageReceivedArgs(ConversionTopic, json),
         };
 
         var results = new List<Dictionary<string, object?>?>();
@@ -31,338 +51,374 @@ public class MqttdSubscribeExtensionsTests
         // Act
         using var subscription = messages.ToObservable()
             .ToDictionary()
-            .Subscribe(d => results.Add(d));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(1);
+        await Assert.That(results).Count().IsEqualTo(SingleResultCount);
         await Assert.That(results[0]).IsNotNull();
-        await Assert.That(results?[0]?["name"]).IsEqualTo("sensor1");
+        await Assert.That(results[0]!["name"]).IsEqualTo(expectedName);
     }
 
-    /// <summary>
-    /// Tests that ToObject deserializes JSON to typed object.
-    /// </summary>
+    /// <summary>Tests that ToObject deserializes JSON to a typed object.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToObject_DeserializesToTypedObject()
+    public async Task ToObject_DeserializesToTypedObjectAsync()
     {
         // Arrange
-        var testData = new TestPayload { Name = "Test", Value = 42 };
+        const string expectedName = "Test";
+        const int expectedValue = 42;
+        var testData = new TestPayload { Name = expectedName, Value = expectedValue };
         var messages = new[]
         {
-            TestDataHelpers.CreateJsonMessageReceivedArgs("topic", testData)
+            TestDataHelpers.CreateJsonMessageReceivedArgs(ConversionTopic, testData),
         };
 
         var results = new List<TestPayload?>();
 
         // Act
         using var subscription = messages.ToObservable()
-            .ToObject<TestPayload>()
-            .Subscribe(obj => results.Add(obj));
+            .ToObject(static json => JsonSerializer.Deserialize<TestPayload>(json))
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(1);
+        await Assert.That(results).Count().IsEqualTo(SingleResultCount);
         await Assert.That(results[0]).IsNotNull();
-        await Assert.That(results[0]!.Name).IsEqualTo("Test");
-        await Assert.That(results[0]!.Value).IsEqualTo(42);
+        await Assert.That(results[0]!.Name).IsEqualTo(expectedName);
+        await Assert.That(results[0]!.Value).IsEqualTo(expectedValue);
     }
 
-    /// <summary>
-    /// Tests that ToObject uses custom serializer settings.
-    /// </summary>
+    /// <summary>Tests that ToObject uses custom serializer settings.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToObject_UsesCustomSettings()
+    public async Task ToObject_UsesCustomSettingsAsync()
     {
         // Arrange
-        var options = new JsonSerializerOptions
-        {
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
-        };
-
+        const string expectedName = "Test";
         const string json = """{"Name":"Test","Value":100}""";
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("topic", json)
+            TestDataHelpers.CreateMessageReceivedArgs(ConversionTopic, json),
         };
 
         var results = new List<TestPayload?>();
 
         // Act
         using var subscription = messages.ToObservable()
-            .ToObject<TestPayload>(options)
-            .Subscribe(obj => results.Add(obj));
+            .ToObject(static json => JsonSerializer.Deserialize<TestPayload>(json, IgnoreNullValuesSerializerOptions))
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(1);
-        await Assert.That(results[0]!.Name).IsEqualTo("Test");
+        await Assert.That(results).Count().IsEqualTo(SingleResultCount);
+        await Assert.That(results[0]!.Name).IsEqualTo(expectedName);
     }
 
-    /// <summary>
-    /// Tests that ToBool converts values correctly.
-    /// </summary>
+    /// <summary>Tests that ToBool converts values correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToBool_ConvertsValuesCorrectly()
+    public async Task ToBool_ConvertsValuesCorrectlyAsync()
     {
         // Arrange
-        var values = new object?[] { true, false, 1, 0, "true", "false" };
+        const int trueIntegerValue = 1;
+        const int falseIntegerValue = 0;
+        var values = new object?[] { true, false, trueIntegerValue, falseIntegerValue, "true", "false" };
         var expected = new[] { true, false, true, false, true, false };
         var results = new List<bool>();
 
         // Act
         using var subscription = values.ToObservable()
             .ToBool()
-            .Subscribe(b => results.Add(b));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
         await Assert.That(results).Count().IsEqualTo(expected.Length);
-        for (var i = 0; i < expected.Length; i++)
+        for (var index = 0; index < expected.Length; index++)
         {
-            await Assert.That(results[i]).IsEqualTo(expected[i]);
+            await Assert.That(results[index]).IsEqualTo(expected[index]);
         }
     }
 
-    /// <summary>
-    /// Tests that ToInt32 converts values correctly.
-    /// </summary>
+    /// <summary>Tests that ToInt32 converts values correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToInt32_ConvertsValuesCorrectly()
+    public async Task ToInt32_ConvertsValuesCorrectlyAsync()
     {
         // Arrange
-        var values = new object?[] { 42, 100L, "200", 3.14 };
-        var expected = new[] { 42, 100, 200, 3 };
+        const int firstExpectedValue = 42;
+        const long secondInputValue = 100L;
+        const int secondExpectedValue = 100;
+        const string thirdInputValue = "200";
+        const int thirdExpectedValue = 200;
+        const double fourthInputValue = 3.14;
+        const int fourthExpectedValue = 3;
+        var values = new object?[]
+        {
+            firstExpectedValue,
+            secondInputValue,
+            thirdInputValue,
+            fourthInputValue,
+        };
+        var expected = new[]
+        {
+            firstExpectedValue,
+            secondExpectedValue,
+            thirdExpectedValue,
+            fourthExpectedValue,
+        };
         var results = new List<int>();
 
         // Act
         using var subscription = values.ToObservable()
             .ToInt32()
-            .Subscribe(i => results.Add(i));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
         await Assert.That(results).Count().IsEqualTo(expected.Length);
-        for (var i = 0; i < expected.Length; i++)
+        for (var index = 0; index < expected.Length; index++)
         {
-            await Assert.That(results[i]).IsEqualTo(expected[i]);
+            await Assert.That(results[index]).IsEqualTo(expected[index]);
         }
     }
 
-    /// <summary>
-    /// Tests that ToDouble converts values correctly.
-    /// </summary>
+    /// <summary>Tests that ToDouble converts values correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToDouble_ConvertsValuesCorrectly()
+    public async Task ToDouble_ConvertsValuesCorrectlyAsync()
     {
         // Arrange
-        var values = new object?[] { 42, 3.14, "2.5" };
+        const double firstExpectedValue = 42.0;
+        const double secondExpectedValue = 3.14;
+        const string thirdInputValue = "2.5";
+        const double thirdExpectedValue = 2.5;
+        var values = new object?[] { firstExpectedValue, secondExpectedValue, thirdInputValue };
+        var expected = new[] { firstExpectedValue, secondExpectedValue, thirdExpectedValue };
         var results = new List<double>();
 
         // Act
         using var subscription = values.ToObservable()
             .ToDouble()
-            .Subscribe(d => results.Add(d));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(3);
-        await Assert.That(results[0]).IsEqualTo(42.0);
-        await Assert.That(results[1]).IsEqualTo(3.14);
-        await Assert.That(results[2]).IsEqualTo(2.5);
+        await Assert.That(results).Count().IsEqualTo(expected.Length);
+        for (var index = 0; index < expected.Length; index++)
+        {
+            await Assert.That(results[index]).IsEqualTo(expected[index]);
+        }
     }
 
-    /// <summary>
-    /// Tests that ToInt16 converts values correctly.
-    /// </summary>
+    /// <summary>Tests that ToInt16 converts values correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToInt16_ConvertsValuesCorrectly()
+    public async Task ToInt16_ConvertsValuesCorrectlyAsync()
     {
         // Arrange
-        var values = new object?[] { (short)100, 200, "300" };
+        const short firstExpectedValue = 100;
+        const int secondInputValue = 200;
+        const short secondExpectedValue = 200;
+        const string thirdInputValue = "300";
+        const short thirdExpectedValue = 300;
+        var values = new object?[] { firstExpectedValue, secondInputValue, thirdInputValue };
+        var expected = new[] { firstExpectedValue, secondExpectedValue, thirdExpectedValue };
         var results = new List<short>();
 
         // Act
         using var subscription = values.ToObservable()
             .ToInt16()
-            .Subscribe(s => results.Add(s));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(3);
-        await Assert.That(results[0]).IsEqualTo((short)100);
-        await Assert.That(results[1]).IsEqualTo((short)200);
-        await Assert.That(results[2]).IsEqualTo((short)300);
+        await Assert.That(results).Count().IsEqualTo(expected.Length);
+        for (var index = 0; index < expected.Length; index++)
+        {
+            await Assert.That(results[index]).IsEqualTo(expected[index]);
+        }
     }
 
-    /// <summary>
-    /// Tests that ToInt64 converts values correctly.
-    /// </summary>
+    /// <summary>Tests that ToInt64 converts values correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToInt64_ConvertsValuesCorrectly()
+    public async Task ToInt64_ConvertsValuesCorrectlyAsync()
     {
         // Arrange
-        var values = new object?[] { 100L, 200, "9999999999" };
+        const long firstInputValue = 100L;
+        const int secondInputValue = 200;
+        const string thirdInputValue = "9999999999";
+        const long thirdExpectedValue = 9_999_999_999L;
+        var values = new object?[] { firstInputValue, secondInputValue, thirdInputValue };
         var results = new List<long>();
 
         // Act
         using var subscription = values.ToObservable()
             .ToInt64()
-            .Subscribe(l => results.Add(l));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(3);
-        await Assert.That(results[2]).IsEqualTo(9999999999L);
+        await Assert.That(results).Count().IsEqualTo(values.Length);
+        await Assert.That(results[^1]).IsEqualTo(thirdExpectedValue);
     }
 
-    /// <summary>
-    /// Tests that ToSingle converts values correctly.
-    /// </summary>
+    /// <summary>Tests that ToSingle converts values correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToSingle_ConvertsValuesCorrectly()
+    public async Task ToSingle_ConvertsValuesCorrectlyAsync()
     {
         // Arrange
-        var values = new object?[] { 1.5f, 2.5, "3.5" };
+        const float firstExpectedValue = 1.5F;
+        const double secondInputValue = 2.5;
+        const float secondExpectedValue = 2.5F;
+        const string thirdInputValue = "3.5";
+        const float thirdExpectedValue = 3.5F;
+        var values = new object?[] { firstExpectedValue, secondInputValue, thirdInputValue };
+        var expected = new[] { firstExpectedValue, secondExpectedValue, thirdExpectedValue };
         var results = new List<float>();
 
         // Act
         using var subscription = values.ToObservable()
             .ToSingle()
-            .Subscribe(f => results.Add(f));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(3);
-        await Assert.That(results[0]).IsEqualTo(1.5f);
-        await Assert.That(results[1]).IsEqualTo(2.5f);
-        await Assert.That(results[2]).IsEqualTo(3.5f);
+        await Assert.That(results).Count().IsEqualTo(expected.Length);
+        for (var index = 0; index < expected.Length; index++)
+        {
+            await Assert.That(results[index]).IsEqualTo(expected[index]);
+        }
     }
 
-    /// <summary>
-    /// Tests that ToByte converts values correctly.
-    /// </summary>
+    /// <summary>Tests that ToByte converts values correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToByte_ConvertsValuesCorrectly()
+    public async Task ToByte_ConvertsValuesCorrectlyAsync()
     {
         // Arrange
-        var values = new object?[] { (byte)100, 200, "255" };
+        const byte firstExpectedValue = 100;
+        const int secondInputValue = 200;
+        const byte secondExpectedValue = 200;
+        const string thirdInputValue = "255";
+        const byte thirdExpectedValue = 255;
+        var values = new object?[] { firstExpectedValue, secondInputValue, thirdInputValue };
+        var expected = new[] { firstExpectedValue, secondExpectedValue, thirdExpectedValue };
         var results = new List<byte>();
 
         // Act
         using var subscription = values.ToObservable()
             .ToByte()
-            .Subscribe(b => results.Add(b));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(3);
-        await Assert.That(results[0]).IsEqualTo((byte)100);
-        await Assert.That(results[1]).IsEqualTo((byte)200);
-        await Assert.That(results[2]).IsEqualTo((byte)255);
+        await Assert.That(results).Count().IsEqualTo(expected.Length);
+        for (var index = 0; index < expected.Length; index++)
+        {
+            await Assert.That(results[index]).IsEqualTo(expected[index]);
+        }
     }
 
-    /// <summary>
-    /// Tests that ToStringValue converts values correctly.
-    /// </summary>
+    /// <summary>Tests that ToStringValue converts values correctly.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ToStringValue_ConvertsValuesCorrectly()
+    public async Task ToStringValue_ConvertsValuesCorrectlyAsync()
     {
         // Arrange
-        var values = new object?[] { 42, 3.14, true, "hello" };
+        const int firstInputValue = 42;
+        const double secondInputValue = 3.14;
+        const string fourthInputValue = "hello";
+        const string expectedFirstValue = "42";
+        var values = new object?[] { firstInputValue, secondInputValue, true, fourthInputValue };
         var results = new List<string?>();
 
         // Act
         using var subscription = values.ToObservable()
             .Select(Convert.ToString)
-            .Subscribe(s => results.Add(s));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(4);
-        await Assert.That(results[0]).IsEqualTo("42");
-        await Assert.That(results[3]).IsEqualTo("hello");
+        await Assert.That(results).Count().IsEqualTo(values.Length);
+        await Assert.That(results[0]).IsEqualTo(expectedFirstValue);
+        await Assert.That(results[^1]).IsEqualTo(fourthInputValue);
     }
 
-    /// <summary>
-    /// Tests SubscribeToTopics with mock client.
-    /// </summary>
+    /// <summary>Tests SubscribeToTopics with a mock client.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task SubscribeToTopics_SubscribesToMultipleTopics()
+    public async Task SubscribeToTopics_SubscribesToMultipleTopicsAsync()
     {
         // Arrange
+        const string firstTopic = "topic1";
+        const string secondTopic = "topic2";
+        const string thirdTopic = "topic3";
         var mockClient = new MockMqttClient();
-        var clientObservable = Observable.Return<IMqttClient>(mockClient);
+        var clientObservable = Signal.Emit<IMqttClient>(mockClient);
         var receivedMessages = new List<MqttApplicationMessageReceivedEventArgs>();
 
         // Act
         using var subscription = clientObservable
-            .SubscribeToTopics("topic1", "topic2", "topic3")
-            .Subscribe(args => receivedMessages.Add(args));
+            .SubscribeToTopics(firstTopic, secondTopic, thirdTopic)
+            .Subscribe(receivedMessages.Add);
 
-        await Task.Delay(100);
+        await Task.Delay(SubscriptionCompletionDelayMilliseconds);
 
         // Verify subscriptions were made
-        await Assert.That(mockClient.Subscriptions).Count().IsEqualTo(3);
+        await Assert.That(mockClient.Subscriptions)
+            .Count()
+            .IsEqualTo(new[] { firstTopic, secondTopic, thirdTopic }.Length);
     }
 
-    /// <summary>
-    /// Tests SubscribeToTopic receives messages.
-    /// </summary>
+    /// <summary>Tests SubscribeToTopic receives messages.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task SubscribeToTopic_ReceivesMessages()
+    public async Task SubscribeToTopic_ReceivesMessagesAsync()
     {
         // Arrange
+        const string payload = "test payload";
         var mockClient = new MockMqttClient();
-        var clientObservable = Observable.Return<IMqttClient>(mockClient);
+        var clientObservable = Signal.Emit<IMqttClient>(mockClient);
         var receivedMessages = new List<MqttApplicationMessageReceivedEventArgs>();
 
         // Act
         using var subscription = clientObservable
-            .SubscribeToTopic("test/topic")
-            .Subscribe(args => receivedMessages.Add(args));
+            .SubscribeToTopic(MessageTopic)
+            .Subscribe(receivedMessages.Add);
 
-        await Task.Delay(100);
+        await Task.Delay(SubscriptionCompletionDelayMilliseconds);
 
         // Simulate message
-        await mockClient.SimulateMessageReceived("test/topic", "test payload");
-        await Task.Delay(50);
+        await mockClient.SimulateMessageReceivedAsync(MessageTopic, payload);
+        await Task.Delay(ObservableNotificationDelayMilliseconds);
 
         // Assert
-        await Assert.That(receivedMessages).Count().IsEqualTo(1);
-        await Assert.That(receivedMessages[0].ApplicationMessage.Topic).IsEqualTo("test/topic");
+        await Assert.That(receivedMessages).Count().IsEqualTo(SingleResultCount);
+        await Assert.That(receivedMessages[0].ApplicationMessage.Topic).IsEqualTo(MessageTopic);
     }
 
-    /// <summary>
-    /// Test payload class.
-    /// </summary>
+    /// <summary>Represents the typed JSON payload used by ToObject tests.</summary>
     private sealed class TestPayload
     {
+        /// <summary>Gets or sets the payload name.</summary>
         public string Name { get; set; } = string.Empty;
 
+        /// <summary>Gets or sets the payload value.</summary>
         public int Value { get; set; }
     }
 }

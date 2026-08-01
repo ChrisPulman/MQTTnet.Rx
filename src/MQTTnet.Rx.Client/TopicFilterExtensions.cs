@@ -1,206 +1,319 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
-using System.Text.RegularExpressions;
+using ReactiveUI.Primitives.Reactive;
+using ReactiveUI.Primitives.Reactive.Signals;
+using RxLinq = System.Reactive.Linq;
 
 namespace MQTTnet.Rx.Client;
 
-/// <summary>
-/// Provides extension methods for filtering MQTT messages by topic patterns including wildcard support.
-/// </summary>
-/// <remarks>
-/// These extensions support MQTT topic wildcards:
-/// - '+' matches a single topic level.
-/// - '#' matches any number of topic levels (must be at the end).
-/// </remarks>
-public static partial class TopicFilterExtensions
+/// <summary>Provides MQTT topic-filtering extensions.</summary>
+public static class TopicFilterExtensions
 {
-    /// <summary>
-    /// Filters MQTT messages where the topic matches any of the specified patterns.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="topicFilters">The topic filter patterns to match against.</param>
-    /// <returns>An observable sequence containing messages matching any of the topic filters.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicMatchesAny(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        params string[] topicFilters)
+    /// <summary>Provides topic-filtering extensions for MQTT message observables.</summary>
+    /// <param name="source">The MQTT messages to filter.</param>
+    extension(IObservable<MqttApplicationMessageReceivedEventArgs> source)
     {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(topicFilters);
-
-        if (topicFilters.Length == 0)
+        /// <summary>Filters messages matching any supplied topic filter.</summary>
+        /// <param name="topicFilters">The topic filters to match.</param>
+        /// <returns>An observable sequence containing matching messages.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicMatchesAny(
+            params string[] topicFilters)
         {
-            return Observable.Empty<MqttApplicationMessageReceivedEventArgs>();
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(topicFilters);
+
+            return topicFilters.Length switch
+            {
+                0 => Signal.Empty<MqttApplicationMessageReceivedEventArgs>(),
+                1 => source.WhereTopicIsMatch(topicFilters[0]),
+                _ => source.Where(message => MatchesAny(message, topicFilters)),
+            };
         }
 
-        if (topicFilters.Length == 1)
+        /// <summary>Filters messages that do not match a topic filter.</summary>
+        /// <param name="topicFilter">The topic filter to exclude.</param>
+        /// <returns>An observable sequence containing non-matching messages.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicIsNotMatch(
+            string topicFilter)
         {
-            return source.WhereTopicIsMatch(topicFilters[0]);
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(topicFilter);
+            return source.Where(message =>
+                !IsTopicMatch(message.ApplicationMessage.Topic, topicFilter));
         }
 
-        return source.Where(e => topicFilters.Any(filter =>
-            MqttTopicFilterComparer.Compare(e.ApplicationMessage.Topic, filter) == MqttTopicFilterCompareResult.IsMatch));
+        /// <summary>Extracts named topic-level values from messages matching a pattern.</summary>
+        /// <param name="topicPattern">The topic pattern containing named placeholders.</param>
+        /// <returns>An observable sequence containing each matching message and its extracted values.</returns>
+        public IObservable<(
+            MqttApplicationMessageReceivedEventArgs Message,
+            Dictionary<string, string> Values)> ExtractTopicValues(string topicPattern)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            ArgumentNullException.ThrowIfNull(topicPattern);
+
+            return source
+                .Select(message => TryExtractTopicValues(message, topicPattern))
+                .Where(static result => result is not null)
+                .Select(static result => result!.Value);
+        }
+
+        /// <summary>Filters messages by their topic-level count.</summary>
+        /// <param name="levelCount">The required number of topic levels.</param>
+        /// <returns>An observable sequence containing messages with the required level count.</returns>
+        public IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicLevelCount(
+            int levelCount)
+        {
+            ArgumentNullException.ThrowIfNull(source);
+            return source.Where(message =>
+                CountTopicLevels(message.ApplicationMessage.Topic) == levelCount);
+        }
+
+        /// <summary>Selects a topic level from each message.</summary>
+        /// <param name="levelIndex">The zero-based topic-level index.</param>
+        /// <returns>An observable sequence containing available topic levels.</returns>
+        public IObservable<string> SelectTopicLevel(int levelIndex) =>
+            source
+                .Select(message => GetTopicLevel(message.ApplicationMessage.Topic, levelIndex))
+                .Where(static level => level is not null)
+                .Select(static level => level!);
+
+        /// <summary>Groups messages by their complete topic.</summary>
+        /// <returns>An observable sequence of topic groups.</returns>
+        public IObservable<RxLinq.IGroupedObservable<
+            string,
+            MqttApplicationMessageReceivedEventArgs
+        >> GroupByTopic() => source.GroupBy(static message => message.ApplicationMessage.Topic);
+
+        /// <summary>Groups messages by a topic level.</summary>
+        /// <param name="levelIndex">The zero-based topic-level index.</param>
+        /// <returns>An observable sequence of topic-level groups.</returns>
+        public IObservable<RxLinq.IGroupedObservable<
+            string,
+            MqttApplicationMessageReceivedEventArgs
+        >> GroupByTopicLevel(int levelIndex) =>
+            source.GroupBy(message =>
+                GetTopicLevel(message.ApplicationMessage.Topic, levelIndex) ?? string.Empty);
     }
 
-    /// <summary>
-    /// Filters MQTT messages where the topic does not match the specified pattern.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="topicFilter">The topic filter pattern to exclude.</param>
-    /// <returns>An observable sequence containing messages not matching the topic filter.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicIsNotMatch(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        string topicFilter)
+    /// <summary>Determines whether a message matches any topic filter.</summary>
+    /// <param name="message">The received MQTT message.</param>
+    /// <param name="topicFilters">The topic filters to test.</param>
+    /// <returns><see langword="true"/> when any filter matches; otherwise, <see langword="false"/>.</returns>
+    private static bool MatchesAny(
+        MqttApplicationMessageReceivedEventArgs message,
+        string[] topicFilters)
     {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(topicFilter);
-
-        return source.Where(e =>
-            MqttTopicFilterComparer.Compare(e.ApplicationMessage.Topic, topicFilter) != MqttTopicFilterCompareResult.IsMatch);
-    }
-
-    /// <summary>
-    /// Extracts values from topic levels based on a pattern with named placeholders.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="topicPattern">
-    /// The topic pattern with named placeholders in the format {name}.
-    /// Example: "sensors/{sensorId}/readings/{type}".
-    /// </param>
-    /// <returns>
-    /// An observable sequence of tuples containing the message and extracted values.
-    /// </returns>
-    /// <example>
-    /// <code>
-    /// client.ApplicationMessageReceived()
-    ///     .ExtractTopicValues("sensors/{sensorId}/readings/{type}")
-    ///     .Subscribe(x =>
-    ///     {
-    ///         Console.WriteLine($"Sensor: {x.Values["sensorId"]}, Type: {x.Values["type"]}");
-    ///     });
-    /// </code>
-    /// </example>
-    public static IObservable<(MqttApplicationMessageReceivedEventArgs Message, Dictionary<string, string> Values)> ExtractTopicValues(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        string topicPattern)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        ArgumentNullException.ThrowIfNull(topicPattern);
-
-        // Find all placeholders
-        var placeholders = PlaceholderRegex().Matches(topicPattern)
-            .Select(m => m.Groups[1].Value)
-            .ToArray();
-
-        // Convert pattern to regex
-        var regexPattern = "^" + PlaceholderRegex().Replace(
-            Regex.Escape(topicPattern).Replace(@"\{", "{").Replace(@"\}", "}"),
-            "(?<$1>[^/]+)") + "$";
-
-        var regex = new Regex(regexPattern, RegexOptions.Compiled);
-
-        return source
-            .Select(e =>
+        foreach (var topicFilter in topicFilters)
+        {
+            if (IsTopicMatch(message.ApplicationMessage.Topic, topicFilter))
             {
-                var match = regex.Match(e.ApplicationMessage.Topic);
-                if (!match.Success)
-                {
-                    return default;
-                }
+                return true;
+            }
+        }
 
-                var values = placeholders.ToDictionary(
-                    p => p,
-                    p => match.Groups[p].Value);
-
-                return (Message: e, Values: values)!;
-            })
-            .Where(x => x.Message != null);
+        return false;
     }
 
-    /// <summary>
-    /// Filters messages by topic level count.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="levelCount">The exact number of topic levels required.</param>
-    /// <returns>An observable sequence containing messages with the specified number of topic levels.</returns>
-    public static IObservable<MqttApplicationMessageReceivedEventArgs> WhereTopicLevelCount(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        int levelCount)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        return source.Where(e => e.ApplicationMessage.Topic.Count(c => c == '/') + 1 == levelCount);
-    }
+    /// <summary>Determines whether a topic matches a topic filter.</summary>
+    /// <param name="topic">The MQTT topic.</param>
+    /// <param name="topicFilter">The MQTT topic filter.</param>
+    /// <returns><see langword="true"/> when the topic matches; otherwise, <see langword="false"/>.</returns>
+    private static bool IsTopicMatch(string topic, string topicFilter) =>
+        MqttTopicFilterComparer.Compare(topic, topicFilter) == MqttTopicFilterCompareResult.IsMatch;
 
-    /// <summary>
-    /// Gets a specific topic level from each message.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="levelIndex">The zero-based index of the topic level to extract.</param>
-    /// <returns>An observable sequence of topic level strings.</returns>
-    public static IObservable<string> SelectTopicLevel(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        int levelIndex)
+    /// <summary>Extracts named full-level placeholders from a topic pattern.</summary>
+    /// <param name="message">The received MQTT message.</param>
+    /// <param name="topicPattern">The topic pattern containing placeholders.</param>
+    /// <returns>The extracted values when the topic matches; otherwise, <see langword="null"/>.</returns>
+    private static (
+        MqttApplicationMessageReceivedEventArgs Message,
+        Dictionary<string, string> Values)? TryExtractTopicValues(
+            MqttApplicationMessageReceivedEventArgs message,
+            string topicPattern)
     {
-        ArgumentNullException.ThrowIfNull(source);
+        var topicLevels = message.ApplicationMessage.Topic.Split('/');
+        var patternLevels = topicPattern.Split('/');
+        if (topicLevels.Length != patternLevels.Length)
+        {
+            return null;
+        }
 
-        return source
-            .Select(e =>
+        var values = new Dictionary<string, string>(StringComparer.Ordinal);
+        for (var index = 0; index < patternLevels.Length; index++)
+        {
+            if (!TryMatchTopicLevel(topicLevels[index], patternLevels[index], values))
             {
-                var topic = e.ApplicationMessage.Topic.AsSpan();
-                var currentLevel = 0;
-                var start = 0;
-
-                for (var i = 0; i <= topic.Length; i++)
-                {
-                    if (i == topic.Length || topic[i] == '/')
-                    {
-                        if (currentLevel == levelIndex)
-                        {
-                            return topic[start..i].ToString();
-                        }
-
-                        currentLevel++;
-                        start = i + 1;
-                    }
-                }
-
                 return null;
-            })
-            .Where(level => level != null)!;
+            }
+        }
+
+        return (message, values);
     }
 
-    /// <summary>
-    /// Groups messages by topic.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <returns>An observable sequence of grouped messages by topic.</returns>
-    public static IObservable<IGroupedObservable<string, MqttApplicationMessageReceivedEventArgs>> GroupByTopic(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source)
-    {
-        ArgumentNullException.ThrowIfNull(source);
-        return source.GroupBy(e => e.ApplicationMessage.Topic);
-    }
+    /// <summary>Matches a topic level against literals and named placeholders.</summary>
+    /// <param name="topicLevel">The incoming topic level.</param>
+    /// <param name="patternLevel">The topic-pattern level.</param>
+    /// <param name="values">The placeholder values collected while matching.</param>
+    /// <returns><see langword="true"/> when the level matches; otherwise, <see langword="false"/>.</returns>
+    private static bool TryMatchTopicLevel(
+        string topicLevel,
+        string patternLevel,
+        Dictionary<string, string> values) => TryMatchTopicLevelCore(topicLevel, patternLevel, values, 0, 0);
 
-    /// <summary>
-    /// Groups messages by a specific topic level.
-    /// </summary>
-    /// <param name="source">The source sequence of MQTT application messages.</param>
-    /// <param name="levelIndex">The zero-based index of the topic level to group by.</param>
-    /// <returns>An observable sequence of grouped messages.</returns>
-    public static IObservable<IGroupedObservable<string, MqttApplicationMessageReceivedEventArgs>> GroupByTopicLevel(
-        this IObservable<MqttApplicationMessageReceivedEventArgs> source,
-        int levelIndex)
+    /// <summary>Matches a topic level from the supplied character offsets.</summary>
+    /// <param name="topicLevel">The incoming topic level.</param>
+    /// <param name="patternLevel">The topic-pattern level.</param>
+    /// <param name="values">The placeholder values collected while matching.</param>
+    /// <param name="topicIndex">The current incoming-topic offset.</param>
+    /// <param name="patternIndex">The current topic-pattern offset.</param>
+    /// <returns><see langword="true"/> when the remaining content matches; otherwise, <see
+    /// langword="false"/>.</returns>
+    private static bool TryMatchTopicLevelCore(
+        string topicLevel,
+        string patternLevel,
+        Dictionary<string, string> values,
+        int topicIndex,
+        int patternIndex)
     {
-        ArgumentNullException.ThrowIfNull(source);
-
-        return source.GroupBy(e =>
+        if (patternIndex == patternLevel.Length)
         {
-            var levels = e.ApplicationMessage.Topic.Split('/');
-            return levelIndex < levels.Length ? levels[levelIndex] : string.Empty;
-        });
+            return topicIndex == topicLevel.Length;
+        }
+
+        if (
+            TryReadPlaceholder(
+                patternLevel,
+                patternIndex,
+                out var placeholderName,
+                out var nextPatternIndex))
+        {
+            for (var candidateEnd = topicLevel.Length; candidateEnd > topicIndex; candidateEnd--)
+            {
+                var candidate = topicLevel[topicIndex..candidateEnd];
+                var hadPreviousValue = values.TryGetValue(placeholderName, out var previousValue);
+                values[placeholderName] = candidate;
+                if (
+                    TryMatchTopicLevelCore(
+                        topicLevel,
+                        patternLevel,
+                        values,
+                        candidateEnd,
+                        nextPatternIndex))
+                {
+                    return true;
+                }
+
+                if (hadPreviousValue)
+                {
+                    values[placeholderName] = previousValue!;
+                }
+                else
+                {
+                    _ = values.Remove(placeholderName);
+                }
+            }
+
+            return false;
+        }
+
+        return topicIndex != topicLevel.Length
+            && topicLevel[topicIndex] == patternLevel[patternIndex]
+            && TryMatchTopicLevelCore(
+                topicLevel,
+                patternLevel,
+                values,
+                topicIndex + 1,
+                patternIndex + 1);
     }
 
-    [GeneratedRegex(@"\{(\w+)\}")]
-    private static partial Regex PlaceholderRegex();
+    /// <summary>Reads a valid placeholder at a pattern offset.</summary>
+    /// <param name="patternLevel">The topic-pattern level.</param>
+    /// <param name="patternIndex">The offset to inspect.</param>
+    /// <param name="placeholderName">The parsed placeholder name.</param>
+    /// <param name="nextPatternIndex">The offset following the parsed placeholder.</param>
+    /// <returns><see langword="true"/> when a valid placeholder was read; otherwise, <see langword="false"/>.</returns>
+    private static bool TryReadPlaceholder(
+        string patternLevel,
+        int patternIndex,
+        out string placeholderName,
+        out int nextPatternIndex)
+    {
+        placeholderName = string.Empty;
+        nextPatternIndex = patternIndex;
+        if (patternLevel[patternIndex] != '{')
+        {
+            return false;
+        }
+
+        var closingBrace = patternLevel.IndexOf('}', patternIndex + 1);
+        if (closingBrace < 0)
+        {
+            return false;
+        }
+
+        var candidate = patternLevel[(patternIndex + 1)..closingBrace];
+        if (candidate.Length == 0)
+        {
+            return false;
+        }
+
+        foreach (var character in candidate)
+        {
+            if (!char.IsLetterOrDigit(character) && character != '_')
+            {
+                return false;
+            }
+        }
+
+        placeholderName = candidate;
+        nextPatternIndex = closingBrace + 1;
+        return true;
+    }
+
+    /// <summary>Counts the levels in a topic.</summary>
+    /// <param name="topic">The MQTT topic.</param>
+    /// <returns>The number of topic levels.</returns>
+    private static int CountTopicLevels(string topic)
+    {
+        var levels = 1;
+        foreach (var character in topic)
+        {
+            if (character == '/')
+            {
+                levels++;
+            }
+        }
+
+        return levels;
+    }
+
+    /// <summary>Gets a topic level by its zero-based index.</summary>
+    /// <param name="topic">The MQTT topic.</param>
+    /// <param name="levelIndex">The zero-based topic-level index.</param>
+    /// <returns>The topic level when it exists; otherwise, <see langword="null"/>.</returns>
+    private static string? GetTopicLevel(string topic, int levelIndex)
+    {
+        var currentLevel = 0;
+        var start = 0;
+        for (var index = 0; index <= topic.Length; index++)
+        {
+            if (index != topic.Length && topic[index] != '/')
+            {
+                continue;
+            }
+
+            if (currentLevel == levelIndex)
+            {
+                return topic[start..index];
+            }
+
+            currentLevel++;
+            start = index + 1;
+        }
+
+        return null;
+    }
 }

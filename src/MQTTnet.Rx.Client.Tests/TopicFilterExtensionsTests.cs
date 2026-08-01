@@ -1,55 +1,107 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
 using MQTTnet.Rx.Client.Tests.Helpers;
+using ReactiveUI.Primitives.Reactive;
 
 namespace MQTTnet.Rx.Client.Tests;
 
-/// <summary>
-/// Tests for the TopicFilterExtensions class.
-/// </summary>
+/// <summary>Tests for the TopicFilterExtensions class.</summary>
 public class TopicFilterExtensionsTests
 {
-    /// <summary>
-    /// Tests that WhereTopicIsMatch matches exact topic.
-    /// </summary>
+    /// <summary>The number of results expected for two matches.</summary>
+    private const int ExpectedDoubleResultCount = 2;
+
+    /// <summary>The number of results expected for three matches.</summary>
+    private const int ExpectedTripleResultCount = 3;
+
+    /// <summary>The index of the first result.</summary>
+    private const int FirstResultIndex = 0;
+
+    /// <summary>The index of the second result.</summary>
+    private const int SecondResultIndex = 1;
+
+    /// <summary>The topic level containing the room name.</summary>
+    private const int RoomTopicLevel = 1;
+
+    /// <summary>The delay used to allow observable handlers to process test events.</summary>
+    private const int ObservableProcessingDelayMilliseconds = 50;
+
+    /// <summary>The payload representing a temperature reading.</summary>
+    private const string TemperaturePayload = "25";
+
+    /// <summary>The payload representing a humidity reading.</summary>
+    private const string HumidityPayload = "60";
+
+    /// <summary>The alternate payload representing a temperature reading.</summary>
+    private const string AlternateTemperaturePayload = "26";
+
+    /// <summary>The payload representing an additional temperature reading.</summary>
+    private const string AdditionalTemperaturePayload = "22";
+
+    /// <summary>The generic payload used by topic tests.</summary>
+    private const string DataPayload = "data";
+
+    /// <summary>The topic for sensor temperature readings.</summary>
+    private const string SensorTemperatureTopic = "sensors/temp";
+
+    /// <summary>The dictionary key for a sensor identifier.</summary>
+    private const string SensorIdentifierKey = "sensorId";
+
+    /// <summary>The topic for sensor humidity readings.</summary>
+    private const string SensorHumidityTopic = "sensors/humidity";
+
+    /// <summary>The topic for living-room temperature readings.</summary>
+    private const string LivingRoomTemperatureTopic = "home/living/temp";
+
+    /// <summary>The topic for kitchen humidity readings.</summary>
+    private const string KitchenHumidityTopic = "home/kitchen/humidity";
+
+    /// <summary>The first generic topic used by grouping tests.</summary>
+    private const string FirstTopic = "topic1";
+
+    /// <summary>The second generic topic used by grouping tests.</summary>
+    private const string SecondTopic = "topic2";
+
+    /// <summary>Tests that WhereTopicIsMatch matches exact topic.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task WhereTopicIsMatch_MatchesExactTopic()
+    public async Task WhereTopicIsMatch_MatchesExactTopicAsync()
     {
         // Arrange
+        const string temperatureTopic = "sensors/temperature";
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/temperature", "25"),
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/humidity", "60"),
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/temperature", "26")
+            TestDataHelpers.CreateMessageReceivedArgs(temperatureTopic, TemperaturePayload),
+            TestDataHelpers.CreateMessageReceivedArgs(SensorHumidityTopic, HumidityPayload),
+            TestDataHelpers.CreateMessageReceivedArgs(temperatureTopic, AlternateTemperaturePayload),
         };
 
         var results = new List<MqttApplicationMessageReceivedEventArgs>();
 
         // Act
         using var subscription = messages.ToObservable()
-            .WhereTopicIsMatch("sensors/temperature")
-            .Subscribe(m => results.Add(m));
+            .WhereTopicIsMatch(temperatureTopic)
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(2);
+        await Assert.That(results).Count().IsEqualTo(ExpectedDoubleResultCount);
     }
 
-    /// <summary>
-    /// Tests that WhereTopicIsMatch matches single-level wildcard.
-    /// </summary>
+    /// <summary>Tests that WhereTopicIsMatch matches single-level wildcard.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task WhereTopicIsMatch_MatchesSingleLevelWildcard()
+    public async Task WhereTopicIsMatch_MatchesSingleLevelWildcardAsync()
     {
         // Arrange
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/temp/room1", "25"),
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/humidity/room1", "60"),
-            TestDataHelpers.CreateMessageReceivedArgs("devices/temp/room1", "26")
+            TestDataHelpers.CreateMessageReceivedArgs("sensors/temp/room1", TemperaturePayload),
+            TestDataHelpers.CreateMessageReceivedArgs("sensors/humidity/room1", HumidityPayload),
+            TestDataHelpers.CreateMessageReceivedArgs("devices/temp/room1", AlternateTemperaturePayload),
         };
 
         var results = new List<MqttApplicationMessageReceivedEventArgs>();
@@ -57,27 +109,26 @@ public class TopicFilterExtensionsTests
         // Act
         using var subscription = messages.ToObservable()
             .WhereTopicIsMatch("sensors/+/room1")
-            .Subscribe(m => results.Add(m));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(2);
+        await Assert.That(results).Count().IsEqualTo(ExpectedDoubleResultCount);
     }
 
-    /// <summary>
-    /// Tests that WhereTopicIsMatch matches multi-level wildcard.
-    /// </summary>
+    /// <summary>Tests that WhereTopicIsMatch matches multi-level wildcard.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task WhereTopicIsMatch_MatchesMultiLevelWildcard()
+    public async Task WhereTopicIsMatch_MatchesMultiLevelWildcardAsync()
     {
         // Arrange
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("home/living/temp", "25"),
-            TestDataHelpers.CreateMessageReceivedArgs("home/kitchen/humidity", "60"),
-            TestDataHelpers.CreateMessageReceivedArgs("office/temp", "22"),
-            TestDataHelpers.CreateMessageReceivedArgs("home/bedroom/lights/brightness", "80")
+            TestDataHelpers.CreateMessageReceivedArgs(LivingRoomTemperatureTopic, TemperaturePayload),
+            TestDataHelpers.CreateMessageReceivedArgs(KitchenHumidityTopic, HumidityPayload),
+            TestDataHelpers.CreateMessageReceivedArgs("office/temp", AdditionalTemperaturePayload),
+            TestDataHelpers.CreateMessageReceivedArgs("home/bedroom/lights/brightness", "80"),
         };
 
         var results = new List<MqttApplicationMessageReceivedEventArgs>();
@@ -85,27 +136,26 @@ public class TopicFilterExtensionsTests
         // Act
         using var subscription = messages.ToObservable()
             .WhereTopicIsMatch("home/#")
-            .Subscribe(m => results.Add(m));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(3);
+        await Assert.That(results).Count().IsEqualTo(ExpectedTripleResultCount);
     }
 
-    /// <summary>
-    /// Tests that WhereTopicMatchesAny matches multiple patterns.
-    /// </summary>
+    /// <summary>Tests that WhereTopicMatchesAny matches multiple patterns.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task WhereTopicMatchesAny_MatchesMultiplePatterns()
+    public async Task WhereTopicMatchesAny_MatchesMultiplePatternsAsync()
     {
         // Arrange
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/temp", "25"),
+            TestDataHelpers.CreateMessageReceivedArgs(SensorTemperatureTopic, TemperaturePayload),
             TestDataHelpers.CreateMessageReceivedArgs("devices/status", "online"),
             TestDataHelpers.CreateMessageReceivedArgs("alerts/fire", "true"),
-            TestDataHelpers.CreateMessageReceivedArgs("other/topic", "data")
+            TestDataHelpers.CreateMessageReceivedArgs("other/topic", DataPayload),
         };
 
         var results = new List<MqttApplicationMessageReceivedEventArgs>();
@@ -113,26 +163,25 @@ public class TopicFilterExtensionsTests
         // Act
         using var subscription = messages.ToObservable()
             .WhereTopicMatchesAny("sensors/#", "alerts/#")
-            .Subscribe(m => results.Add(m));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(2);
+        await Assert.That(results).Count().IsEqualTo(ExpectedDoubleResultCount);
     }
 
-    /// <summary>
-    /// Tests that WhereTopicIsNotMatch excludes matching topics.
-    /// </summary>
+    /// <summary>Tests that WhereTopicIsNotMatch excludes matching topics.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task WhereTopicIsNotMatch_ExcludesMatchingTopics()
+    public async Task WhereTopicIsNotMatch_ExcludesMatchingTopicsAsync()
     {
         // Arrange
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/temp", "25"),
-            TestDataHelpers.CreateMessageReceivedArgs("debug/trace", "data"),
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/humidity", "60")
+            TestDataHelpers.CreateMessageReceivedArgs(SensorTemperatureTopic, TemperaturePayload),
+            TestDataHelpers.CreateMessageReceivedArgs("debug/trace", DataPayload),
+            TestDataHelpers.CreateMessageReceivedArgs(SensorHumidityTopic, HumidityPayload),
         };
 
         var results = new List<MqttApplicationMessageReceivedEventArgs>();
@@ -140,114 +189,111 @@ public class TopicFilterExtensionsTests
         // Act
         using var subscription = messages.ToObservable()
             .WhereTopicIsNotMatch("debug/#")
-            .Subscribe(m => results.Add(m));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(2);
+        await Assert.That(results).Count().IsEqualTo(ExpectedDoubleResultCount);
     }
 
-    /// <summary>
-    /// Tests that ExtractTopicValues extracts values correctly.
-    /// </summary>
+    /// <summary>Tests that ExtractTopicValues extracts values correctly.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ExtractTopicValues_ExtractsValues()
+    public async Task ExtractTopicValues_ExtractsValuesAsync()
     {
         // Arrange
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/temp123/readings/celsius", "25"),
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/hum456/readings/percent", "60")
+            TestDataHelpers.CreateMessageReceivedArgs("sensors/temp123/readings/celsius", TemperaturePayload),
+            TestDataHelpers.CreateMessageReceivedArgs("sensors/hum456/readings/percent", HumidityPayload),
         };
 
-        var results = new List<(MqttApplicationMessageReceivedEventArgs, Dictionary<string, string>)>();
+        var results = new List<(MqttApplicationMessageReceivedEventArgs Message, Dictionary<string, string> Values)>();
 
         // Act
         using var subscription = messages.ToObservable()
             .ExtractTopicValues("sensors/{sensorId}/readings/{unit}")
-            .Subscribe(x => results.Add(x));
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(2);
-        await Assert.That(results[0].Item2["sensorId"]).IsEqualTo("temp123");
-        await Assert.That(results[0].Item2["unit"]).IsEqualTo("celsius");
-        await Assert.That(results[1].Item2["sensorId"]).IsEqualTo("hum456");
+        await Assert.That(results).Count().IsEqualTo(ExpectedDoubleResultCount);
+        await Assert.That(results[FirstResultIndex].Values[SensorIdentifierKey]).IsEqualTo("temp123");
+        await Assert.That(results[FirstResultIndex].Values["unit"]).IsEqualTo("celsius");
+        await Assert.That(results[SecondResultIndex].Values[SensorIdentifierKey]).IsEqualTo("hum456");
     }
 
-    /// <summary>
-    /// Tests that WhereTopicLevelCount filters by level count.
-    /// </summary>
+    /// <summary>Tests that WhereTopicLevelCount filters by level count.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task WhereTopicLevelCount_FiltersByLevelCount()
+    public async Task WhereTopicLevelCount_FiltersByLevelCountAsync()
     {
         // Arrange
+        const int threeTopicLevels = 3;
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("a/b/c", "data"),
-            TestDataHelpers.CreateMessageReceivedArgs("a/b", "data"),
-            TestDataHelpers.CreateMessageReceivedArgs("a/b/c/d", "data"),
-            TestDataHelpers.CreateMessageReceivedArgs("x/y/z", "data")
+            TestDataHelpers.CreateMessageReceivedArgs("a/b/c", DataPayload),
+            TestDataHelpers.CreateMessageReceivedArgs("a/b", DataPayload),
+            TestDataHelpers.CreateMessageReceivedArgs("a/b/c/d", DataPayload),
+            TestDataHelpers.CreateMessageReceivedArgs("x/y/z", DataPayload),
         };
 
         var results = new List<MqttApplicationMessageReceivedEventArgs>();
 
         // Act
         using var subscription = messages.ToObservable()
-            .WhereTopicLevelCount(3)
-            .Subscribe(m => results.Add(m));
+            .WhereTopicLevelCount(threeTopicLevels)
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(2);
+        await Assert.That(results).Count().IsEqualTo(ExpectedDoubleResultCount);
     }
 
-    /// <summary>
-    /// Tests that SelectTopicLevel extracts specific level.
-    /// </summary>
+    /// <summary>Tests that SelectTopicLevel extracts specific level.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task SelectTopicLevel_ExtractsSpecificLevel()
+    public async Task SelectTopicLevel_ExtractsSpecificLevelAsync()
     {
         // Arrange
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("home/living/temp", "25"),
-            TestDataHelpers.CreateMessageReceivedArgs("home/kitchen/humidity", "60"),
-            TestDataHelpers.CreateMessageReceivedArgs("home/bedroom/lights", "on")
+            TestDataHelpers.CreateMessageReceivedArgs(LivingRoomTemperatureTopic, TemperaturePayload),
+            TestDataHelpers.CreateMessageReceivedArgs(KitchenHumidityTopic, HumidityPayload),
+            TestDataHelpers.CreateMessageReceivedArgs("home/bedroom/lights", "on"),
         };
 
         var results = new List<string>();
 
         // Act
         using var subscription = messages.ToObservable()
-            .SelectTopicLevel(1) // Get the room names
-            .Subscribe(level => results.Add(level));
+            .SelectTopicLevel(RoomTopicLevel) // Get the room names
+            .Subscribe(results.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(results).Count().IsEqualTo(3);
+        await Assert.That(results).Count().IsEqualTo(ExpectedTripleResultCount);
         await Assert.That(results).Contains("living");
         await Assert.That(results).Contains("kitchen");
         await Assert.That(results).Contains("bedroom");
     }
 
-    /// <summary>
-    /// Tests that GroupByTopic groups messages correctly.
-    /// </summary>
+    /// <summary>Tests that GroupByTopic groups messages correctly.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task GroupByTopic_GroupsMessagesCorrectly()
+    public async Task GroupByTopic_GroupsMessagesCorrectlyAsync()
     {
         // Arrange
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("topic1", "a"),
-            TestDataHelpers.CreateMessageReceivedArgs("topic2", "b"),
-            TestDataHelpers.CreateMessageReceivedArgs("topic1", "c"),
-            TestDataHelpers.CreateMessageReceivedArgs("topic2", "d")
+            TestDataHelpers.CreateMessageReceivedArgs(FirstTopic, "a"),
+            TestDataHelpers.CreateMessageReceivedArgs(SecondTopic, "b"),
+            TestDataHelpers.CreateMessageReceivedArgs(FirstTopic, "c"),
+            TestDataHelpers.CreateMessageReceivedArgs(SecondTopic, "d"),
         };
 
         var groupKeys = new List<string>();
@@ -255,42 +301,43 @@ public class TopicFilterExtensionsTests
         // Act
         using var subscription = messages.ToObservable()
             .GroupByTopic()
-            .Subscribe(group => groupKeys.Add(group.Key));
+            .Select(static group => group.Key)
+            .Subscribe(groupKeys.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(groupKeys).Count().IsEqualTo(2);
-        await Assert.That(groupKeys).Contains("topic1");
-        await Assert.That(groupKeys).Contains("topic2");
+        await Assert.That(groupKeys).Count().IsEqualTo(ExpectedDoubleResultCount);
+        await Assert.That(groupKeys).Contains(FirstTopic);
+        await Assert.That(groupKeys).Contains(SecondTopic);
     }
 
-    /// <summary>
-    /// Tests that GroupByTopicLevel groups by specific level.
-    /// </summary>
+    /// <summary>Tests that GroupByTopicLevel groups by specific level.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task GroupByTopicLevel_GroupsBySpecificLevel()
+    public async Task GroupByTopicLevel_GroupsBySpecificLevelAsync()
     {
         // Arrange
         var messages = new[]
         {
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/room1/temp", "25"),
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/room2/temp", "22"),
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/room1/humidity", "60"),
-            TestDataHelpers.CreateMessageReceivedArgs("sensors/room2/humidity", "55")
+            TestDataHelpers.CreateMessageReceivedArgs("sensors/room1/temp", TemperaturePayload),
+            TestDataHelpers.CreateMessageReceivedArgs("sensors/room2/temp", AdditionalTemperaturePayload),
+            TestDataHelpers.CreateMessageReceivedArgs("sensors/room1/humidity", HumidityPayload),
+            TestDataHelpers.CreateMessageReceivedArgs("sensors/room2/humidity", "55"),
         };
 
         var groupKeys = new List<string>();
 
         // Act
         using var subscription = messages.ToObservable()
-            .GroupByTopicLevel(1) // Group by room
-            .Subscribe(group => groupKeys.Add(group.Key));
+            .GroupByTopicLevel(RoomTopicLevel) // Group by room
+            .Select(static group => group.Key)
+            .Subscribe(groupKeys.Add);
 
-        await Task.Delay(50);
+        await Task.Delay(ObservableProcessingDelayMilliseconds);
 
         // Assert
-        await Assert.That(groupKeys).Count().IsEqualTo(2);
+        await Assert.That(groupKeys).Count().IsEqualTo(ExpectedDoubleResultCount);
         await Assert.That(groupKeys).Contains("room1");
         await Assert.That(groupKeys).Contains("room2");
     }

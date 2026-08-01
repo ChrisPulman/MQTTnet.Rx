@@ -49,7 +49,7 @@ dotnet_style_prefer_is_null_check_over_reference_equality_method = true:suggesti
 dotnet_style_prefer_auto_properties = true:suggestion
 dotnet_style_operator_placement_when_wrapping = beginning_of_line
 tab_width = 4
-end_of_line = crlf
+end_of_line = lf
 dotnet_style_object_initializer = true:suggestion
 
 [project.json]

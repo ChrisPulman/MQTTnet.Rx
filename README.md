@@ -21,13 +21,21 @@
 ![Nuget](https://img.shields.io/nuget/dt/MQTTnet.Rx.S7Plc?color=pink&style=plastic)
 [![NuGet](https://img.shields.io/nuget/v/MQTTnet.Rx.S7Plc.svg?style=plastic)](https://www.nuget.org/packages/MQTTnet.Rx.S7Plc)
 
-#### MQTTnet.Rx.SerialPort
-![Nuget](https://img.shields.io/nuget/dt/MQTTnet.Rx.SerialPort?color=pink&style=plastic)
-[![NuGet](https://img.shields.io/nuget/v/MQTTnet.Rx.SerialPort.svg?style=plastic)](https://www.nuget.org/packages/MQTTnet.Rx.SerialPort)
+#### MQTTnet.SerialPort
+![Nuget](https://img.shields.io/nuget/dt/MQTTnet.SerialPort?color=pink&style=plastic)
+[![NuGet](https://img.shields.io/nuget/v/MQTTnet.SerialPort.svg?style=plastic)](https://www.nuget.org/packages/MQTTnet.SerialPort)
 
-#### MQTTnet.Rx.TwinCAT
-![Nuget](https://img.shields.io/nuget/dt/MQTTnet.Rx.TwinCAT?color=pink&style=plastic)
-[![NuGet](https://img.shields.io/nuget/v/MQTTnet.Rx.TwinCAT.svg?style=plastic)](https://www.nuget.org/packages/MQTTnet.Rx.TwinCAT)
+#### MQTTnet.Rx.Mitsubishi
+![Nuget](https://img.shields.io/nuget/dt/MQTTnet.Rx.Mitsubishi?color=pink&style=plastic)
+[![NuGet](https://img.shields.io/nuget/v/MQTTnet.Rx.Mitsubishi.svg?style=plastic)](https://www.nuget.org/packages/MQTTnet.Rx.Mitsubishi)
+
+#### MQTTnet.Rx.OmronPlc
+![Nuget](https://img.shields.io/nuget/dt/MQTTnet.Rx.OmronPlc?color=pink&style=plastic)
+[![NuGet](https://img.shields.io/nuget/v/MQTTnet.Rx.OmronPlc.svg?style=plastic)](https://www.nuget.org/packages/MQTTnet.Rx.OmronPlc)
+
+#### MQTTnet.TwinCATRx
+![Nuget](https://img.shields.io/nuget/dt/MQTTnet.TwinCATRx?color=pink&style=plastic)
+[![NuGet](https://img.shields.io/nuget/v/MQTTnet.TwinCATRx.svg?style=plastic)](https://www.nuget.org/packages/MQTTnet.TwinCATRx)
 
 ![Alt](https://repobeats.axiom.co/api/embed/c9b84f3200da41856350a888598eae1ca5613ec2.svg "Repobeats analytics image")
 
@@ -40,36 +48,40 @@
 # MQTTnet.Rx
 Reactive extensions and helpers for MQTTnet (v5) that make it simple to build event-driven MQTT clients and servers using IObservable streams.
 
-- Targets .NET 8, .NET 9, and .NET 10
-- Based on MQTTnet 5.x and System.Reactive
+- Targets .NET 8, .NET 9, .NET 10, and .NET 11
+- Based on MQTTnet 5.x, ReactiveUI.Primitives, and ReactiveUI.Primitives.Reactive
 - Client and Server wrappers with rich observable APIs
 - Auto-reconnect Resilient client (replacement for ManagedClient)
 - Topic discovery, filtering, and JSON helpers
 - Low-allocation memory-efficient extensions for high-throughput scenarios
 - Last Will and Testament (LWT) configuration helpers
-- Optional integration packages (Modbus, SerialPort, S7 PLC, Allen-Bradley PLC, TwinCAT)
+- Optional integration packages for Modbus, SerialPort, S7, Allen-Bradley, Mitsubishi, Omron, and TwinCAT devices
 
 Note on ManagedClient: Support for ManagedClient is removed because MQTTnet v5 no longer includes it. Use the Resilient client in MQTTnet.Rx.Client instead.
 
 ## Packages
 - MQTTnet.Rx.Client – Reactive MQTT client helpers (raw and resilient)
 - MQTTnet.Rx.Server – Reactive MQTT server helpers
-- MQTTnet.Rx.Modbus – Publish Modbus values via MQTT using ModbusRx.Reactive
-- MQTTnet.Rx.SerialPort – Publish/consume serial data via MQTT with CP.IO.Ports
-- MQTTnet.Rx.S7Plc – Publish/subscribe S7 PLC tags via MQTT with S7PlcRx
-- MQTTnet.Rx.ABPlc – Publish/subscribe Allen-Bradley PLC tags via MQTT with ABPlcRx
-- MQTTnet.Rx.TwinCAT – Publish/subscribe TwinCAT tags via MQTT with CP.TwinCatRx
+- MQTTnet.Rx.ABPlc – Allen-Bradley PLC bridges using IoT-Driver.ABPlcRx 1.0.1
+- MQTTnet.Rx.Mitsubishi – Mitsubishi PLC bridges using IoT-Driver.MitsubishiRx 1.0.1
+- MQTTnet.Rx.Modbus – Modbus bridges using IoT-Driver.ModbusRx 1.0.1
+- MQTTnet.Rx.OmronPlc – Omron PLC bridges using IoT-Driver.OmronPlcRx 1.0.1
+- MQTTnet.Rx.S7Plc – S7 PLC bridges using IoT-Driver.S7PlcRx 1.0.1
+- MQTTnet.SerialPort – Serial-port bridges using IoT-Driver.SerialPortRx 1.0.1
+- MQTTnet.TwinCATRx – TwinCAT bridges using IoT-Driver.TwinCATRx 1.0.1
 
 ## Install
 ```bash
 # Pick what you need
  dotnet add package MQTTnet.Rx.Client
  dotnet add package MQTTnet.Rx.Server
- dotnet add package MQTTnet.Rx.Modbus
- dotnet add package MQTTnet.Rx.SerialPort
- dotnet add package MQTTnet.Rx.S7Plc
  dotnet add package MQTTnet.Rx.ABPlc
- dotnet add package MQTTnet.Rx.TwinCAT
+ dotnet add package MQTTnet.Rx.Mitsubishi
+ dotnet add package MQTTnet.Rx.Modbus
+ dotnet add package MQTTnet.Rx.OmronPlc
+ dotnet add package MQTTnet.Rx.S7Plc
+ dotnet add package MQTTnet.SerialPort
+ dotnet add package MQTTnet.TwinCATRx
 ```
 
 ---
@@ -78,10 +90,10 @@ Note on ManagedClient: Support for ManagedClient is removed because MQTTnet v5 n
 Publish an observable stream and subscribe to a topic.
 
 ```csharp
-using System.Reactive.Subjects;
 using MQTTnet.Rx.Client;
+using ReactiveUI.Primitives.Reactive.Signals;
 
-var messages = new Subject<(string topic, string payload)>();
+var messages = new ReplaySignal<(string topic, string payload)>(0);
 
 // Connect and publish
 var publishSub = Create.MqttClient()
@@ -104,10 +116,10 @@ messages.OnNext(("sensors/lab/temp", "19.9"));
 The resilient client stays connected and queues outbound messages while reconnecting.
 
 ```csharp
-using System.Reactive.Subjects;
 using MQTTnet.Rx.Client;
+using ReactiveUI.Primitives.Reactive.Signals;
 
-var messages = new Subject<(string topic, string payload)>();
+var messages = new ReplaySignal<(string topic, string payload)>(0);
 
 var resilientPubSub = Create.ResilientMqttClient()
     .WithResilientClientOptions(o =>
@@ -239,7 +251,7 @@ var pub3 = client
     .Subscribe(result => Console.WriteLine($"Published custom: {result.ReasonCode}"));
 
 // Publish multiple messages from an observable stream
-var messageStream = Observable.Interval(TimeSpan.FromSeconds(1))
+var messageStream = Signal.Every(TimeSpan.FromSeconds(1))
     .Select(i => Create.MqttFactory.CreateApplicationMessageBuilder()
         .WithTopic($"topic/seq/{i}")
         .WithPayload($"Message {i}")
@@ -524,8 +536,9 @@ All publish helpers accept QoS and retain flags, with overloads for string or by
 
 ```csharp
 using MQTTnet.Protocol;
+using ReactiveUI.Primitives.Reactive.Signals;
 
-var msgs = new Subject<(string topic, string payload)>();
+var msgs = new ReplaySignal<(string topic, string payload)>(0);
 
 var pub = Create.MqttClient()
     .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
@@ -543,11 +556,11 @@ var pub2 = Create.MqttClient()
 
 ### Binary payloads (byte[])
 ```csharp
-using System.Reactive.Subjects;
 using MQTTnet.Rx.Client;
+using ReactiveUI.Primitives.Reactive.Signals;
 
 // Publish byte[] payloads with raw client
-var bytes = new Subject<(string topic, byte[] payload)>();
+var bytes = new ReplaySignal<(string topic, byte[] payload)>(0);
 var pubBytes = Create.MqttClient()
     .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
     .PublishMessage(bytes)
@@ -772,9 +785,10 @@ var safePub = client
 ```csharp
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Server;
+using ReactiveUI.Primitives.Reactive.Signals;
 
 // Publish retained and later clear it
-var msgsRetain = new Subject<(string topic, string payload)>();
+var msgsRetain = new ReplaySignal<(string topic, string payload)>(0);
 var pubRetained = Create.MqttClient()
     .WithClientOptions(c => c.WithTcpServer("localhost", 1883))
     .PublishMessage(msgsRetain, qos: MqttQualityOfServiceLevel.AtLeastOnce, retain: true)
@@ -972,15 +986,16 @@ Notes:
 - FromMaster and FromFactory help you pass your own configured master or a factory.
 - All publish helpers accept qos/retain.
 - For write operations, use SubscribeWrite* helpers or the generic SubscribeWrite/SubscribeWriteAsync to plug the correct Modbus API calls.
+- Calls with more than seven arguments use the C# 14 extension syntax, for example `clients.PublishCoils(...)`; shorter legacy `Create.*` entry points remain as compatibility forwarders.
 
-### Serial Port (MQTTnet.Rx.SerialPort)
-Publish framed serial data to MQTT using CP.IO.Ports ISerialPortRx.
+### Serial Port (MQTTnet.SerialPort)
+Publish framed serial data to MQTT using IoT-Driver.SerialPortRx `ISerialPortRx`.
 
 ```csharp
 using System;
-using System.Reactive.Linq;
-using CP.IO.Ports;
+using IoT.Driver.Serial;
 using MQTTnet.Rx.SerialPort;
+using ReactiveUI.Primitives.Reactive.Signals;
 
 // Create and configure an ISerialPortRx (COM port, baud, parity, etc.)
 ISerialPortRx port = /* create and configure an ISerialPortRx */;
@@ -990,20 +1005,26 @@ var serialPub = Create.MqttClient()
     .PublishSerialPort(
         topic: "serial/data",
         serialPort: port,
-        startsWith: Observable.Return('<'),
-        endsWith: Observable.Return('>'),
+        startsWith: Signal.Return('<'),
+        endsWith: Signal.Return('>'),
         timeOut: 1000)
     .Subscribe();
 ```
 
-### PLCs – S7, Allen-Bradley, TwinCAT
-Each PLC package adds helpers to publish or subscribe PLC tags via MQTT using the respective Rx client libraries (S7PlcRx, ABPlcRx, CP.TwinCatRx). Example signatures include:
+### PLCs – Allen-Bradley, Mitsubishi, Omron, S7, and TwinCAT
+Each PLC package adds helpers to publish values to MQTT and write subscribed MQTT payloads back through the corresponding IoT-Driver client or simulator:
 
 - MQTTnet.Rx.S7Plc: PublishS7PlcTag<T>(client, topic, plcVariable, configurePlc)
 - MQTTnet.Rx.ABPlc: PublishABPlcTag<T>(client, topic, plcVariable, configurePlc)
-- MQTTnet.Rx.TwinCAT: PublishTcPlcTag<T>(client, topic, plcVariable, configurePlc)
+- MQTTnet.Rx.Mitsubishi: PublishMitsubishiTag<T>(client, topic, tag, logicalTags)
+- MQTTnet.Rx.OmronPlc: PublishOmronPlcTag<T>(client, topic, tag, plc)
+- MQTTnet.TwinCATRx: PublishTcPlcTag<T>(client, topic, plcVariable, configurePlc)
 
-Refer to those libraries for creating and configuring connected PLC clients, then use the Publish* helpers to push tag changes to MQTT. You can also combine SubscribeToTopic with your PLC client to write incoming values back to tags.
+Refer to the IoT-Driver package README and bundled skill for client configuration and tag types. Each `Subscribe*` bridge returns an `IDisposable`, so callers can stop MQTT-to-device writes deterministically.
+
+### Hardware-free integration tests
+
+The driver packages are tested against their IoT-Driver simulator or in-memory transport and a real in-process MQTTnet broker. Every bridge test proves both directions—device-to-MQTT and MQTT-to-device—without requiring PLC, serial, ADS, or Modbus hardware. The broker binds to an OS-assigned loopback port and waits for confirmed subscriptions, keeping the suite deterministic and parallel-safe.
 
 ---
 

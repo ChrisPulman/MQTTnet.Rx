@@ -1,22 +1,32 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Linq;
 using MQTTnet.Rx.Client.Tests.Helpers;
-using ReactiveUI.Extensions.Async;
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.Reactive.Signals;
 
 namespace MQTTnet.Rx.Client.Tests;
 
-/// <summary>
-/// Tests for the Create class.
-/// </summary>
+/// <summary>Tests for the Create class.</summary>
 public class CreateTests
 {
-    /// <summary>
-    /// Tests that MqttFactory returns a valid factory instance.
-    /// </summary>
+    /// <summary>Delay used to allow an asynchronous client operation to complete.</summary>
+    private const int AsyncOperationDelayMilliseconds = 50;
+
+    /// <summary>Delay used to allow client option configuration to complete.</summary>
+    private const int ClientOptionsConfigurationDelayMilliseconds = 100;
+
+    /// <summary>Port used by the test MQTT broker.</summary>
+    private const int TestBrokerPort = 1883;
+
+    /// <summary>Host used by the test MQTT broker.</summary>
+    private const string TestBrokerHost = "test.mqtt.broker";
+
+    /// <summary>Tests that MqttFactory returns a valid factory instance.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task MqttFactory_ReturnsValidFactory()
+    public async Task MqttFactory_ReturnsValidFactoryAsync()
     {
         // Arrange & Act
         var factory = Create.MqttFactory;
@@ -26,11 +36,10 @@ public class CreateTests
         await Assert.That(factory).IsTypeOf<MqttClientFactory>();
     }
 
-    /// <summary>
-    /// Tests that NewMqttFactory sets a custom factory.
-    /// </summary>
+    /// <summary>Tests that NewMqttFactory sets a custom factory.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task NewMqttFactory_SetsCustomFactory()
+    public async Task NewMqttFactory_SetsCustomFactoryAsync()
     {
         // Arrange
         var originalFactory = Create.MqttFactory;
@@ -51,33 +60,28 @@ public class CreateTests
         }
     }
 
-    /// <summary>
-    /// Tests that MqttClient returns an observable that emits a client.
-    /// </summary>
+    /// <summary>Tests that MqttClient returns an observable that emits a client.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task MqttClient_ReturnsObservableThatEmitsClient()
+    public async Task MqttClient_ReturnsObservableThatEmitsClientAsync()
     {
         // Arrange & Act
         var clientObservable = Create.MqttClient();
         IMqttClient? receivedClient = null;
 
-        using var subscription = clientObservable.Subscribe(client =>
-        {
-            receivedClient = client;
-        });
+        using var subscription = clientObservable.Subscribe(client => receivedClient = client);
 
         // Give time for async operations
-        await Task.Delay(50);
+        await Task.Delay(AsyncOperationDelayMilliseconds);
 
         // Assert
         await Assert.That(receivedClient).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests that MqttClient shares the same client among subscribers.
-    /// </summary>
+    /// <summary>Tests that MqttClient shares the same client among subscribers.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task MqttClient_SharesClientAmongSubscribers()
+    public async Task MqttClient_SharesClientAmongSubscribersAsync()
     {
         // Arrange
         var clientObservable = Create.MqttClient();
@@ -88,7 +92,7 @@ public class CreateTests
         using var subscription1 = clientObservable.Subscribe(client => client1 = client);
         using var subscription2 = clientObservable.Subscribe(client => client2 = client);
 
-        await Task.Delay(50);
+        await Task.Delay(AsyncOperationDelayMilliseconds);
 
         // Assert
         await Assert.That(client1).IsNotNull();
@@ -96,45 +100,39 @@ public class CreateTests
         await Assert.That(client1).IsSameReferenceAs(client2);
     }
 
-    /// <summary>
-    /// Tests that MqttClientAsync returns an async observable that emits a client.
-    /// </summary>
+    /// <summary>Tests that MqttClientSignal returns an async observable that emits a client.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task MqttClientAsync_ReturnsObservableThatEmitsClient()
+    public async Task MqttClientSignal_ReturnsObservableThatEmitsClientAsync()
     {
         // Arrange & Act
-        var receivedClient = await Create.MqttClientAsync().FirstAsync(TimeSpan.FromSeconds(1));
+        var receivedClient = await Create.MqttClientSignal().FirstAsync(TimeSpan.FromSeconds(1));
 
         // Assert
         await Assert.That(receivedClient).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests that ResilientMqttClient returns an observable that emits a resilient client.
-    /// </summary>
+    /// <summary>Tests that ResilientMqttClient returns an observable that emits a resilient client.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ResilientMqttClient_ReturnsObservableThatEmitsResilientClient()
+    public async Task ResilientMqttClient_ReturnsObservableThatEmitsResilientClientAsync()
     {
         // Arrange & Act
         var clientObservable = Create.ResilientMqttClient();
         IResilientMqttClient? receivedClient = null;
 
-        using var subscription = clientObservable.Subscribe(client =>
-        {
-            receivedClient = client;
-        });
+        using var subscription = clientObservable.Subscribe(client => receivedClient = client);
 
-        await Task.Delay(50);
+        await Task.Delay(AsyncOperationDelayMilliseconds);
 
         // Assert
         await Assert.That(receivedClient).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests that ResilientMqttClient shares the same client among subscribers.
-    /// </summary>
+    /// <summary>Tests that ResilientMqttClient shares the same client among subscribers.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ResilientMqttClient_SharesClientAmongSubscribers()
+    public async Task ResilientMqttClient_SharesClientAmongSubscribersAsync()
     {
         // Arrange
         var clientObservable = Create.ResilientMqttClient();
@@ -145,7 +143,7 @@ public class CreateTests
         using var subscription1 = clientObservable.Subscribe(client => client1 = client);
         using var subscription2 = clientObservable.Subscribe(client => client2 = client);
 
-        await Task.Delay(50);
+        await Task.Delay(AsyncOperationDelayMilliseconds);
 
         // Assert
         await Assert.That(client1).IsNotNull();
@@ -153,47 +151,41 @@ public class CreateTests
         await Assert.That(client1).IsSameReferenceAs(client2);
     }
 
-    /// <summary>
-    /// Tests that WithClientOptions configures the client with provided options.
-    /// </summary>
+    /// <summary>Tests that WithClientOptions configures the client with provided options.</summary>
     /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task WithClientOptions_ConfiguresClient()
+    public async Task WithClientOptions_ConfiguresClientAsync()
     {
         // Arrange
         var mockClient = new MockMqttClient();
-        var clientObservable = Observable.Return<IMqttClient>(mockClient);
+        var clientObservable = Signal.Emit<IMqttClient>(mockClient);
 
         // Act
         using var subscription = clientObservable
-            .WithClientOptions(options =>
-            {
-                options.WithTcpServer("test.mqtt.broker", 1883);
-            })
+            .WithClientOptions(static options => options.WithTcpServer(TestBrokerHost, TestBrokerPort))
             .Subscribe(
-                onNext: _ => { },
-                onError: _ => { });
+                onNext: static _ => { },
+                onError: static _ => { });
 
-        await Task.Delay(100);
+        await Task.Delay(ClientOptionsConfigurationDelayMilliseconds);
 
         // Assert
         await Assert.That(mockClient.Options).IsNotNull();
         await Assert.That(mockClient.Options?.ChannelOptions).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests that WithClientOptions configures the client for asynchronous observable sources.
-    /// </summary>
+    /// <summary>Tests that WithClientOptions configures the client for asynchronous observable sources.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task WithClientOptionsAsync_ConfiguresClient()
+    public async Task WithClientOptionsAsync_ConfiguresClientAsync()
     {
         // Arrange
         var mockClient = new MockMqttClient();
-        var clientObservable = ObservableAsync.Return<IMqttClient>(mockClient);
+        var clientObservable = SignalAsync.Return<IMqttClient>(mockClient);
 
         // Act
         var configuredClient = await clientObservable
-            .WithClientOptions(options => options.WithTcpServer("test.mqtt.broker", 1883))
+            .WithClientOptions(static options => options.WithTcpServer(TestBrokerHost, TestBrokerPort))
             .FirstAsync(TimeSpan.FromSeconds(1));
 
         // Assert
@@ -202,11 +194,10 @@ public class CreateTests
         await Assert.That(mockClient.Options?.ChannelOptions).IsNotNull();
     }
 
-    /// <summary>
-    /// Tests that CreateResilientClientOptionsBuilder creates a builder.
-    /// </summary>
+    /// <summary>Tests that CreateResilientClientOptionsBuilder creates a builder.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task CreateResilientClientOptionsBuilder_CreatesBuilder()
+    public async Task CreateResilientClientOptionsBuilder_CreatesBuilderAsync()
     {
         // Arrange
         var factory = Create.MqttFactory;
@@ -219,20 +210,17 @@ public class CreateTests
         await Assert.That(builder).IsTypeOf<ResilientMqttClientOptionsBuilder>();
     }
 
-    /// <summary>
-    /// Tests that WithClientOptions on ResilientMqttClientOptionsBuilder works correctly.
-    /// </summary>
+    /// <summary>Tests that WithClientOptions on ResilientMqttClientOptionsBuilder works correctly.</summary>
+    /// <returns>A <see cref="Task"/> representing the asynchronous unit test.</returns>
     [Test]
-    public async Task ResilientBuilder_WithClientOptions_Works()
+    public async Task ResilientBuilder_WithClientOptions_WorksAsync()
     {
         // Arrange
         var builder = Create.MqttFactory.CreateResilientClientOptionsBuilder();
 
         // Act
-        var result = builder.WithClientOptions(clientBuilder =>
-        {
-            clientBuilder.WithTcpServer("test.broker", 1883);
-        });
+        var result = builder.WithClientOptions(
+            static clientBuilder => clientBuilder.WithTcpServer("test.broker", TestBrokerPort));
 
         // Assert
         await Assert.That(result).IsNotNull();

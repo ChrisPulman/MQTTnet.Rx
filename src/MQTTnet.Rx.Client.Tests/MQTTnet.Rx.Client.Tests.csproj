@@ -1,28 +1,40 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
+    <TargetFrameworks>$(MQTTnetRxTargetFrameworks);net8.0-windows10.0.17763;net9.0-windows10.0.17763</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <OutputType>Exe</OutputType>
-    <!-- Disable SA1615 (return value should be documented) for test methods -->
-    <NoWarn>$(NoWarn);SA1615</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.17763' Or '$(TargetFramework)' == 'net9.0-windows10.0.17763'">
+    <DefineConstants>$(DefineConstants);TWINCAT_TESTS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TUnit" Version="1.61.38" />
-    <PackageReference Include="Verify.TUnit" Version="31.27.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
-    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0" />
-    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
-    <PackageReference Include="Microsoft.Reactive.Testing" Version="7.0.0" />
-    <PackageReference Include="NSubstitute" Version="6.0.0" />
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="Verify.TUnit" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\MQTTnet.Rx.ABPlc\MQTTnet.Rx.ABPlc.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Mitsubishi\MQTTnet.Rx.Mitsubishi.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Modbus\MQTTnet.Rx.Modbus.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.OmronPlc\MQTTnet.Rx.OmronPlc.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.S7Plc\MQTTnet.Rx.S7Plc.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.SerialPort\MQTTnet.Rx.SerialPort.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Server\MQTTnet.Rx.Server.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.TwinCAT\MQTTnet.Rx.TwinCAT.csproj"
+                      Condition="'$(TargetFramework)' == 'net8.0-windows10.0.17763' Or '$(TargetFramework)' == 'net9.0-windows10.0.17763'" />
   </ItemGroup>
 
 </Project>

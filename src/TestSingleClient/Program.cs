@@ -1,93 +1,37 @@
-﻿// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using System;
-using System.Reactive.Disposables.Fluent;
-using System.Reactive.Linq;
-using System.Reactive.Subjects;
-using MQTTnet;
 using MQTTnet.Rx.Client;
-using MQTTnet.Rx.Server;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Reactive.Signals;
 
-IDisposable? disposable = default;
-var serverPort = 2883;
+namespace TestSingleClient;
 
-disposable =
-MQTTnet.Rx.Server.Create.MqttServer(builder => builder.WithDefaultEndpointPort(serverPort).WithDefaultEndpoint().Build())
-      .Subscribe(async sub =>
-      {
-          sub.Server.ClientConnected().Subscribe(args => Console.WriteLine($"SERVER: ClientConnectedAsync => clientId:{args.ClientId}")).DisposeWith(sub.Disposable);
-          sub.Server.ClientDisconnected().Subscribe(args => Console.WriteLine($"SERVER: ClientDisconnectedAsync => clientId:{args.ClientId}")).DisposeWith(sub.Disposable);
-
-          var obsClient1 = MQTTnet.Rx.Client.Create.ResilientMqttClient()
-                          .WithResilientClientOptions(options =>
-                            options.WithClientOptions(c =>
-                                        c.WithTcpServer("localhost", serverPort))
-                                   .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
-
-          var obsClient2 = MQTTnet.Rx.Client.Create.ResilientMqttClient()
-                                .WithResilientClientOptions(options =>
-                                  options.WithClientOptions(c =>
-                                              c.WithTcpServer("localhost", serverPort)
-                                               .WithClientId("Client02"))
-                                         .WithAutoReconnectDelay(TimeSpan.FromSeconds(2)));
-          obsClient1.Subscribe(i =>
-            {
-                sub.Disposable.Add(i.Connected.Subscribe((_) =>
-                    Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Connected with server.")));
-                sub.Disposable.Add(i.Disconnected.Subscribe((_) =>
-                    Console.WriteLine($"{DateTime.Now.Dump()}\t CLIENT: Disconnected with server.")));
-            }).DisposeWith(sub.Disposable);
-
-          var s1 = obsClient1.SubscribeToTopic("FromMilliseconds/#")
-                   .Subscribe(r => Console.WriteLine($"\tCLIENT S1 #: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
-
-          var s2 = obsClient1.SubscribeToTopic("FromMilliseconds/+/+/abc")
-                   .Subscribe(r => Console.WriteLine($"\tCLIENT S2 /+/+/: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
-
-          var s3 = obsClient1.SubscribeToTopic("FromMilliseconds/+")
-                   .Subscribe(r => Console.WriteLine($"\tCLIENT S3 +: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
-
-          var s4 = obsClient2.SubscribeToTopic("FromMilliseconds/1/+/abc")
-                   .Subscribe(r => Console.WriteLine($"\tCLIENT S4 /+/: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
-
-          var s5 = obsClient1.SubscribeToTopic("FromMilliseconds/2/+/abc")
-                   .Subscribe(r => Console.WriteLine($"\tCLIENT S5 /+/: {r.ReasonCode} [{r.ApplicationMessage.Topic}] value : {r.ApplicationMessage.ConvertPayloadToString()}"));
-
-          Subject<(string topic, string payload)> message = new();
-
-          Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds/1/xyz/abc", "{" + $"payload: {i}" + "}"))).DisposeWith(sub.Disposable);
-          obsClient1.PublishMessage(message).Subscribe().DisposeWith(sub.Disposable);
-
-          Subject<(string topic, string payload)> message1 = new();
-
-          Observable.Interval(TimeSpan.FromMilliseconds(1000)).Subscribe(i => message.OnNext(("FromMilliseconds/2/zyx/abc", "{" + $"payload: {i}" + "}"))).DisposeWith(sub.Disposable);
-          obsClient1.PublishMessage(message1).Subscribe().DisposeWith(sub.Disposable);
-
-          await Task.Delay(3000);
-          s2.Dispose();
-          Console.WriteLine("Dispose S2 ---------------");
-          await Task.Delay(5000);
-          s1.Dispose();
-          Console.WriteLine("Dispose S1 ---------------");
-          await Task.Delay(5000);
-          s4.Dispose();
-          Console.WriteLine("Dispose S4 ---------------");
-
-          Console.Read();
-          s3.Dispose();
-          Console.WriteLine("Dispose S3 ---------------");
-          Console.Read();
-          s5.Dispose();
-          Console.WriteLine("Dispose S5 ---------------");
-      });
-Console.WriteLine("Press 'Escape' or 'Q' to exit.");
-
-while (Console.ReadKey(true).Key is ConsoleKey key && !(key == ConsoleKey.Escape || key == ConsoleKey.Q))
+/// <summary>Publishes two retained observable message streams to a local MQTT broker.</summary>
+internal static class Program
 {
-    Thread.Sleep(1);
-}
+    /// <summary>Gets the local MQTT broker port.</summary>
+    private const int BrokerPort = 2883;
 
-Console.WriteLine("Disposing Server ---------------");
-disposable?.Dispose();
-Console.WriteLine("Disposed Server ---------------");
+    /// <summary>Starts the sample and keeps its observable subscriptions alive until a key is pressed.</summary>
+    internal static void Main()
+    {
+        using var disposables = new MultipleDisposable();
+        var client = Create.ResilientMqttClient()
+            .WithResilientClientOptions(static options =>
+                options.WithClientOptions(static settings =>
+                    settings.WithTcpServer("localhost", BrokerPort)));
+        var message = new ReplaySignal<(string Topic, string Payload)>(0);
+        var message1 = new ReplaySignal<(string Topic, string Payload)>(0);
+
+        disposables.Add(Signal.Every(TimeSpan.FromSeconds(1)).Subscribe(index =>
+            message.OnNext(("FromMilliseconds/1/xyz/abc", $"{{payload: {index}}}"))));
+        disposables.Add(client.PublishMessage(message).Subscribe());
+        disposables.Add(Signal.Every(TimeSpan.FromSeconds(1)).Subscribe(index =>
+            message1.OnNext(("FromMilliseconds/2/zyx/abc", $"{{payload: {index}}}"))));
+        disposables.Add(client.PublishMessage(message1).Subscribe());
+
+        var _ = Console.ReadKey(intercept: true);
+    }
+}

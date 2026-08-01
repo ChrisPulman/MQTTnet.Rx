@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <PackageId>MQTTnet.Rx.OmronPlc</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="IoT-Driver.OmronPlcRx" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj" />
+  </ItemGroup>
+
+</Project>
