@@ -30,6 +30,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 11.0.100-preview.6.26359.118
+
       - name: 'Cache: .nuke/temp, ~/.nuget/packages'
         uses: actions/cache@v6
         with:
