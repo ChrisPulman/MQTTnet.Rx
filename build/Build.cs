@@ -2,7 +2,6 @@ using Nuke.Common;
 using Nuke.Common.CI.GitHubActions;
 using Nuke.Common.Git;
 using Nuke.Common.IO;
-using Nuke.Common.ProjectModel;
 using Nuke.Common.Tooling;
 using Nuke.Common.Tools.NerdbankGitVersioning;
 using Nuke.Common.Tools.DotNet;
@@ -28,24 +27,23 @@ using System.Linq;
 partial class Build : NukeBuild
 {
     [GitRepository]
-    private readonly GitRepository Repository;
-
-    [Solution(GenerateProjects = true)]
-    private readonly Solution Solution;
+    private readonly GitRepository Repository = default;
 
     [NerdbankGitVersioning]
-    private readonly NerdbankGitVersioning NerdbankVersioning;
+    private readonly NerdbankGitVersioning NerdbankVersioning = default;
 
     [Parameter]
     [Secret]
-    private readonly string NuGetApiKey;
+    private readonly string NuGetApiKey = default;
 
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
     private readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
     public static int Main() => Execute<Build>(x => x.Test);
 
-    private AbsolutePath PackagesDirectory => RootDirectory / "output";
+    private static AbsolutePath PackagesDirectory => RootDirectory / "output";
+
+    private static AbsolutePath SolutionFile => RootDirectory / "src" / "MQTTnet.Rx.slnx";
 
     private Target Print => _ => _
         .Executes(() => Log.Information("NerdbankVersioning = {Value}", NerdbankVersioning.NuGetPackageVersion));
@@ -60,45 +58,27 @@ partial class Build : NukeBuild
             }
 
             PackagesDirectory.CreateOrCleanDirectory();
-            await this.InstallDotNetSdk("8.x.x", "9.x.x", "10.x.x");
+            await this.InstallDotNetSdk("8.x.x", "9.x.x", "10.x.x", "11.0.100-preview.6.26359.118");
         });
 
     private Target Restore => _ => _
         .DependsOn(Clean)
-        .Executes(() => DotNetRestore(s => s.SetProjectFile(Solution)));
+        .Executes(() => DotNetRestore(s => s.SetProjectFile(SolutionFile)));
 
     private Target Compile => _ => _
         .DependsOn(Restore, Print)
         .Executes(() => DotNetBuild(s => s
-                .SetProjectFile(Solution)
+                .SetProjectFile(SolutionFile)
                 .SetConfiguration(Configuration)
                 .EnableNoRestore()));
 
     private Target Test => _ => _
        .DependsOn(Compile)
-       .Executes(() =>
-       {
-           var testProjects = Solution.AllProjects.Where(x => x.GetProperty("IsTestProject") == "true").ToList();
-           foreach (var project in testProjects!)
-           {
-               Log.Information("Testing {Project}", project.Name);
-
-               // Run the test executable directly for each target framework
-               // Microsoft.Testing.Platform on .NET 10 SDK requires running the test executable directly
-               var projectDirectory = project.Directory;
-               var targetFrameworks = project.GetTargetFrameworks();
-
-               foreach (var tfm in targetFrameworks!)
-               {
-                   var testExePath = projectDirectory / "bin" / Configuration / tfm / $"{project.Name}.dll";
-                   if (testExePath.FileExists())
-                   {
-                       Log.Information("Running tests for {Project} ({Framework})", project.Name, tfm);
-                       DotNet($"exec {testExePath}");
-                   }
-               }
-           }
-       });
+       .Executes(() => DotNetTest(settings => settings
+           .SetProjectFile(SolutionFile)
+           .SetConfiguration(Configuration)
+           .EnableNoBuild()
+           .EnableNoRestore()));
 
     private Target Pack => _ => _
     .After(Compile)
@@ -107,7 +87,9 @@ partial class Build : NukeBuild
     {
         if (Repository.IsOnMainOrMasterBranch())
         {
-            var packableProjects = Solution.GetPackableProjects();
+            var packableProjects = SolutionFile
+                .ReadSolutionProjectInfos()
+                .GetPackableProjectInfos();
 
             foreach (var project in packableProjects!)
             {
@@ -119,13 +101,13 @@ partial class Build : NukeBuild
                 .SetVersion(NerdbankVersioning.NuGetPackageVersion)
                 .SetOutputDirectory(PackagesDirectory)
                 .CombineWith(packableProjects, (packSettings, project) =>
-                    packSettings.SetProject(project)));
+                    packSettings.SetProject(project.Path)));
         }
     });
 
     private Target Deploy => _ => _
     .DependsOn(Pack)
-    .Requires(() => NuGetApiKey)
+    .Requires(() => !string.IsNullOrWhiteSpace(NuGetApiKey))
     .Executes(() =>
     {
         if (Repository.IsOnMainOrMasterBranch())

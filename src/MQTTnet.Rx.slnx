@@ -1,0 +1,30 @@
+<Solution>
+  <Folder Name="/SolutionConfig/">
+    <File Path="../.editorconfig" />
+    <File Path="../.gitignore" />
+    <File Path="../Directory.Build.props" />
+    <File Path="../Directory.Packages.props" />
+    <File Path="../LICENSE" />
+    <File Path="../nuget.config" />
+    <File Path="../README.md" />
+    <File Path="../stylecop.json" />
+    <File Path="../Version.json" />
+    <File Path="global.json" />
+    <File Path="testconfig.json" />
+  </Folder>
+  <Project Path="../build/_build.csproj">
+    <Build Project="false" />
+  </Project>
+  <Project Path="MQTTnet.Rx.ABPlc/MQTTnet.Rx.ABPlc.csproj" />
+  <Project Path="MQTTnet.Rx.Client.TestApp/MQTTnet.Rx.Client.TestApp.csproj" />
+  <Project Path="MQTTnet.Rx.Client.Tests/MQTTnet.Rx.Client.Tests.csproj" />
+  <Project Path="MQTTnet.Rx.Client/MQTTnet.Rx.Client.csproj" />
+  <Project Path="MQTTnet.Rx.Mitsubishi/MQTTnet.Rx.Mitsubishi.csproj" />
+  <Project Path="MQTTnet.Rx.Modbus/MQTTnet.Rx.Modbus.csproj" />
+  <Project Path="MQTTnet.Rx.OmronPlc/MQTTnet.Rx.OmronPlc.csproj" />
+  <Project Path="MQTTnet.Rx.S7Plc/MQTTnet.Rx.S7Plc.csproj" />
+  <Project Path="MQTTnet.Rx.SerialPort/MQTTnet.Rx.SerialPort.csproj" />
+  <Project Path="MQTTnet.Rx.Server/MQTTnet.Rx.Server.csproj" />
+  <Project Path="MQTTnet.Rx.TwinCAT/MQTTnet.Rx.TwinCAT.csproj" />
+  <Project Path="TestSingleClient/TestSingleClient.csproj" />
+</Solution>

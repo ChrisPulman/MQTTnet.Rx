@@ -1,101 +1,50 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using ModbusRx.Device;
-using MQTTnet.Protocol;
+using IoT.Driver.ModbusRx.Device;
 using MQTTnet.Rx.Client;
-using ReactiveUI.Extensions.Async;
-
-#pragma warning disable SA1600
+using ReactiveUI.Primitives.Async;
 
 namespace MQTTnet.Rx.Modbus;
 
-/// <summary>
-/// Provides asynchronous observable counterparts for Modbus MQTT helpers.
-/// </summary>
+/// <summary>Provides compatible static entry points for asynchronous Modbus MQTT sequences.</summary>
+/// <remarks>
+/// The extension surface provides <c>PublishInputRegisters</c>, <c>PublishHoldingRegisters</c>,
+/// <c>PublishInputs</c>, <c>PublishCoils</c>, and <c>PublishModbus</c> overload families for raw and
+/// resilient MQTT clients.
+/// </remarks>
 public static class ObservableAsyncCreateExtensions
 {
-    public static IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> FromMasterAsync(ModbusIpMaster master)
-    {
-        ArgumentNullException.ThrowIfNull(master);
-        return Create.FromMaster(master).ToObservableAsync();
-    }
+    /// <summary>Gets the legacy callable entry point for creating a sequence from an existing master.</summary>
+    public static Func<
+        ModbusIpMaster,
+        IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)>> FromMasterAsync { get; } =
+        FromMaster;
 
-    public static IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> FromFactoryAsync(Func<ModbusIpMaster> factory)
+    /// <summary>Gets the legacy callable entry point for creating a sequence from a master factory.</summary>
+    public static Func<
+        Func<ModbusIpMaster>,
+        IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)>> FromFactoryAsync { get; } =
+        FromFactory;
+
+    /// <summary>Creates an asynchronous observable sequence from a master factory.</summary>
+    /// <param name="factory">Creates the Modbus master.</param>
+    /// <returns>The asynchronous Modbus master sequence.</returns>
+    private static IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> FromFactory(
+        Func<ModbusIpMaster> factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
-        return Create.FromFactory(factory).ToObservableAsync();
+        return Create.FromFactory(factory).ToSignal();
     }
 
-    public static IObservableAsync<MqttClientPublishResult> PublishInputRegisters(this IObservableAsync<IMqttClient> client, IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
+    /// <summary>Creates an asynchronous observable sequence from an existing master.</summary>
+    /// <param name="master">The existing Modbus master.</param>
+    /// <returns>The asynchronous Modbus master sequence.</returns>
+    private static IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> FromMaster(
+        ModbusIpMaster master)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(modbus);
-        return Create.PublishInputRegisters(client.ToObservable(), modbus.ToObservable(), topic, startAddress, numberOfPoints, interval, qos, retain).ToObservableAsync();
-    }
-
-    public static IObservableAsync<MqttClientPublishResult> PublishHoldingRegisters(this IObservableAsync<IMqttClient> client, IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(modbus);
-        return Create.PublishHoldingRegisters(client.ToObservable(), modbus.ToObservable(), topic, startAddress, numberOfPoints, interval, qos, retain).ToObservableAsync();
-    }
-
-    public static IObservableAsync<MqttClientPublishResult> PublishInputs(this IObservableAsync<IMqttClient> client, IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(modbus);
-        return Create.PublishInputs(client.ToObservable(), modbus.ToObservable(), topic, startAddress, numberOfPoints, interval, qos, retain).ToObservableAsync();
-    }
-
-    public static IObservableAsync<MqttClientPublishResult> PublishCoils(this IObservableAsync<IMqttClient> client, IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(modbus);
-        return Create.PublishCoils(client.ToObservable(), modbus.ToObservable(), topic, startAddress, numberOfPoints, interval, qos, retain).ToObservableAsync();
-    }
-
-    public static IObservableAsync<MqttClientPublishResult> PublishModbus<TPayload>(this IObservableAsync<IMqttClient> client, IObservableAsync<(bool connected, Exception? error, object? data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
-        where TPayload : notnull
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(reader);
-        return Create.PublishModbus(client.ToObservable(), reader.ToObservable(), topic, payloadFactory, qos, retain).ToObservableAsync();
-    }
-
-    public static IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputRegisters(this IObservableAsync<IResilientMqttClient> client, IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(modbus);
-        return Create.PublishInputRegisters(client.ToObservable(), modbus.ToObservable(), topic, startAddress, numberOfPoints, interval, qos, retain).ToObservableAsync();
-    }
-
-    public static IObservableAsync<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters(this IObservableAsync<IResilientMqttClient> client, IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(modbus);
-        return Create.PublishHoldingRegisters(client.ToObservable(), modbus.ToObservable(), topic, startAddress, numberOfPoints, interval, qos, retain).ToObservableAsync();
-    }
-
-    public static IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputs(this IObservableAsync<IResilientMqttClient> client, IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(modbus);
-        return Create.PublishInputs(client.ToObservable(), modbus.ToObservable(), topic, startAddress, numberOfPoints, interval, qos, retain).ToObservableAsync();
-    }
-
-    public static IObservableAsync<ApplicationMessageProcessedEventArgs> PublishCoils(this IObservableAsync<IResilientMqttClient> client, IObservableAsync<(bool connected, Exception? error, ModbusIpMaster? master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval = 100.0, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(modbus);
-        return Create.PublishCoils(client.ToObservable(), modbus.ToObservable(), topic, startAddress, numberOfPoints, interval, qos, retain).ToObservableAsync();
-    }
-
-    public static IObservableAsync<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>(this IObservableAsync<IResilientMqttClient> client, IObservableAsync<(bool connected, Exception? error, object? data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos = MqttQualityOfServiceLevel.AtLeastOnce, bool retain = false)
-        where TPayload : notnull
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(reader);
-        return Create.PublishModbus(client.ToObservable(), reader.ToObservable(), topic, payloadFactory, qos, retain).ToObservableAsync();
+        ArgumentNullException.ThrowIfNull(master);
+        return Create.FromMaster(master).ToSignal();
     }
 }

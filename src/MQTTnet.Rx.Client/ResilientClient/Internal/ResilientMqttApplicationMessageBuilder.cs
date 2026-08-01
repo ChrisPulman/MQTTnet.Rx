@@ -1,51 +1,52 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
 namespace MQTTnet.Rx.Client.ResilientClient.Internal;
 
-/// <summary>
-/// Provides a builder for creating resilient MQTT application messages with configurable identifiers and message
-/// content.
-/// </summary>
+/// <summary>Builds a resilient MQTT application message.</summary>
 /// <remarks>This builder enables the step-by-step construction of a resilient MQTT application message by
 /// allowing the caller to specify a unique identifier and configure the underlying MQTT message. Use the fluent methods
 /// to set the desired properties before calling Build to create the final message instance.</remarks>
-internal class ResilientMqttApplicationMessageBuilder
+internal sealed class ResilientMqttApplicationMessageBuilder
 {
+    /// <summary>Stores the identifier assigned to the message being built.</summary>
     private Guid _id = Guid.NewGuid();
+
+    /// <summary>Stores the MQTT application message being built.</summary>
     private MqttApplicationMessage? _applicationMessage;
 
-    /// <summary>
-    /// Sets the identifier for the MQTT application message being built.
-    /// </summary>
+    /// <summary>Sets the identifier for the MQTT application message being built.</summary>
     /// <param name="id">The unique identifier to assign to the message.</param>
-    /// <returns>The current <see cref="ResilientMqttApplicationMessageBuilder"/> instance with the specified identifier set.</returns>
-    public ResilientMqttApplicationMessageBuilder WithId(in Guid id)
+    /// <returns>The current <see cref="ResilientMqttApplicationMessageBuilder"/> instance with the specified identifier
+    /// set.</returns>
+    internal ResilientMqttApplicationMessageBuilder WithId(in Guid id)
     {
         _id = id;
         return this;
     }
 
-    /// <summary>
-    /// Sets the MQTT application message to be published by the builder.
-    /// </summary>
+    /// <summary>Sets the MQTT application message to be published by the builder.</summary>
     /// <param name="applicationMessage">The MQTT application message to use for publishing. Cannot be null.</param>
-    /// <returns>The current instance of <see cref="ResilientMqttApplicationMessageBuilder"/> to allow method chaining.</returns>
-    public ResilientMqttApplicationMessageBuilder WithApplicationMessage(MqttApplicationMessage applicationMessage)
+    /// <returns>The current instance of <see cref="ResilientMqttApplicationMessageBuilder"/> to allow method
+    /// chaining.</returns>
+    internal ResilientMqttApplicationMessageBuilder WithApplicationMessage(
+        MqttApplicationMessage applicationMessage)
     {
         _applicationMessage = applicationMessage;
         return this;
     }
 
-    /// <summary>
-    /// Configures the MQTT application message to be published using the specified builder action.
-    /// </summary>
+    /// <summary>Configures the MQTT application message to be published using the specified builder action.</summary>
     /// <remarks>Use this method to set the topic, payload, QoS, and other properties of the MQTT application
     /// message before publishing. This method supports a fluent configuration style.</remarks>
-    /// <param name="builder">An action that receives an instance of <see cref="MqttApplicationMessageBuilder"/> to configure the application
+    /// <param name="builder">An action that receives an instance of <see cref="MqttApplicationMessageBuilder"/> to
+    /// configure the application
     /// message properties.</param>
-    /// <returns>The current <see cref="ResilientMqttApplicationMessageBuilder"/> instance for method chaining.</returns>
-    public ResilientMqttApplicationMessageBuilder WithApplicationMessage(Action<MqttApplicationMessageBuilder> builder)
+    /// <returns>The current <see cref="ResilientMqttApplicationMessageBuilder"/> instance for method
+    /// chaining.</returns>
+    internal ResilientMqttApplicationMessageBuilder WithApplicationMessage(
+        Action<MqttApplicationMessageBuilder> builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
@@ -56,22 +57,17 @@ internal class ResilientMqttApplicationMessageBuilder
         return this;
     }
 
-    /// <summary>
-    /// Builds and returns a new instance of the ResilientMqttApplicationMessage using the configured values.
-    /// </summary>
+    /// <summary>Builds the configured resilient application message.</summary>
     /// <returns>A ResilientMqttApplicationMessage initialized with the current configuration settings.</returns>
-    /// <exception cref="InvalidOperationException">Thrown if the application message has not been set before calling this method.</exception>
-    public ResilientMqttApplicationMessage Build()
+    /// <exception cref="InvalidOperationException">Thrown if the application message has not been set before calling
+    /// this method.</exception>
+    internal ResilientMqttApplicationMessage Build()
     {
-        if (_applicationMessage == null)
+        if (_applicationMessage is null)
         {
             throw new InvalidOperationException("The ApplicationMessage cannot be null.");
         }
 
-        return new()
-        {
-            Id = _id,
-            ApplicationMessage = _applicationMessage
-        };
+        return new() { Id = _id, ApplicationMessage = _applicationMessage };
     }
 }

@@ -9,7 +9,6 @@
             "extensionId": "Microsoft.Testing.Extensions.CodeCoverage",
             "settings": {
                 "format": "cobertura",
-                "skipAutoProperties": true,
                 "modulePaths": {
                     "include": [
                         "MQTTnet.Rx\\..*"

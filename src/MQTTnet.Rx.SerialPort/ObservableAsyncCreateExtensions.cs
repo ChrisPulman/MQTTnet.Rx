@@ -1,68 +1,153 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using CP.IO.Ports;
+using IoT.Driver.Serial;
 using MQTTnet.Rx.Client;
-using ReactiveUI.Extensions.Async;
-
-#pragma warning disable SA1600
+using ReactiveUI.Primitives.Async;
 
 namespace MQTTnet.Rx.SerialPort;
 
-/// <summary>
-/// Provides asynchronous observable counterparts for serial port MQTT helpers.
-/// </summary>
+/// <summary>Provides asynchronous-observable MQTT and serial-port bridge operations.</summary>
 public static class ObservableAsyncCreateExtensions
 {
-    public static IObservableAsync<MqttClientPublishResult> PublishSerialPort(this IObservableAsync<IMqttClient> client, string topic, ISerialPortRx serialPort, IObservableAsync<char> startsWith, IObservableAsync<char> endsWith, int timeOut)
+    /// <summary>Provides serial-port bridge operations for asynchronous MQTT client sequences.</summary>
+    /// <param name="client">The asynchronous MQTT client sequence used by the bridge.</param>
+    extension(IObservableAsync<IMqttClient> client)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(startsWith);
-        ArgumentNullException.ThrowIfNull(endsWith);
-        return Create.PublishSerialPort(client.ToObservable(), topic, serialPort, startsWith.ToObservable(), endsWith.ToObservable(), timeOut).ToObservableAsync();
+        /// <summary>Publishes framed serial-port payloads to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives framed payloads.</param>
+        /// <param name="serialPort">The serial port that supplies received data.</param>
+        /// <param name="startsWith">The asynchronous sequence that identifies frame starts.</param>
+        /// <param name="endsWith">The asynchronous sequence that identifies frame ends.</param>
+        /// <param name="timeOut">The maximum time to wait for a complete frame.</param>
+        /// <returns>The result of each MQTT publish operation.</returns>
+        public IObservableAsync<MqttClientPublishResult> PublishSerialPort(
+            string topic,
+            ISerialPortRx serialPort,
+            IObservableAsync<char> startsWith,
+            IObservableAsync<char> endsWith,
+            int timeOut)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            ArgumentNullException.ThrowIfNull(startsWith);
+            ArgumentNullException.ThrowIfNull(endsWith);
+
+            return client.ToObservable()
+                .PublishSerialPort(topic, serialPort, startsWith.ToObservable(), endsWith.ToObservable(), timeOut)
+                .ToSignal();
+        }
+
+        /// <summary>Writes matching MQTT payloads as serial-port lines.</summary>
+        /// <param name="topic">The MQTT topic to subscribe to.</param>
+        /// <param name="serialPort">The serial port that receives the lines.</param>
+        /// <param name="payloadFactory">Converts each MQTT payload to a serial-port line.</param>
+        /// <returns>A disposable that ends the MQTT-to-serial subscription.</returns>
+        public IDisposable SubscribeSerialPortWriteLine(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<string, string> payloadFactory)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            return client.ToObservable().SubscribeSerialPortWriteLine(topic, serialPort, payloadFactory);
+        }
+
+        /// <summary>Writes matching MQTT payloads as serial-port text.</summary>
+        /// <param name="topic">The MQTT topic to subscribe to.</param>
+        /// <param name="serialPort">The serial port that receives the text.</param>
+        /// <param name="payloadFactory">Converts each MQTT payload to serial-port text.</param>
+        /// <returns>A disposable that ends the MQTT-to-serial subscription.</returns>
+        public IDisposable SubscribeSerialPortWrite(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<string, string> payloadFactory)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            return client.ToObservable().SubscribeSerialPortWrite(topic, serialPort, payloadFactory);
+        }
+
+        /// <summary>Writes matching MQTT payloads as serial-port bytes.</summary>
+        /// <param name="topic">The MQTT topic to subscribe to.</param>
+        /// <param name="serialPort">The serial port that receives the bytes.</param>
+        /// <param name="payloadFactory">Converts each MQTT payload to serial-port bytes.</param>
+        /// <returns>A disposable that ends the MQTT-to-serial subscription.</returns>
+        public IDisposable SubscribeSerialPortWrite(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<string, byte[]> payloadFactory)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            return client.ToObservable().SubscribeSerialPortWrite(topic, serialPort, payloadFactory);
+        }
     }
 
-    public static void SubscribeSerialPortWriteLine(this IObservableAsync<IMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, string> payloadFactory)
+    /// <summary>Provides serial-port bridge operations for asynchronous resilient MQTT client sequences.</summary>
+    /// <param name="client">The asynchronous resilient MQTT client sequence used by the bridge.</param>
+    extension(IObservableAsync<IResilientMqttClient> client)
     {
-        ArgumentNullException.ThrowIfNull(client);
-        Create.SubscribeSerialPortWriteLine(client.ToObservable(), topic, configurePort, payloadFactory);
-    }
+        /// <summary>Publishes framed serial-port payloads to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives framed payloads.</param>
+        /// <param name="serialPort">The serial port that supplies received data.</param>
+        /// <param name="startsWith">The asynchronous sequence that identifies frame starts.</param>
+        /// <param name="endsWith">The asynchronous sequence that identifies frame ends.</param>
+        /// <param name="timeOut">The maximum time to wait for a complete frame.</param>
+        /// <returns>The result of each resilient MQTT publish operation.</returns>
+        public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishSerialPort(
+            string topic,
+            ISerialPortRx serialPort,
+            IObservableAsync<char> startsWith,
+            IObservableAsync<char> endsWith,
+            int timeOut)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            ArgumentNullException.ThrowIfNull(startsWith);
+            ArgumentNullException.ThrowIfNull(endsWith);
 
-    public static void SubscribeSerialPortWrite(this IObservableAsync<IMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, string> payloadFactory)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        Create.SubscribeSerialPortWrite(client.ToObservable(), topic, configurePort, payloadFactory);
-    }
+            return client.ToObservable()
+                .PublishSerialPort(topic, serialPort, startsWith.ToObservable(), endsWith.ToObservable(), timeOut)
+                .ToSignal();
+        }
 
-    public static void SubscribeSerialPortWrite(this IObservableAsync<IMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, byte[]> payloadFactory)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        Create.SubscribeSerialPortWrite(client.ToObservable(), topic, configurePort, payloadFactory);
-    }
+        /// <summary>Writes matching MQTT payloads as serial-port lines.</summary>
+        /// <param name="topic">The MQTT topic to subscribe to.</param>
+        /// <param name="serialPort">The serial port that receives the lines.</param>
+        /// <param name="payloadFactory">Converts each MQTT payload to a serial-port line.</param>
+        /// <returns>A disposable that ends the MQTT-to-serial subscription.</returns>
+        public IDisposable SubscribeSerialPortWriteLine(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<string, string> payloadFactory)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            return client.ToObservable().SubscribeSerialPortWriteLine(topic, serialPort, payloadFactory);
+        }
 
-    public static IObservableAsync<ApplicationMessageProcessedEventArgs> PublishSerialPort(this IObservableAsync<IResilientMqttClient> client, string topic, ISerialPortRx serialPort, IObservableAsync<char> startsWith, IObservableAsync<char> endsWith, int timeOut)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        ArgumentNullException.ThrowIfNull(startsWith);
-        ArgumentNullException.ThrowIfNull(endsWith);
-        return Create.PublishSerialPort(client.ToObservable(), topic, serialPort, startsWith.ToObservable(), endsWith.ToObservable(), timeOut).ToObservableAsync();
-    }
+        /// <summary>Writes matching MQTT payloads as serial-port text.</summary>
+        /// <param name="topic">The MQTT topic to subscribe to.</param>
+        /// <param name="serialPort">The serial port that receives the text.</param>
+        /// <param name="payloadFactory">Converts each MQTT payload to serial-port text.</param>
+        /// <returns>A disposable that ends the MQTT-to-serial subscription.</returns>
+        public IDisposable SubscribeSerialPortWrite(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<string, string> payloadFactory)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            return client.ToObservable().SubscribeSerialPortWrite(topic, serialPort, payloadFactory);
+        }
 
-    public static void SubscribeSerialPortWriteLine(this IObservableAsync<IResilientMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, string> payloadFactory)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        Create.SubscribeSerialPortWriteLine(client.ToObservable(), topic, configurePort, payloadFactory);
-    }
-
-    public static void SubscribeSerialPortWrite(this IObservableAsync<IResilientMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, string> payloadFactory)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        Create.SubscribeSerialPortWrite(client.ToObservable(), topic, configurePort, payloadFactory);
-    }
-
-    public static void SubscribeSerialPortWrite(this IObservableAsync<IResilientMqttClient> client, string topic, Action<ISerialPortRx> configurePort, Func<string, byte[]> payloadFactory)
-    {
-        ArgumentNullException.ThrowIfNull(client);
-        Create.SubscribeSerialPortWrite(client.ToObservable(), topic, configurePort, payloadFactory);
+        /// <summary>Writes matching MQTT payloads as serial-port bytes.</summary>
+        /// <param name="topic">The MQTT topic to subscribe to.</param>
+        /// <param name="serialPort">The serial port that receives the bytes.</param>
+        /// <param name="payloadFactory">Converts each MQTT payload to serial-port bytes.</param>
+        /// <returns>A disposable that ends the MQTT-to-serial subscription.</returns>
+        public IDisposable SubscribeSerialPortWrite(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<string, byte[]> payloadFactory)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            return client.ToObservable().SubscribeSerialPortWrite(topic, serialPort, payloadFactory);
+        }
     }
 }

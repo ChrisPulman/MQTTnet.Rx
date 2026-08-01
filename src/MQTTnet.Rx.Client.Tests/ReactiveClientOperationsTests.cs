@@ -1,27 +1,44 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
 using MQTTnet.Rx.Client.Tests.Helpers;
-using ReactiveUI.Extensions.Async;
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.Reactive;
+using ReactiveUI.Primitives.Reactive.Signals;
 
 namespace MQTTnet.Rx.Client.Tests;
 
-/// <summary>
-/// Tests for async observable client operation extensions.
-/// </summary>
+/// <summary>Tests asynchronous observable client operation extensions.</summary>
 public class ReactiveClientOperationsTests
 {
-    /// <summary>
-    /// Tests that Ping on an async observable client invokes the underlying MQTT ping operation.
-    /// </summary>
+    /// <summary>The expected number of published messages.</summary>
+    private const int ExpectedPublishedMessageCount = 2;
+
+    /// <summary>Tests that the compatibility facade forwards static calls to the extension implementation.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task Ping_AsyncObservableInvokesPing()
+    public async Task Ping_CompatibilityFacadeInvokesPingAsync()
+    {
+        using var mockClient = new MockMqttClient();
+
+        _ = await ReactiveClientOperations
+            .Ping(Signal.Emit<IMqttClient>(mockClient))
+            .FirstAsync();
+
+        await Assert.That(mockClient.PingCount).IsEqualTo(1);
+    }
+
+    /// <summary>Tests that Ping on an async observable client invokes the underlying MQTT ping operation.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
+    [Test]
+    public async Task Ping_AsyncObservableInvokesPingAsync()
     {
         // Arrange
-        var mockClient = new MockMqttClient();
+        using var mockClient = new MockMqttClient();
 
         // Act
-        _ = await ObservableAsync.Return<IMqttClient>(mockClient)
+        _ = await SignalAsync.Return<IMqttClient>(mockClient)
             .Ping()
             .FirstAsync(TimeSpan.FromSeconds(1));
 
@@ -29,47 +46,43 @@ public class ReactiveClientOperationsTests
         await Assert.That(mockClient.PingCount).IsEqualTo(1);
     }
 
-    /// <summary>
-    /// Tests that PublishMany on async observables publishes every supplied message.
-    /// </summary>
+    /// <summary>Tests that PublishMany on async observables publishes every supplied message.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task PublishMany_AsyncObservablePublishesMessages()
+    public async Task PublishMany_AsyncObservablePublishesMessagesAsync()
     {
         // Arrange
-        var mockClient = new MockMqttClient();
+        using var mockClient = new MockMqttClient();
         var messages = new[]
         {
             new MqttApplicationMessage { Topic = "topic/1" },
-            new MqttApplicationMessage { Topic = "topic/2" }
-        }.ToObservableAsync();
+            new MqttApplicationMessage { Topic = "topic/2" },
+        }.ToObservable().ToSignal();
 
         // Act
-        _ = await ObservableAsync.Return<IMqttClient>(mockClient)
+        _ = await SignalAsync.Return<IMqttClient>(mockClient)
             .PublishMany(messages)
             .FirstAsync(TimeSpan.FromSeconds(1));
 
         // Assert
-        await Assert.That(mockClient.PublishedMessages).Count().IsEqualTo(2);
-        await Assert.That(mockClient.PublishedMessages.Select(message => message.Topic).ToArray())
-            .IsEquivalentTo(new[] { "topic/1", "topic/2" });
+        await Assert.That(mockClient.PublishedMessages).Count().IsEqualTo(ExpectedPublishedMessageCount);
+        await Assert.That(mockClient.PublishedMessages[0].Topic).IsEqualTo("topic/1");
+        await Assert.That(mockClient.PublishedMessages[1].Topic).IsEqualTo("topic/2");
     }
 
-    /// <summary>
-    /// Tests that WaitForConnection on an async observable client emits the client after a connection event.
-    /// </summary>
+    /// <summary>Tests that WaitForConnection emits the client after a connection event.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WaitForConnection_AsyncObservableEmitsConnectedClient()
+    public async Task WaitForConnection_AsyncObservableEmitsConnectedClientAsync()
     {
         // Arrange
-        var mockClient = new MockMqttClient();
+        using var mockClient = new MockMqttClient();
 
         // Act
-        var connectedClientTask = ObservableAsync.Return<IMqttClient>(mockClient)
+        await mockClient.SimulateConnectedAsync();
+        var connectedClient = await SignalAsync.Return<IMqttClient>(mockClient)
             .WaitForConnection(TimeSpan.FromSeconds(1))
             .FirstAsync(TimeSpan.FromSeconds(1));
-
-        await mockClient.SimulateConnected();
-        var connectedClient = await connectedClientTask;
 
         // Assert
         await Assert.That(connectedClient).IsSameReferenceAs(mockClient);

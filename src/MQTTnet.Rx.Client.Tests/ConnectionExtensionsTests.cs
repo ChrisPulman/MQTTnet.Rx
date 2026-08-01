@@ -1,27 +1,25 @@
-// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
 using MQTTnet.Rx.Client.Tests.Helpers;
-using ReactiveUI.Extensions.Async;
+using ReactiveUI.Primitives.Async;
 
 namespace MQTTnet.Rx.Client.Tests;
 
-/// <summary>
-/// Tests for resilient client async observable connection extensions.
-/// </summary>
+/// <summary>Tests resilient client asynchronous observable connection extensions.</summary>
 public class ConnectionExtensionsTests
 {
-    /// <summary>
-    /// Tests that ObserveApplicationMessageProcessedAsync emits processed message events.
-    /// </summary>
+    /// <summary>Tests that ObserveApplicationMessageProcessed emits processed message events.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task ObserveApplicationMessageProcessedAsync_EmitsProcessedEvent()
+    public async Task ObserveApplicationMessageProcessed_EmitsProcessedEventAsync()
     {
         // Arrange
-        var mockClient = new MockResilientMqttClient();
+        using var mockClient = new MockResilientMqttClient();
 
         // Act
-        var processedMessageTask = mockClient.ObserveApplicationMessageProcessedAsync()
+        var processedMessageTask = mockClient.ObserveApplicationMessageProcessed()
             .FirstAsync(TimeSpan.FromSeconds(1));
 
         await mockClient.SimulateApplicationMessageProcessedAsync();
@@ -31,17 +29,16 @@ public class ConnectionExtensionsTests
         await Assert.That(processedMessage.ApplicationMessage.ApplicationMessage?.Topic).IsEqualTo("processed/topic");
     }
 
-    /// <summary>
-    /// Tests that WhenReady emits the resilient client after a connection event.
-    /// </summary>
+    /// <summary>Tests that WhenReady emits the resilient client after a connection event.</summary>
+    /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
-    public async Task WhenReady_AsyncObservableEmitsConnectedClient()
+    public async Task WhenReady_AsyncObservableEmitsConnectedClientAsync()
     {
         // Arrange
-        var mockClient = new MockResilientMqttClient();
+        using var mockClient = new MockResilientMqttClient();
 
         // Act
-        var readyClientTask = ObservableAsync.Return<IResilientMqttClient>(mockClient)
+        var readyClientTask = SignalAsync.Return<IResilientMqttClient>(mockClient)
             .WhenReady()
             .FirstAsync(TimeSpan.FromSeconds(1));
 

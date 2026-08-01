@@ -1,136 +1,273 @@
-﻿// Copyright (c) Chris Pulman. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
 
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
 using System.Text.Json;
+using System.Threading.Channels;
 using MQTTnet.Server;
+using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.Reactive;
+using ReactiveUI.Primitives.Reactive.Signals;
 
 namespace MQTTnet.Rx.Server;
 
-/// <summary>
-/// Provides factory methods and properties for creating and managing MQTT server instances.
-/// </summary>
-/// <remarks>The Create class offers static members to configure and instantiate MQTT servers using a customizable
-/// factory. It is intended for scenarios where MQTT server creation and lifecycle management need to be centralized or
-/// shared across an application.</remarks>
+/// <summary>Creates MQTT server observable sequences.</summary>
 public static class Create
 {
-    /// <summary>
-    /// Gets the default factory instance for creating MQTT server components.
-    /// </summary>
-    /// <remarks>Use this property to obtain a shared instance of the MQTT server factory. The returned
-    /// factory can be used to create and configure MQTT server instances throughout the application.</remarks>
+    private const int MaximumServerRetries = 3;
+
+    /// <summary>Gets the MQTT server factory.</summary>
     public static MqttServerFactory MqttFactory { get; private set; } = new();
 
-    /// <summary>
-    /// Sets the MQTT server factory to use for creating MQTT server instances.
-    /// </summary>
-    /// <param name="mqttFactory">The factory instance that will be used to create MQTT servers. Cannot be null.</param>
+    /// <summary>Sets the MQTT server factory.</summary>
+    /// <param name="mqttFactory">The MQTT server factory.</param>
     public static void NewMqttFactory(MqttServerFactory mqttFactory) => MqttFactory = mqttFactory;
 
-    /// <summary>
-    /// Creates and starts an MQTT server as an observable sequence, allowing subscribers to manage the server's
-    /// lifetime and resources.
-    /// </summary>
-    /// <remarks>The server instance is shared among all subscribers. The server is started automatically when
-    /// the first observer subscribes and is stopped and disposed when the last observer unsubscribes. The returned
-    /// disposable should be disposed to release resources and stop the server when no longer needed. This method
-    /// retries the observable sequence on error, ensuring resilience to transient failures.</remarks>
-    /// <param name="builder">A delegate that configures and returns the options for the MQTT server. Cannot be null.</param>
-    /// <returns>An observable sequence that emits a tuple containing the started MQTT server instance and a disposable for
-    /// managing its lifetime. The server is started when the first subscription is made and stopped when the last
-    /// subscription is disposed.</returns>
-    public static IObservable<(MqttServer Server, CompositeDisposable Disposable)> MqttServer(Func<MqttServerOptionsBuilder, MqttServerOptions> builder)
+    /// <summary>Creates an MQTT server observable sequence.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServer(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        var mqttServer = MqttFactory.CreateMqttServer(builder(MqttFactory.CreateServerOptionsBuilder()));
-        var serverCount = 0;
-        return Observable.Create<(MqttServer Server, CompositeDisposable Disposable)>(async observer =>
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options));
+        return Signal.Create<(MqttServer Server, MqttServerSession Disposable)>(async (observer, cancellationToken) =>
         {
-            var disposable = new CompositeDisposable();
-            Interlocked.Increment(ref serverCount);
-            if (serverCount == 1)
+            var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
-                await mqttServer.StartAsync();
+                observer.OnNext((session.Server, session));
+                return session;
             }
-
-            observer.OnNext((mqttServer, disposable));
-            return Disposable.Create(async () =>
+            catch
             {
-                Interlocked.Decrement(ref serverCount);
-                if (serverCount == 0)
-                {
-                    await mqttServer.StopAsync();
-                    mqttServer.Dispose();
-                }
-
-                disposable.Dispose();
-            });
-        }).Retry();
+                session.Dispose();
+                throw;
+            }
+        }).Retry(MaximumServerRetries);
     }
 
-    /// <summary>
-    /// Creates an observable sequence that provides an MQTT server instance with support for persisting retained
-    /// messages to disk.
-    /// </summary>
-    /// <remarks>The observable ensures that retained messages are loaded from and saved to disk using a JSON
-    /// file named 'RetainedMessages.json' in the specified directory or temp directory if no path is given. The MQTT server is started when the first
-    /// subscription is made and stopped when all subscriptions are disposed. This method is intended for scenarios
-    /// where retained message persistence is required across server restarts.</remarks>
-    /// <param name="builder">A delegate that configures and returns the options for the MQTT server. Cannot be null.</param>
-    /// <param name="retainedMessageDirectory">The directory path where retained messages are stored as a JSON file. If null, the system's temporary directory
-    /// is used.</param>
-    /// <returns>An observable sequence that emits a tuple containing the created MQTT server and a disposable resource for
-    /// managing the server's lifetime. The server persists retained messages to the specified directory.</returns>
-    public static IObservable<(MqttServer Server, CompositeDisposable Disposable)> MqttServerWithRetainedMessages(Func<MqttServerOptionsBuilder, MqttServerOptions> builder, string? retainedMessageDirectory = null)
+    /// <summary>Creates an asynchronous MQTT server sequence.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)> MqttServerSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
 
-        var mqttServer = MqttFactory.CreateMqttServer(builder(MqttFactory.CreateServerOptionsBuilder()));
-        IDisposable retainedDisposable;
-        var serverCount = 0;
-        return Observable.Create<(MqttServer Server, CompositeDisposable Disposable)>(async observer =>
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options));
+        return SignalAsync.Create<(MqttServer Server, MqttServerSession Disposable)>(
+            async (observer, cancellationToken) =>
         {
-            var disposable = new CompositeDisposable();
-            Interlocked.Increment(ref serverCount);
-            if (serverCount == 1)
+            var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
+            await observer.OnNextAsync((session.Server, session), cancellationToken).ConfigureAwait(false);
+            return session;
+        }).Retry(MaximumServerRetries);
+    }
+
+    /// <summary>Creates an MQTT server sequence with retained messages.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder) =>
+        MqttServerWithRetainedMessages(builder, null);
+
+    /// <summary>Creates an MQTT server sequence with retained messages.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), "RetainedMessages.json");
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options), storePath);
+        return Signal.Create<(MqttServer Server, MqttServerSession Disposable)>(async (observer, cancellationToken) =>
+        {
+            var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
+            try
             {
-                var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), "RetainedMessages.json");
-                retainedDisposable = mqttServer.LoadingRetainedMessage().Subscribe(async e =>
+                observer.OnNext((session.Server, session));
+                return session;
+            }
+            catch
+            {
+                session.Dispose();
+                throw;
+            }
+        }).Retry(MaximumServerRetries);
+    }
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder) =>
+        MqttServerWithRetainedMessagesSignal(builder, null);
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), "RetainedMessages.json");
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options), storePath);
+        return SignalAsync.Create<(MqttServer Server, MqttServerSession Disposable)>(
+            async (observer, cancellationToken) =>
+        {
+            var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
+            await observer.OnNextAsync((session.Server, session), cancellationToken).ConfigureAwait(false);
+            return session;
+        }).Retry(MaximumServerRetries);
+    }
+
+    /// <summary>Coordinates the lifecycle of a shared MQTT server instance.</summary>
+    /// <param name="serverFactory">Creates the MQTT server instance.</param>
+    /// <param name="retainedStorePath">The optional retained-message store path.</param>
+    internal sealed class MqttServerLifetime(Func<MqttServer> serverFactory, string? retainedStorePath = null)
+    {
+        private readonly LifecycleGate _gate = new();
+
+        private Func<LoadingRetainedMessagesEventArgs, Task>? _retainedHandler;
+
+        private MqttServer? _server;
+
+        private int _subscriptionCount;
+
+        /// <summary>Acquires a session for the shared MQTT server.</summary>
+        /// <param name="cancellationToken">Cancels acquisition before the server is available.</param>
+        /// <returns>A session that releases the server when disposed.</returns>
+        internal async Task<MqttServerSession> AcquireAsync(CancellationToken cancellationToken)
+        {
+            await _gate.EnterAsync(cancellationToken).ConfigureAwait(false);
+            try
+            {
+                if (_subscriptionCount == 0)
                 {
+                    var server = serverFactory();
+                    _server = server;
                     try
                     {
-                        var models = await JsonSerializer.DeserializeAsync<List<MqttRetainedMessageModel>>(File.OpenRead(storePath)) ?? [];
-                        e.LoadedRetainedMessages = models.ConvertAll(m => m.ToApplicationMessage());
-                        Console.WriteLine("Retained messages loaded.");
+                        AttachRetainedHandler(server);
+                        await server.StartAsync().ConfigureAwait(false);
                     }
-                    catch (FileNotFoundException)
+                    catch
                     {
-                        // Ignore because nothing is stored yet.
-                        Console.WriteLine("No retained messages stored yet.");
+                        DetachRetainedHandler(server);
+                        _server = null;
+                        server.Dispose();
+                        throw;
                     }
-                    catch (Exception exception)
-                    {
-                        Console.WriteLine(exception);
-                    }
-                });
-                await mqttServer.StartAsync();
-            }
-
-            observer.OnNext((mqttServer, disposable));
-            return Disposable.Create(async () =>
-            {
-                Interlocked.Decrement(ref serverCount);
-                if (serverCount == 0)
-                {
-                    await mqttServer.StopAsync();
-                    mqttServer.Dispose();
                 }
 
-                disposable.Dispose();
-            });
-        }).Retry();
+                _subscriptionCount++;
+                return new(_server!, ReleaseAsync);
+            }
+            finally
+            {
+                _gate.Exit();
+            }
+        }
+
+        private void AttachRetainedHandler(MqttServer server)
+        {
+            if (retainedStorePath is null || _retainedHandler is not null)
+            {
+                return;
+            }
+
+            _retainedHandler = LoadRetainedMessagesAsync;
+            server.LoadingRetainedMessageAsync += _retainedHandler;
+        }
+
+        private void DetachRetainedHandler(MqttServer server)
+        {
+            if (_retainedHandler is null)
+            {
+                return;
+            }
+
+            server.LoadingRetainedMessageAsync -= _retainedHandler;
+            _retainedHandler = null;
+        }
+
+        private async Task LoadRetainedMessagesAsync(LoadingRetainedMessagesEventArgs eventArgs)
+        {
+            if (!File.Exists(retainedStorePath))
+            {
+                return;
+            }
+
+            await using var stream = File.OpenRead(retainedStorePath!);
+            var models = await JsonSerializer
+                .DeserializeAsync<List<MqttRetainedMessageModel>>(stream)
+                .ConfigureAwait(false) ?? [];
+            eventArgs.LoadedRetainedMessages = models.ConvertAll(static model => model.ToApplicationMessage());
+        }
+
+        private async ValueTask ReleaseAsync()
+        {
+            await _gate.EnterAsync(CancellationToken.None).ConfigureAwait(false);
+            try
+            {
+                _subscriptionCount--;
+                if (_subscriptionCount != 0)
+                {
+                    return;
+                }
+
+                var server = _server!;
+                DetachRetainedHandler(server);
+                try
+                {
+                    await server.StopAsync().ConfigureAwait(false);
+                }
+                finally
+                {
+                    _server = null;
+                    server.Dispose();
+                }
+            }
+            finally
+            {
+                _gate.Exit();
+            }
+        }
+    }
+
+    /// <summary>Serializes asynchronous server lifecycle operations.</summary>
+    internal sealed class LifecycleGate
+    {
+        private readonly Channel<byte> _tokens = System.Threading.Channels.Channel.CreateBounded<byte>(1);
+
+        /// <summary>Initializes a new instance of the <see cref="LifecycleGate"/> class.</summary>
+        internal LifecycleGate() => _ = _tokens.Writer.TryWrite(0);
+
+        /// <summary>Enters the gate.</summary>
+        /// <param name="cancellationToken">Cancels the wait to enter the gate.</param>
+        /// <returns>A value task that completes after entering the gate.</returns>
+        internal async ValueTask EnterAsync(CancellationToken cancellationToken) =>
+            _ = await _tokens.Reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+
+        /// <summary>Exits the gate.</summary>
+        internal void Exit() => _ = _tokens.Writer.TryWrite(0);
     }
 }

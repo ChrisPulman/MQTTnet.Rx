@@ -1,0 +1,38 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="Azure.Identity" Version="1.21.0" />
+    <PackageVersion Include="ConsoleMenu-simple" Version="2.7.0" />
+    <PackageVersion Include="CP.Nuke.BuildTools" Version="3.0.2" />
+    <PackageVersion Include="IoT-Driver.ABPlcRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.MitsubishiRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.ModbusRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.OmronPlcRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.S7PlcRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.SerialPortRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.TwinCATRx" Version="1.0.1" />
+    <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="18.8.2" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0" />
+    <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
+    <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
+    <PackageVersion Include="MQTTnet.Server" Version="5.2.0.1603" />
+    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.10.91" />
+    <PackageVersion Include="NSubstitute" Version="6.0.0" />
+    <PackageVersion Include="NuGet.Packaging" Version="7.6.0" />
+    <PackageVersion Include="Nuke.Common" Version="10.1.0" />
+    <PackageVersion Include="PerformanceSharp.Analyzers" Version="3.40.1" />
+    <PackageVersion Include="ReactiveUI.Primitives" Version="7.1.0" />
+    <PackageVersion Include="ReactiveUI.Primitives.Async.Reactive" Version="7.1.0" />
+    <PackageVersion Include="ReactiveUI.Primitives.Reactive" Version="7.1.0" />
+    <PackageVersion Include="SecuritySharp.Analyzers" Version="3.40.1" />
+    <PackageVersion Include="StyleSharp.Analyzers" Version="3.40.1" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
+    <PackageVersion Include="TUnit" Version="1.63.0" />
+    <PackageVersion Include="Verify.TUnit" Version="31.28.0" />
+  </ItemGroup>
+</Project>

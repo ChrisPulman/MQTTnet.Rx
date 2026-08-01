@@ -2,19 +2,17 @@
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Authors>Chris Pulman</Authors>
-    <Description>Reactive extensions for MQTTnet Broker</Description>
+    <Description>ReactiveUI.Primitives extensions for MQTTnet clients, brokers, and industrial device bridges</Description>
     <Copyright>Copyright © https://github.com/ChrisPulman $([System.DateTime]::Now.ToString(yyyy))</Copyright>
     <IsTestProject>$(MSBuildProjectName.Contains('Tests'))</IsTestProject>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <LangVersion>preview</LangVersion>
     <Configuration>$(TargetFramework)</Configuration>
     <Company>ChrisPulman</Company>
-    <NoWarn>CS1591;IDE0190;IDE1006</NoWarn>
     <Nullable>enable</Nullable>
     <PackageIcon>logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Compatability with Net 8 / 9 / 10 / 11</PackageReleaseNotes>
-    <PackageTags>MQTT;MQTTnet;S7Plc;Allen;Bradley;Rockwell;Modbus;S7;Seimens;Serial;Beckhoff;TwinCat;rx;reactive;extensions;observable;LINQ;net;netstandard</PackageTags>
+    <PackageReleaseNotes>Central package management, ReactiveUI.Primitives migration, IoT-Driver 1.0.1 integrations, and .NET 8 / 9 / 10 / 11 compatibility</PackageReleaseNotes>
+    <PackageTags>MQTT;MQTTnet;ReactiveUI;Primitives;S7Plc;Allen;Bradley;Rockwell;Mitsubishi;Omron;Modbus;Siemens;Serial;Beckhoff;TwinCAT;rx;reactive;extensions;observable;LINQ;net</PackageTags>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
     <PackageProjectUrl>https://github.com/ChrisPulman/MQTTnet.Rx</PackageProjectUrl>
@@ -34,7 +32,7 @@
     <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
   </PropertyGroup>
   <ItemGroup Condition="'$(IsTestProject)' != 'true'">
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="10.0.301" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.SourceLink.GitHub" PrivateAssets="All" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(MSBuildThisFileDirectory)images\logo.png" Pack="true" PackagePath="\" />
@@ -43,10 +41,9 @@
   </ItemGroup>
   
   <ItemGroup>
-    <PackageReference Include="StyleSharp.Analyzers" Version="3.40.1" />
-    <PackageReference Include="PerformanceSharp.Analyzers" Version="3.40.1" />
-    <PackageReference Include="SecuritySharp.Analyzers" Version="3.40.1" />
-    <PackageReference Include="Roslynator.Analyzers" Version="4.15.0" PrivateAssets="All" />
+    <PackageReference Include="StyleSharp.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="PerformanceSharp.Analyzers" PrivateAssets="all" />
+    <PackageReference Include="SecuritySharp.Analyzers" PrivateAssets="all" />
   </ItemGroup>
 
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">

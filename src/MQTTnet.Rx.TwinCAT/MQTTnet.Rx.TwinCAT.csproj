@@ -1,13 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-	  <TargetFrameworks>net8.0-windows10.0.17763;net9.0-windows10.0.17763</TargetFrameworks>
+    <TargetFrameworks>net8.0-windows10.0.17763;net9.0-windows10.0.17763</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>MQTTnet.TwinCATRx</PackageId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CP.TwinCATRx" Version="3.0.0" />
+    <PackageReference Include="IoT-Driver.TwinCATRx" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
   </ItemGroup>
 
   <ItemGroup>
