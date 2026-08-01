@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="MQTTnet.Server" Version="5.2.0.1603" />
-    <PackageReference Include="ReactiveUI.Extensions" Version="2.3.1" />
+    <PackageReference Include="ReactiveUI.Extensions" Version="4.0.0" />
     <PackageReference Include="System.Reactive" Version="7.0.0" />
   </ItemGroup>
 </Project>
