@@ -3,11 +3,19 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Signals;
 using RxLinq = System.Reactive.Linq;
-using RxUnit = System.Reactive.Unit;
+#else
+using ReactiveUI.Primitives.Signals;
+using RxLinq = MQTTnet.Rx.Client.Linq;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides observable operations retained for System.Reactive compatibility.</summary>
 internal static class PrimitivesObservableCompatibilityExtensions
@@ -114,7 +122,11 @@ internal static class PrimitivesObservableCompatibilityExtensions
             IDisposable
     {
         /// <summary>Distributes elements to group subscribers.</summary>
+#if REACTIVE_SHIM
         private readonly ReactiveUI.Primitives.Signals.Signal<T> _signal = new();
+#else
+        private readonly Signal<T> _signal = new();
+#endif
 
         /// <inheritdoc/>
         public TKey Key { get; } = key;

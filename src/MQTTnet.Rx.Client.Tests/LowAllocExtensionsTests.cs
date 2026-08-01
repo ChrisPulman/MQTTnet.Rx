@@ -2,9 +2,17 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 using MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
+#else
+using ReactiveUI.Primitives;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -174,8 +182,8 @@ public sealed class LowAllocExtensionsTests
         var groupKeys = new List<string>();
 
         // Act
-        using var subscription = messages.ToObservable()
-            .GroupByTopic()
+        using var subscription = LowAllocExtensions
+            .GroupByTopic(messages.ToObservable())
             .Select(static group => group.Key)
             .Subscribe(groupKeys.Add);
 

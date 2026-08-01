@@ -2,11 +2,23 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using IoT.Driver.ModbusRx.Reactive.Device;
+#else
 using IoT.Driver.ModbusRx.Device;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Modbus.Reactive;
+#else
 using MQTTnet.Rx.Modbus;
+#endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

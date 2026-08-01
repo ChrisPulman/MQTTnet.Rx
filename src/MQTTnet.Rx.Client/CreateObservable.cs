@@ -5,11 +5,19 @@
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
 using ReactiveUI.Primitives.Reactive.Signals;
-using RxVoid = System.Reactive.Unit;
+#else
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides factory methods for creating observable sequences from asynchronous event patterns.</summary>
 /// <remarks>This class bridges asynchronous event patterns with observable sequences.</remarks>

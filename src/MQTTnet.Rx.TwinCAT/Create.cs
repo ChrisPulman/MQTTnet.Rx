@@ -2,11 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using CP.Collections;
-using IoT.Driver.TwinCATRx;
-using MQTTnet.Rx.Client;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.TwinCAT.Reactive;
+#else
 namespace MQTTnet.Rx.TwinCAT;
+#endif
 
 /// <summary>Provides string-variable compatibility helpers for TwinCAT MQTT bridges.</summary>
 /// <remarks>Prefer <see cref="CreateExtensions"/> in new code.</remarks>

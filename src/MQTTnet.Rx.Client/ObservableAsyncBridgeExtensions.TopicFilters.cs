@@ -6,7 +6,11 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using ReactiveUI.Primitives.Async;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides asynchronous observable counterparts for classic observable extension APIs.</summary>
 public static partial class ObservableAsyncBridgeExtensions

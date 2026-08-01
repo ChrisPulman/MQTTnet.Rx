@@ -4,12 +4,12 @@
 
 using System.Diagnostics;
 using System.Globalization;
-using IoT.Driver.Core;
-using IoT.Driver.OmronPlcRx;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Reactive;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.OmronPlc.Reactive;
+#else
 namespace MQTTnet.Rx.OmronPlc;
+#endif
 
 /// <summary>Provides typed MQTT publishing and subscription helpers for Omron PLC tags.</summary>
 /// <remarks>

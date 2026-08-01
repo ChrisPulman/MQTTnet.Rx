@@ -2,7 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Specifies the outcome of a reconnection attempt to a remote service or resource.</summary>
 /// <remarks>Use this enumeration to determine the result of a reconnection operation, such as whether the

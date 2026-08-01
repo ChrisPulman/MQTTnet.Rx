@@ -2,11 +2,27 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using IoT.Driver.Serial.Reactive;
+#else
 using IoT.Driver.Serial;
+#endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using SerialAsyncCreate = MQTTnet.Rx.SerialPort.Reactive.ObservableAsyncCreateExtensions;
+#else
 using SerialAsyncCreate = MQTTnet.Rx.SerialPort.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using SerialCreate = MQTTnet.Rx.SerialPort.Reactive.Create;
+#else
 using SerialCreate = MQTTnet.Rx.SerialPort.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -231,20 +247,28 @@ public sealed partial class SerialPortLiveBridgeTests
     /// <summary>Composes the synchronous and async sources accepted by publisher facade overloads.</summary>
     private sealed class PublisherFacadeSources
     {
+        /// <summary>Gets the synchronous MQTT client source.</summary>
         public required IObservable<IMqttClient> Raw { get; init; }
 
+        /// <summary>Gets the synchronous resilient MQTT client source.</summary>
         public required IObservable<IResilientMqttClient> Resilient { get; init; }
 
+        /// <summary>Gets the asynchronous MQTT client source.</summary>
         public required IObservableAsync<IMqttClient> RawAsync { get; init; }
 
+        /// <summary>Gets the asynchronous resilient MQTT client source.</summary>
         public required IObservableAsync<IResilientMqttClient> ResilientAsync { get; init; }
 
+        /// <summary>Gets the synchronous start-delimiter source.</summary>
         public required IObservable<char> Starts { get; init; }
 
+        /// <summary>Gets the synchronous end-delimiter source.</summary>
         public required IObservable<char> Ends { get; init; }
 
+        /// <summary>Gets the asynchronous start-delimiter source.</summary>
         public required IObservableAsync<char> StartsAsync { get; init; }
 
+        /// <summary>Gets the asynchronous end-delimiter source.</summary>
         public required IObservableAsync<char> EndsAsync { get; init; }
     }
 }

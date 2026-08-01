@@ -5,12 +5,24 @@
 using System.Globalization;
 using System.Text;
 using IoT.Driver.Core;
+#if REACTIVE_SHIM
+using IoT.Driver.MitsubishiRx.Reactive;
+#else
 using IoT.Driver.MitsubishiRx;
+#endif
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Mitsubishi.Reactive;
+#else
 using MQTTnet.Rx.Mitsubishi;
+#endif
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
+using MitsubishiClient = IoT.Driver.MitsubishiRx.Reactive.MitsubishiRx;
+#else
 using MitsubishiClient = IoT.Driver.MitsubishiRx.MitsubishiRx;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

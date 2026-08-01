@@ -6,14 +6,36 @@
 using System.Buffers;
 using System.Globalization;
 using System.Text;
+#if !REACTIVE_SHIM
 using CP.Collections;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.TwinCATRx.Reactive;
+#else
 using IoT.Driver.TwinCATRx;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.TwinCAT.Reactive;
+#else
 using MQTTnet.Rx.TwinCAT;
+#endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using TwinCatAsync = MQTTnet.Rx.TwinCAT.Reactive.ObservableAsyncCreateExtensions;
+#else
 using TwinCatAsync = MQTTnet.Rx.TwinCAT.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using TwinCatCreate = MQTTnet.Rx.TwinCAT.Reactive.Create;
+#else
 using TwinCatCreate = MQTTnet.Rx.TwinCAT.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -89,9 +111,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
     /// <summary>The bounded duration for live broker evidence.</summary>
     private static readonly TimeSpan OperationTimeout = TimeSpan.FromSeconds(5);
 
-    /// <summary>
-    /// Proves static, extension, and async raw-client publishers carry ADS/hash values through the real broker.
-    /// </summary>
+    /// <summary>Proves static, extension, and async raw-client publishers carry ADS/hash values through the real broker.</summary>
     /// <returns>A task representing the live integration test.</returns>
     [Test]
     public async Task RawPublishers_CarryAdsAndHashValuesThroughRealBrokerAsync()
@@ -148,9 +168,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         await Assert.That(hash[HashVariable]).IsEqualTo(RawAsyncHashValue);
     }
 
-    /// <summary>
-    /// Proves static, extension, and async resilient publishers carry ADS/hash values through the real broker.
-    /// </summary>
+    /// <summary>Proves static, extension, and async resilient publishers carry ADS/hash values through the real broker.</summary>
     /// <returns>A task representing the live integration test.</returns>
     [Test]
     public async Task ResilientPublishers_CarryAdsAndHashValuesThroughRealBrokerAsync()
@@ -158,7 +176,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         await using var broker = await StartConnectedBrokerAsync();
         using var ads = CreateAdsClient();
         using var hash = CreateHashTable();
-        using var processed = new ReactiveUI.Primitives.Signals.Signal<ApplicationMessageProcessedEventArgs>();
+        using var processed = new TestSignal<ApplicationMessageProcessedEventArgs>();
         var resilient = CreateLiveResilientClient(broker.BridgeClient, processed);
         IRxTcAdsClient adsContract = ads;
         IHashTableRx hashContract = hash;
@@ -211,9 +229,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         resilient.Dispose();
     }
 
-    /// <summary>
-    /// Proves raw static, extension, and async subscribers write broker payloads into the in-memory ADS client.
-    /// </summary>
+    /// <summary>Proves raw static, extension, and async subscribers write broker payloads into the in-memory ADS client.</summary>
     /// <returns>A task representing the live integration test.</returns>
     [Test]
     public async Task RawSubscribers_WriteProbePayloadIntoAdsAndDisposeCleanlyAsync()
@@ -261,16 +277,14 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         await Assert.That(ads.OperationMetrics.WriteOperations).IsEqualTo(ExpectedSubscriberOperations);
     }
 
-    /// <summary>
-    /// Proves resilient static, extension, and async subscribers write broker payloads into the in-memory ADS client.
-    /// </summary>
+    /// <summary>Proves resilient static, extension, and async subscribers write broker payloads into the in-memory ADS client.</summary>
     /// <returns>A task representing the live integration test.</returns>
     [Test]
     public async Task ResilientSubscribers_WriteProbePayloadIntoAdsAndDisposeCleanlyAsync()
     {
         await using var broker = await StartConnectedBrokerAsync();
         using var ads = CreateAdsClient();
-        using var processed = new ReactiveUI.Primitives.Signals.Signal<ApplicationMessageProcessedEventArgs>();
+        using var processed = new TestSignal<ApplicationMessageProcessedEventArgs>();
         var resilient = CreateLiveResilientClient(broker.BridgeClient, processed);
         IRxTcAdsClient adsContract = ads;
         var clients = Signal.Emit(resilient);
@@ -331,9 +345,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         await ValidateAsyncResilientDependenciesAsync(adsContract, hashContract);
     }
 
-    /// <summary>
-    /// Captures the Behavior-style current hash value and the following mutation as separate broker messages.
-    /// </summary>
+    /// <summary>Captures the Behavior-style current hash value and the following mutation as separate broker messages.</summary>
     /// <typeparam name="TResult">The MQTT publication result type.</typeparam>
     /// <param name="broker">The connected real loopback broker.</param>
     /// <param name="topic">The unique MQTT topic.</param>
@@ -429,9 +441,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Publishes from the probe, waits for ADS write evidence, and optionally proves subscription disposal.
-    /// </summary>
+    /// <summary>Publishes from the probe, waits for ADS write evidence, and optionally proves subscription disposal.</summary>
     /// <param name="broker">The connected real loopback broker.</param>
     /// <param name="ads">The in-memory ADS client that records the write.</param>
     /// <param name="topic">The unique MQTT write topic.</param>

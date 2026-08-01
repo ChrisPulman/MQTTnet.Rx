@@ -4,8 +4,16 @@
 
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives;
+#endif
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -53,11 +61,12 @@ public class ReactiveClientOperationsTests
     {
         // Arrange
         using var mockClient = new MockMqttClient();
-        var messages = new[]
-        {
-            new MqttApplicationMessage { Topic = "topic/1" },
-            new MqttApplicationMessage { Topic = "topic/2" },
-        }.ToObservable().ToSignal();
+        var messages = TestObservableBridge.ToSignal(
+            new[]
+            {
+                new MqttApplicationMessage { Topic = "topic/1" },
+                new MqttApplicationMessage { Topic = "topic/2" },
+            }.ToObservable());
 
         // Act
         _ = await SignalAsync.Return<IMqttClient>(mockClient)

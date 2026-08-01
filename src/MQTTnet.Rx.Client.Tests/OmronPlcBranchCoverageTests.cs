@@ -6,11 +6,27 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using IoT.Driver.Core;
+#if REACTIVE_SHIM
+using IoT.Driver.OmronPlcRx.Reactive;
+#else
 using IoT.Driver.OmronPlcRx;
+#endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using OmronAsyncCreate = MQTTnet.Rx.OmronPlc.Reactive.ObservableAsyncCreateExtensions;
+#else
 using OmronAsyncCreate = MQTTnet.Rx.OmronPlc.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using OmronCreate = MQTTnet.Rx.OmronPlc.Reactive.OmronPlcCreateExtensions;
+#else
 using OmronCreate = MQTTnet.Rx.OmronPlc.OmronPlcCreateExtensions;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

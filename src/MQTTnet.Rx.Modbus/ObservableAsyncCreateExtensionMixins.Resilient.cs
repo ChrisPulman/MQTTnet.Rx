@@ -3,16 +3,25 @@
 // See the LICENSE file in the project root for full license information.
 
 using MQTTnet.Protocol;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
+using ModbusMasterSignal = ReactiveUI.Primitives.Async.IObservableAsync<
+    (bool Connected, System.Exception? Error, IoT.Driver.ModbusRx.Reactive.Device.ModbusIpMaster? Master)>;
+using ResilientResult = ReactiveUI.Primitives.Async.IObservableAsync<
+    MQTTnet.Rx.Client.Reactive.ApplicationMessageProcessedEventArgs>;
+#else
 using ModbusMasterSignal = ReactiveUI.Primitives.Async.IObservableAsync<
     (bool Connected, System.Exception? Error, IoT.Driver.ModbusRx.Device.ModbusIpMaster? Master)>;
-using ModbusReaderSignal = ReactiveUI.Primitives.Async.IObservableAsync<
-    (bool Connected, System.Exception? Error, object? Data)>;
 using ResilientResult = ReactiveUI.Primitives.Async.IObservableAsync<
     MQTTnet.Rx.Client.ApplicationMessageProcessedEventArgs>;
+#endif
+using ModbusReaderSignal = ReactiveUI.Primitives.Async.IObservableAsync<
+    (bool Connected, System.Exception? Error, object? Data)>;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Modbus.Reactive;
+#else
 namespace MQTTnet.Rx.Modbus;
+#endif
 
 /// <summary>Provides asynchronous observable extensions for resilient Modbus MQTT clients.</summary>
 public static partial class ObservableAsyncCreateExtensionMixins
@@ -113,7 +122,7 @@ public static partial class ObservableAsyncCreateExtensionMixins
                     interval,
                     qos,
                     retain)
-                .ToSignal();
+                .ToMqttAsyncSignal();
         }
 
         /// <summary>Publishes holding registers using default MQTT settings.</summary>
@@ -208,7 +217,7 @@ public static partial class ObservableAsyncCreateExtensionMixins
                     interval,
                     qos,
                     retain)
-                .ToSignal();
+                .ToMqttAsyncSignal();
         }
 
         /// <summary>Publishes discrete inputs using default MQTT settings.</summary>
@@ -303,7 +312,7 @@ public static partial class ObservableAsyncCreateExtensionMixins
                     interval,
                     qos,
                     retain)
-                .ToSignal();
+                .ToMqttAsyncSignal();
         }
 
         /// <summary>Publishes coils using default MQTT settings.</summary>
@@ -398,7 +407,7 @@ public static partial class ObservableAsyncCreateExtensionMixins
                     interval,
                     qos,
                     retain)
-                .ToSignal();
+                .ToMqttAsyncSignal();
         }
 
         /// <summary>Publishes reader data using default MQTT settings.</summary>
@@ -461,7 +470,7 @@ public static partial class ObservableAsyncCreateExtensionMixins
                     payloadFactory,
                     qos,
                     retain)
-                .ToSignal();
+                .ToMqttAsyncSignal();
         }
     }
 }

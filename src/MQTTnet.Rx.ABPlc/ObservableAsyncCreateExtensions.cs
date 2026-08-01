@@ -2,11 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.ABPlcRx;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Async;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.ABPlc.Reactive;
+#else
 namespace MQTTnet.Rx.ABPlc;
+#endif
 
 /// <summary>Provides compatible static asynchronous MQTT helpers for Allen-Bradley PLC tags.</summary>
 public static class ObservableAsyncCreateExtensions

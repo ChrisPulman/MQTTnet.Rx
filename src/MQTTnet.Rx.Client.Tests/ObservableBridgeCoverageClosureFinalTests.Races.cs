@@ -2,7 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 using MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Disposables;
 
@@ -38,7 +42,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
         var firstDelivery = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var secondDelivery = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var deliveryCount = 0;
-        using var subscription = System.ObservableExtensions.Subscribe(
+        using var subscription = TestObservableExtensions.Subscribe(
             LowAllocExtensions.ObserveOnThreadPool(source),
             value => ProcessTaskPoolDelivery(value, ref deliveryCount, firstDelivery, secondDelivery, release));
         var assignedObserver = observer ?? throw new InvalidOperationException("Task-pool observer was not assigned.");
@@ -90,7 +94,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
         });
         var disposed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         IDisposable? subscription = null;
-        subscription = System.ObservableExtensions.Subscribe(
+        subscription = TestObservableExtensions.Subscribe(
             LowAllocExtensions.ObserveOnThreadPool(source),
             value => DisposeTaskPoolSubscription(value, subscription, disposed));
         var assignedObserver = observer

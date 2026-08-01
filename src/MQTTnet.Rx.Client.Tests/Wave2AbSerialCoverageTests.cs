@@ -2,15 +2,39 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using IoT.Driver.ABPlcRx.Reactive;
+#else
 using IoT.Driver.ABPlcRx;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.Serial.Reactive;
+#else
 using IoT.Driver.Serial;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
 using NSubstitute;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using AbCreate = MQTTnet.Rx.ABPlc.Reactive.Create;
+#else
 using AbCreate = MQTTnet.Rx.ABPlc.Create;
+#endif
+#if REACTIVE_SHIM
+using SerialAsyncCreate = MQTTnet.Rx.SerialPort.Reactive.ObservableAsyncCreateExtensions;
+#else
 using SerialAsyncCreate = MQTTnet.Rx.SerialPort.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using SerialCreate = MQTTnet.Rx.SerialPort.Reactive.Create;
+#else
 using SerialCreate = MQTTnet.Rx.SerialPort.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -78,7 +102,7 @@ public sealed class Wave2AbSerialCoverageTests
     [Test]
     public async Task SerialPublishers_FrameAndPublishRawAndResilientStreamsAsync()
     {
-        using var rawData = new ReactiveUI.Primitives.Signals.Signal<char>();
+        using var rawData = new TestSignal<char>();
         var rawSerial = CreateSerialPort(rawData);
         using var rawClient = new MockMqttClient();
         var rawResultTask = SerialCreate.PublishSerialPort(
@@ -95,7 +119,7 @@ public sealed class Wave2AbSerialCoverageTests
         await Assert.That(rawResult.ReasonCode).IsEqualTo(MqttClientPublishReasonCode.Success);
         await Assert.That(rawClient.PublishedMessages.Count).IsEqualTo(1);
 
-        using var resilientData = new ReactiveUI.Primitives.Signals.Signal<char>();
+        using var resilientData = new TestSignal<char>();
         var resilientSerial = CreateSerialPort(resilientData);
         var resilientClient = new MockResilientMqttClient();
         var resilientResultTask = SerialCreate.PublishSerialPort(
@@ -118,7 +142,7 @@ public sealed class Wave2AbSerialCoverageTests
     [Test]
     public async Task AsyncSerialPublishers_ValidateBridgeArgumentsAsync()
     {
-        using var dataReceived = new ReactiveUI.Primitives.Signals.Signal<char>();
+        using var dataReceived = new TestSignal<char>();
         var serial = CreateSerialPort(dataReceived);
         var starts = SignalAsync.Emit(FrameStart);
         var ends = SignalAsync.Emit(FrameEnd);
@@ -179,7 +203,7 @@ public sealed class Wave2AbSerialCoverageTests
 
     /// <summary>Emits one framed payload after the serial pipeline has subscribed.</summary>
     /// <param name="dataReceived">The serial receive stream.</param>
-    private static void EmitFrame(ReactiveUI.Primitives.Signals.Signal<char> dataReceived)
+    private static void EmitFrame(TestSignal<char> dataReceived)
     {
         dataReceived.OnNext(FrameStart);
         dataReceived.OnNext(FramePayload);

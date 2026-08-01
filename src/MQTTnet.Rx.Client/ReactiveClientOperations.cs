@@ -5,9 +5,12 @@
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
 using ReactiveUI.Primitives.Async;
-using RxUnit = System.Reactive.Unit;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides compatibility static methods for reactive MQTT client operations.</summary>
 public static class ReactiveClientOperations

@@ -6,8 +6,16 @@ using System.Text.Json.Serialization;
 using MQTTnet.Packets;
 using MQTTnet.Rx.Client.Tests.Helpers;
 using NSubstitute;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives;
+#endif
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -123,7 +131,7 @@ public sealed partial class MqttdSubscribeCoverageClosureFinalTests
     public async Task SubscribeToTopic_WhenResilientUnsubscribeFails_AbsorbsTheExceptionAsync()
     {
         // Arrange
-        var received = new ReactiveUI.Primitives.Signals.Signal<MqttApplicationMessageReceivedEventArgs>();
+        var received = new TestSignal<MqttApplicationMessageReceivedEventArgs>();
         var client = Substitute.For<IResilientMqttClient>();
         _ = client.ApplicationMessageReceived.Returns(received);
         _ = client.SubscribeAsync(Arg.Any<IEnumerable<MqttTopicFilter>>()).Returns(Task.CompletedTask);

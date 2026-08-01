@@ -90,9 +90,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
             .IsEqualTo(value.ToString(CultureInfo.InvariantCulture));
     }
 
-    /// <summary>
-    /// Acknowledges a hash publisher's current state before verifying its asynchronous raw-client mutation.
-    /// </summary>
+    /// <summary>Acknowledges a hash publisher's current state before verifying its asynchronous raw-client mutation.</summary>
     /// <param name="broker">The connected real loopback broker.</param>
     /// <param name="topic">The unique MQTT topic.</param>
     /// <param name="initialValue">The hash table's current value when the bridge subscribes.</param>
@@ -136,9 +134,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
             .IsEqualTo(value.ToString(CultureInfo.InvariantCulture));
     }
 
-    /// <summary>
-    /// Acknowledges a hash publisher's current state before verifying its resilient-client mutation publication.
-    /// </summary>
+    /// <summary>Acknowledges a hash publisher's current state before verifying its resilient-client mutation publication.</summary>
     /// <param name="broker">The connected real loopback broker.</param>
     /// <param name="topic">The unique MQTT topic.</param>
     /// <param name="initialValue">The hash table's current value when the bridge subscribes.</param>
@@ -188,9 +184,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
             .IsEqualTo(value.ToString(CultureInfo.InvariantCulture));
     }
 
-    /// <summary>
-    /// Acknowledges a hash publisher's current state before verifying its asynchronous resilient-client mutation.
-    /// </summary>
+    /// <summary>Acknowledges a hash publisher's current state before verifying its asynchronous resilient-client mutation.</summary>
     /// <param name="broker">The connected real loopback broker.</param>
     /// <param name="topic">The unique MQTT topic.</param>
     /// <param name="initialValue">The hash table's current value when the bridge subscribes.</param>

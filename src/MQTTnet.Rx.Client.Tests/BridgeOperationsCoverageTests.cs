@@ -6,7 +6,11 @@ using System.Text.Json;
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

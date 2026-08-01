@@ -8,7 +8,16 @@
 
   <ItemGroup>
     <PackageReference Include="MQTTnet.Server" />
-    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
-    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives" />
+    <PackageReference Include="ReactiveUI.Primitives.Async" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="ReactiveUI.Primitives" />
+    <Using Include="ReactiveUI.Primitives.Async" />
+    <Using Include="ReactiveUI.Primitives.Async.Disposables" />
+    <Using Include="ReactiveUI.Primitives.Disposables" />
+    <Using Include="ReactiveUI.Primitives.Signals" />
+    <Using Include="ReactiveUI.Primitives.Signals.Signal" Alias="SignalFactory" />
   </ItemGroup>
 </Project>

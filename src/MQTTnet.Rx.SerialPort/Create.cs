@@ -2,10 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.Serial;
-using MQTTnet.Rx.Client;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.SerialPort.Reactive;
+#else
 namespace MQTTnet.Rx.SerialPort;
+#endif
 
 /// <summary>Provides static compatibility entry points for serial-port MQTT bridge operations.</summary>
 public static class Create

@@ -4,7 +4,11 @@
 
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
+#else
+using ReactiveUI.Primitives;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

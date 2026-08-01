@@ -8,7 +8,11 @@ using MQTTnet.Packets;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Disposables;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
+#else
 namespace MQTTnet.Rx.Client.ResilientClient.Internal;
+#endif
 
 /// <summary>Contains event-facing members of the resilient MQTT client.</summary>
 internal sealed partial class ResilientMqttClient

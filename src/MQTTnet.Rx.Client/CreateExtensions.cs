@@ -4,9 +4,17 @@
 
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives.Signals;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides extensions for configuring MQTT clients and resilient MQTT client options.</summary>
 public static class CreateExtensions

@@ -5,12 +5,24 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using MQTTnet.Protocol;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 using MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive;
+#else
 using ReactiveUI.Primitives;
+#endif
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -62,7 +74,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
         var malformed = TestDataHelpers.CreateMessageReceivedArgs("root/beta/value", "not-json");
         var empty = TestDataHelpers.CreateMessageReceivedArgs("root/gamma/value", string.Empty);
         IObservableAsync<MqttApplicationMessageReceivedEventArgs> source =
-            Signal.FromEnumerable([matching, malformed]).ToSignal();
+            TestObservableBridge.ToSignal(Signal.FromEnumerable([matching, malformed]));
         await VerifyTopicFilteringAsync(source);
         await VerifyPayloadConversionsAsync(source, empty);
     }
@@ -169,8 +181,8 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
             return EmptyDisposable.Instance;
         });
 
-        var retried = await retryingSource
-            .ToSignal()
+        var retried = await TestObservableBridge
+            .ToSignal(retryingSource)
             .WhereTopicMatchesAny("retry/#")
             .ToObservable()
             .CollectAsync(Timeout);
@@ -197,13 +209,13 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
     [Test]
     public async Task PrimitivesCompatibilityBridge_ForwardsGroupedErrorsAndDrainsNonterminalValuesAsync()
     {
-        using var source = new ReactiveUI.Primitives.Signals.Signal<MqttApplicationMessageReceivedEventArgs>();
+        using var source = new TestSignal<MqttApplicationMessageReceivedEventArgs>();
         var message = TestDataHelpers.CreateMessageReceivedArgs("group/value", Payload);
         var groupError = new InvalidOperationException("group error");
         var observedError = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var groups = System.ObservableExtensions.Subscribe(
+        using var groups = TestObservableExtensions.Subscribe(
             LowAllocExtensions.GroupByTopic(source),
-            group => _ = System.ObservableExtensions.Subscribe(
+            group => _ = TestObservableExtensions.Subscribe(
                 group,
                 static _ => { },
                 error => _ = observedError.TrySetResult(error)),
@@ -212,10 +224,10 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
         source.OnError(groupError);
         var forwarded = await observedError.Task.WaitAsync(Timeout);
 
-        using var scheduled = new ReactiveUI.Primitives.Signals.Signal<MqttApplicationMessageReceivedEventArgs>();
+        using var scheduled = new TestSignal<MqttApplicationMessageReceivedEventArgs>();
         var observedValue = new TaskCompletionSource<MqttApplicationMessageReceivedEventArgs>(
             TaskCreationOptions.RunContinuationsAsynchronously);
-        using var taskPool = System.ObservableExtensions.Subscribe(
+        using var taskPool = TestObservableExtensions.Subscribe(
             LowAllocExtensions.ObserveOnThreadPool(scheduled),
             value => _ = observedValue.TrySetResult(value));
         scheduled.OnNext(message);
@@ -233,7 +245,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
         var failure = new InvalidOperationException("subscription failure");
         var observedFailure = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         var throwing = SignalAsync.Create<int>((_, _) => ValueTask.FromException<IAsyncDisposable>(failure));
-        using var failedSubscription = System.ObservableExtensions.Subscribe(
+        using var failedSubscription = TestObservableExtensions.Subscribe(
             throwing.ToObservable(),
             static _ => { },
             exception => _ = observedFailure.TrySetResult(exception));
@@ -248,9 +260,9 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
     public async Task ObservableCompatibilityBridge_HandlesDeliveryCancellationFailuresAndResumeAsync()
     {
         using var cancellation = new CancellationTokenSource();
-        using var cancellationSource = new ReactiveUI.Primitives.Signals.Signal<int>();
+        using var cancellationSource = new TestSignal<int>();
         var cancellationEntered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using var cancellationSubscription = await cancellationSource.ToSignal().SubscribeAsync(
+        await using var cancellationSubscription = await TestObservableBridge.ToSignal(cancellationSource).SubscribeAsync(
             async (value, token) =>
             {
                 _ = cancellationEntered.TrySetResult(true);
@@ -264,10 +276,10 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
         await cancellationEntered.Task.WaitAsync(Timeout);
         await Task.Delay(DrainTimeout);
 
-        using var failureSource = new ReactiveUI.Primitives.Signals.Signal<int>();
+        using var failureSource = new TestSignal<int>();
         var failureDelivered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var deliveryFailure = new InvalidOperationException("delivery failure");
-        await using var failureSubscription = await failureSource.ToSignal().SubscribeAsync(
+        await using var failureSubscription = await TestObservableBridge.ToSignal(failureSource).SubscribeAsync(
             (value, token) =>
             {
                 _ = failureDelivered.TrySetResult(true);
@@ -287,7 +299,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
             await observer.OnErrorResumeAsync(resumeFailure, token);
             return ReactiveUI.Primitives.Async.Disposables.DisposableAsync.Empty;
         });
-        using var resumeSubscription = System.ObservableExtensions.Subscribe(
+        using var resumeSubscription = TestObservableExtensions.Subscribe(
             resuming.ToObservable(),
             static _ => { },
             error => _ = resumed.TrySetResult(error));
@@ -308,7 +320,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
             _ = subscribed.TrySetResult(true);
             return new ValueTask<IAsyncDisposable>(new RecordingAsyncDisposable(disposed));
         });
-        using var subscription = System.ObservableExtensions.Subscribe(source.ToObservable());
+        using var subscription = TestObservableExtensions.Subscribe(source.ToObservable());
         await subscribed.Task.WaitAsync(Timeout);
         subscription.Dispose();
         subscription.Dispose();
@@ -324,21 +336,21 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
     {
         using var preCanceled = new CancellationTokenSource();
         await preCanceled.CancelAsync();
-        using var preCanceledSource = new ReactiveUI.Primitives.Signals.Signal<int>();
+        using var preCanceledSource = new TestSignal<int>();
         var preCanceledObserver = new ControlledAsyncObserver<int>(new InvalidOperationException("must not run"));
-        await using var preCanceledSubscription = await preCanceledSource
-            .ToSignal()
+        await using var preCanceledSubscription = await TestObservableBridge
+            .ToSignal(preCanceledSource)
             .SubscribeAsync(preCanceledObserver, preCanceled.Token);
         preCanceledSource.OnNext(ExpectedInteger);
 
-        using var failedSource = new ReactiveUI.Primitives.Signals.Signal<int>();
+        using var failedSource = new TestSignal<int>();
         var releaseFailure = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var failedObserver = new ControlledAsyncObserver<int>(
             new InvalidOperationException("delivery"),
             null,
             releaseFailure.Task);
-        await using var failedSubscription = await failedSource
-            .ToSignal()
+        await using var failedSubscription = await TestObservableBridge
+            .ToSignal(failedSource)
             .SubscribeAsync(failedObserver, CancellationToken.None);
         failedSource.OnNext(ExpectedInteger);
         await failedObserver.Entered.WaitAsync(Timeout);
@@ -346,13 +358,13 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
         _ = releaseFailure.TrySetResult(true);
         await failedObserver.Finished.WaitAsync(Timeout);
 
-        using var canceledSource = new ReactiveUI.Primitives.Signals.Signal<int>();
+        using var canceledSource = new TestSignal<int>();
         using var deliveryCancellation = new CancellationTokenSource();
         var canceledObserver = new ControlledAsyncObserver<int>(
             new OperationCanceledException(deliveryCancellation.Token),
             deliveryCancellation);
-        await using var canceledSubscription = await canceledSource
-            .ToSignal()
+        await using var canceledSubscription = await TestObservableBridge
+            .ToSignal(canceledSource)
             .SubscribeAsync(canceledObserver, deliveryCancellation.Token);
         canceledSource.OnNext(ExpectedInteger);
         await canceledObserver.Finished.WaitAsync(Timeout);
@@ -371,14 +383,14 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
         var canceledError = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
         var canceledSubscriptionSource = SignalAsync.Create<int>(
             static (_, _) => ValueTask.FromException<IAsyncDisposable>(new OperationCanceledException("subscribe")));
-        using var canceledSubscription = System.ObservableExtensions.Subscribe(
+        using var canceledSubscription = TestObservableExtensions.Subscribe(
             canceledSubscriptionSource.ToObservable(),
             static _ => { },
             error => _ = canceledError.TrySetResult(error));
 
         var terminalFailure = new InvalidOperationException("terminal");
         var observedTerminal = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var terminalSubscription = System.ObservableExtensions.Subscribe(
+        using var terminalSubscription = TestObservableExtensions.Subscribe(
             SignalAsync.Fail<int>(terminalFailure).ToObservable(),
             static _ => { },
             error => _ = observedTerminal.TrySetResult(error));
@@ -386,7 +398,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
 
         var canceledDisposal = new ThrowingAsyncDisposable(new OperationCanceledException("dispose"));
         var canceledDisposeSource = CreateAsyncDisposableSource(canceledDisposal);
-        using var canceledDisposeSubscription = System.ObservableExtensions.Subscribe(
+        using var canceledDisposeSubscription = TestObservableExtensions.Subscribe(
             canceledDisposeSource.ToObservable());
         await canceledDisposal.Subscribed.WaitAsync(Timeout);
         canceledDisposeSubscription.Dispose();
@@ -394,7 +406,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
 
         var failedDisposal = new ThrowingAsyncDisposable(new InvalidOperationException("dispose"));
         var failedDisposeSource = CreateAsyncDisposableSource(failedDisposal);
-        using var failedDisposeSubscription = System.ObservableExtensions.Subscribe(failedDisposeSource.ToObservable());
+        using var failedDisposeSubscription = TestObservableExtensions.Subscribe(failedDisposeSource.ToObservable());
         await failedDisposal.Subscribed.WaitAsync(Timeout);
         failedDisposeSubscription.Dispose();
         await failedDisposal.Attempted.WaitAsync(Timeout);
@@ -423,7 +435,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
 
             return EmptyDisposable.Instance;
         });
-        var retrySubscription = System.ObservableExtensions.Subscribe(
+        var retrySubscription = TestObservableExtensions.Subscribe(
             retrySource.ToDictionary(),
             static _ => { });
         var assignedRetryObserver = retryObserver
@@ -440,7 +452,7 @@ public sealed partial class ObservableBridgeCoverageClosureFinalTests
             attempt == 1
                 ? throw new InvalidOperationException("subscribe")
                 : EmptyDisposable.Instance);
-        using var throwingSubscription = System.ObservableExtensions.Subscribe(
+        using var throwingSubscription = TestObservableExtensions.Subscribe(
             throwingSource.ToDictionary(),
             static _ => { });
 

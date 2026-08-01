@@ -3,7 +3,11 @@
 // See the LICENSE file in the project root for full license information.
 
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
+#else
+using ReactiveUI.Primitives;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

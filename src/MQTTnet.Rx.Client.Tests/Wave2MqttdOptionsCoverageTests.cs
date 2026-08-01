@@ -7,8 +7,16 @@ using System.Security.Authentication;
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives;
+#endif
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -169,10 +177,10 @@ public sealed class Wave2MqttdOptionsCoverageTests
         var messages = new[] { message }.ToObservable();
 
         // Act
-        var empty = await messages.WhereTopicMatchesAny().ToList();
-        var single = await messages.WhereTopicMatchesAny(SharedTopicFilter).ToList();
-        var mismatch = await messages.ExtractTopicValues("other/{value}").ToList();
-        var unavailable = await messages.SelectTopicLevel(UnavailableTopicLevel).ToList();
+        var empty = await TestObservableExtensions.ToListAsync(messages.WhereTopicMatchesAny());
+        var single = await TestObservableExtensions.ToListAsync(messages.WhereTopicMatchesAny(SharedTopicFilter));
+        var mismatch = await TestObservableExtensions.ToListAsync(messages.ExtractTopicValues("other/{value}"));
+        var unavailable = await TestObservableExtensions.ToListAsync(messages.SelectTopicLevel(UnavailableTopicLevel));
 
         // Assert
         await Assert.That(empty).IsEmpty();
@@ -254,7 +262,7 @@ public sealed class Wave2MqttdOptionsCoverageTests
     {
         // Arrange
         using var client = new MockMqttClient();
-        using var messages = new ReactiveUI.Primitives.Signals.Signal<(string Topic, byte[] Payload)>();
+        using var messages = new TestSignal<(string Topic, byte[] Payload)>();
 
         // Act
         using var subscription = Signal.Emit<IMqttClient>(client)

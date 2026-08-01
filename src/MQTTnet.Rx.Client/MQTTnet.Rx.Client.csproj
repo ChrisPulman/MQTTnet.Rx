@@ -6,8 +6,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="bin\**;obj\**" />
     <PackageReference Include="MQTTnet" />
-    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
-    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives" />
+    <PackageReference Include="ReactiveUI.Primitives.Async" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="ReactiveUI.Primitives" />
+    <Using Include="ReactiveUI.Primitives.Concurrency.ISequencer" Alias="ISequencer" />
+    <Using Include="ReactiveUI.Primitives.Concurrency.ISequencer" Alias="IScheduler" />
+    <Using Include="ReactiveUI.Primitives.RxVoid" Alias="RxUnit" />
+    <Using Include="ReactiveUI.Primitives.RxVoid" Alias="RxVoid" />
   </ItemGroup>
 </Project>

@@ -5,7 +5,11 @@
 using MQTTnet.Packets;
 using ReactiveUI.Primitives.Async;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Defines a resilient MQTT client with queued delivery and automatic reconnection.</summary>
 /// <remarks>This interface extends <see cref="IDisposable"/> and exposes both event-based and observable patterns

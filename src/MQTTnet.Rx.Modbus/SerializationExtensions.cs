@@ -2,7 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Modbus.Reactive;
+#else
 namespace MQTTnet.Rx.Modbus;
+#endif
 
 /// <summary>Provides JSON serialization extensions used by the Modbus bridge.</summary>
 public static class SerializationExtensions

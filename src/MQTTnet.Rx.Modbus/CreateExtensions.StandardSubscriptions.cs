@@ -2,15 +2,17 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.ModbusRx.Device;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Advanced;
-using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using ModbusMasterState = (bool Connected, System.Exception? Error, IoT.Driver.ModbusRx.Reactive.Device.ModbusIpMaster? Master);
+#else
 using ModbusMasterState = (bool Connected, System.Exception? Error, IoT.Driver.ModbusRx.Device.ModbusIpMaster? Master);
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Modbus.Reactive;
+#else
 namespace MQTTnet.Rx.Modbus;
+#endif
 
 /// <summary>Provides reactive MQTT extensions for Modbus reads and writes.</summary>
 public static partial class CreateExtensions

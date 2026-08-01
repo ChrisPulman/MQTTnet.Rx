@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <DefineConstants>$(DefineConstants);REACTIVE_SHIM</DefineConstants>
+    <PackageId>MQTTnet.Rx.Modbus.Reactive</PackageId>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.Modbus\**\*.cs"
+             Exclude="..\MQTTnet.Rx.Modbus\bin\**;..\MQTTnet.Rx.Modbus\obj\**"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    <PackageReference Include="IoT-Driver.ModbusRx.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MQTTnet.Rx.Client.Reactive\MQTTnet.Rx.Client.Reactive.csproj" />
+  </ItemGroup>
+
+</Project>

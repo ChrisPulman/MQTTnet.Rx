@@ -5,15 +5,17 @@
 using System.Text.Json;
 using System.Threading.Channels;
 using MQTTnet.Server;
-using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Reactive.Signals;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Server.Reactive;
+#else
 namespace MQTTnet.Rx.Server;
+#endif
 
 /// <summary>Creates MQTT server observable sequences.</summary>
 public static class Create
 {
+    /// <summary>Defines the maximum number of attempts used when starting a server sequence.</summary>
     private const int MaximumServerRetries = 3;
 
     /// <summary>Gets the MQTT server factory.</summary>
@@ -34,19 +36,10 @@ public static class Create
         var factory = MqttFactory;
         var options = builder(factory.CreateServerOptionsBuilder());
         var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options));
-        return Signal.Create<(MqttServer Server, MqttServerSession Disposable)>(async (observer, cancellationToken) =>
+        return SignalFactory.Create<(MqttServer Server, MqttServerSession Disposable)>(async (observer, cancellationToken) =>
         {
             var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                observer.OnNext((session.Server, session));
-                return session;
-            }
-            catch
-            {
-                session.Dispose();
-                throw;
-            }
+            return NotifyObserver(observer, session);
         }).Retry(MaximumServerRetries);
     }
 
@@ -91,19 +84,10 @@ public static class Create
         var factory = MqttFactory;
         var options = builder(factory.CreateServerOptionsBuilder());
         var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options), storePath);
-        return Signal.Create<(MqttServer Server, MqttServerSession Disposable)>(async (observer, cancellationToken) =>
+        return SignalFactory.Create<(MqttServer Server, MqttServerSession Disposable)>(async (observer, cancellationToken) =>
         {
             var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
-            try
-            {
-                observer.OnNext((session.Server, session));
-                return session;
-            }
-            catch
-            {
-                session.Dispose();
-                throw;
-            }
+            return NotifyObserver(observer, session);
         }).Retry(MaximumServerRetries);
     }
 
@@ -139,17 +123,41 @@ public static class Create
         }).Retry(MaximumServerRetries);
     }
 
+    /// <summary>Notifies a synchronous observer and releases the session if the observer rejects it.</summary>
+    /// <param name="observer">The observer receiving the server session.</param>
+    /// <param name="session">The acquired server session.</param>
+    /// <returns>The accepted server session.</returns>
+    private static MqttServerSession NotifyObserver(
+        IObserver<(MqttServer Server, MqttServerSession Disposable)> observer,
+        MqttServerSession session)
+    {
+        try
+        {
+            observer.OnNext((session.Server, session));
+            return session;
+        }
+        catch
+        {
+            session.Dispose();
+            throw;
+        }
+    }
+
     /// <summary>Coordinates the lifecycle of a shared MQTT server instance.</summary>
     /// <param name="serverFactory">Creates the MQTT server instance.</param>
     /// <param name="retainedStorePath">The optional retained-message store path.</param>
     internal sealed class MqttServerLifetime(Func<MqttServer> serverFactory, string? retainedStorePath = null)
     {
+        /// <summary>Serializes server acquisition and release operations.</summary>
         private readonly LifecycleGate _gate = new();
 
+        /// <summary>Handles retained-message loading while the server is active.</summary>
         private Func<LoadingRetainedMessagesEventArgs, Task>? _retainedHandler;
 
+        /// <summary>Stores the currently active shared server.</summary>
         private MqttServer? _server;
 
+        /// <summary>Tracks the number of active server sessions.</summary>
         private int _subscriptionCount;
 
         /// <summary>Acquires a session for the shared MQTT server.</summary>
@@ -187,6 +195,8 @@ public static class Create
             }
         }
 
+        /// <summary>Attaches the retained-message loader when persistent storage is configured.</summary>
+        /// <param name="server">The server receiving the retained-message loader.</param>
         private void AttachRetainedHandler(MqttServer server)
         {
             if (retainedStorePath is null || _retainedHandler is not null)
@@ -198,6 +208,8 @@ public static class Create
             server.LoadingRetainedMessageAsync += _retainedHandler;
         }
 
+        /// <summary>Detaches the retained-message loader from the supplied server.</summary>
+        /// <param name="server">The server from which the retained-message loader is removed.</param>
         private void DetachRetainedHandler(MqttServer server)
         {
             if (_retainedHandler is null)
@@ -209,6 +221,9 @@ public static class Create
             _retainedHandler = null;
         }
 
+        /// <summary>Loads retained messages from persistent storage.</summary>
+        /// <param name="eventArgs">The event arguments populated with retained messages.</param>
+        /// <returns>A task that represents the asynchronous load operation.</returns>
         private async Task LoadRetainedMessagesAsync(LoadingRetainedMessagesEventArgs eventArgs)
         {
             if (!File.Exists(retainedStorePath))
@@ -223,6 +238,8 @@ public static class Create
             eventArgs.LoadedRetainedMessages = models.ConvertAll(static model => model.ToApplicationMessage());
         }
 
+        /// <summary>Releases one server session and stops the server after the final session.</summary>
+        /// <returns>A value task that represents the asynchronous release operation.</returns>
         private async ValueTask ReleaseAsync()
         {
             await _gate.EnterAsync(CancellationToken.None).ConfigureAwait(false);
@@ -256,6 +273,7 @@ public static class Create
     /// <summary>Serializes asynchronous server lifecycle operations.</summary>
     internal sealed class LifecycleGate
     {
+        /// <summary>Stores the single token that grants access to the lifecycle gate.</summary>
         private readonly Channel<byte> _tokens = System.Threading.Channels.Channel.CreateBounded<byte>(1);
 
         /// <summary>Initializes a new instance of the <see cref="LifecycleGate"/> class.</summary>

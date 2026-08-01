@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(MQTTnetRxTargetFrameworks);net8.0-windows10.0.17763;net9.0-windows10.0.17763</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <DefineConstants>$(DefineConstants);REACTIVE_SHIM</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(TargetFramework)' == 'net8.0-windows10.0.17763' Or '$(TargetFramework)' == 'net9.0-windows10.0.17763'">
+    <DefineConstants>$(DefineConstants);TWINCAT_TESTS</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.Client.Tests\**\*.cs"
+             Exclude="..\MQTTnet.Rx.Client.Tests\bin\**;..\MQTTnet.Rx.Client.Tests\obj\**"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="TUnit" />
+    <PackageReference Include="Verify.TUnit" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Testing.Extensions.CodeCoverage" />
+    <PackageReference Include="Microsoft.Testing.Platform.MSBuild" />
+    <PackageReference Include="NSubstitute" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MQTTnet.Rx.ABPlc.Reactive\MQTTnet.Rx.ABPlc.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Client.Reactive\MQTTnet.Rx.Client.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Mitsubishi.Reactive\MQTTnet.Rx.Mitsubishi.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Modbus.Reactive\MQTTnet.Rx.Modbus.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.OmronPlc.Reactive\MQTTnet.Rx.OmronPlc.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.S7Plc.Reactive\MQTTnet.Rx.S7Plc.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.SerialPort.Reactive\MQTTnet.Rx.SerialPort.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Server.Reactive\MQTTnet.Rx.Server.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.TwinCAT.Reactive\MQTTnet.Rx.TwinCAT.Reactive.csproj"
+                      Condition="'$(TargetFramework)' == 'net8.0-windows10.0.17763' Or '$(TargetFramework)' == 'net9.0-windows10.0.17763'" />
+  </ItemGroup>
+
+</Project>

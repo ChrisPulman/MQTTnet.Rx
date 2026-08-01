@@ -4,14 +4,34 @@
 
 using System.Globalization;
 using System.Text;
+#if REACTIVE_SHIM
+using IoT.Driver.ModbusRx.Reactive.Data;
+#else
 using IoT.Driver.ModbusRx.Data;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.ModbusRx.Reactive.Device;
+#else
 using IoT.Driver.ModbusRx.Device;
+#endif
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Modbus.Reactive;
+#else
 using MQTTnet.Rx.Modbus;
+#endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using ModbusCreate = MQTTnet.Rx.Modbus.Reactive.Create;
+#else
 using ModbusCreate = MQTTnet.Rx.Modbus.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

@@ -2,11 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.Core;
-using IoT.Driver.S7PlcRx;
-using MQTTnet.Rx.Client;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.S7Plc.Reactive;
+#else
 namespace MQTTnet.Rx.S7Plc;
+#endif
 
 /// <summary>Provides string-tag compatibility helpers for S7 MQTT bridges.</summary>
 /// <remarks>Prefer <see cref="S7PlcExtensions"/> with a <see cref="LogicalTagKey{T}"/> in new code.</remarks>

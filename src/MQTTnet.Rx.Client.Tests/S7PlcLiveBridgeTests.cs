@@ -7,10 +7,22 @@ using System.Text;
 using IoT.Driver.Core;
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.S7Plc.Reactive;
+#else
 using MQTTnet.Rx.S7Plc;
+#endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using S7Create = MQTTnet.Rx.S7Plc.Reactive.Create;
+#else
 using S7Create = MQTTnet.Rx.S7Plc.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

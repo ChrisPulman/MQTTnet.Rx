@@ -2,16 +2,40 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using IoT.Driver.ABPlcRx.Reactive;
+#else
 using IoT.Driver.ABPlcRx;
+#endif
 using IoT.Driver.Core;
+#if REACTIVE_SHIM
+using IoT.Driver.S7PlcRx.Reactive;
+#else
 using IoT.Driver.S7PlcRx;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
 using NSubstitute;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using AbAsyncCreate = MQTTnet.Rx.ABPlc.Reactive.ObservableAsyncCreateExtensions;
+#else
 using AbAsyncCreate = MQTTnet.Rx.ABPlc.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using AbCreate = MQTTnet.Rx.ABPlc.Reactive.Create;
+#else
 using AbCreate = MQTTnet.Rx.ABPlc.Create;
+#endif
+#if REACTIVE_SHIM
+using S7Extensions = MQTTnet.Rx.S7Plc.Reactive.S7PlcExtensions;
+#else
 using S7Extensions = MQTTnet.Rx.S7Plc.S7PlcExtensions;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

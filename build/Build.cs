@@ -1,123 +1,64 @@
+// Copyright (c) 2019-2026 Chris Pulman and contributors. All rights reserved.
+// Chris Pulman and contributors licenses this file to you under the MIT license.
+// See the LICENSE file in the project root for full license information.
+
+using System;
 using Nuke.Common;
-using Nuke.Common.CI.GitHubActions;
-using Nuke.Common.Git;
 using Nuke.Common.IO;
-using Nuke.Common.Tooling;
-using Nuke.Common.Tools.NerdbankGitVersioning;
 using Nuke.Common.Tools.DotNet;
 using Serilog;
 using static Nuke.Common.Tools.DotNet.DotNetTasks;
-using Nuke.Common.Tools.PowerShell;
-using CP.BuildTools;
-using System.Linq;
 
-////[GitHubActions(
-////    "BuildOnly",
-////    GitHubActionsImage.WindowsLatest,
-////    OnPushBranchesIgnore = new[] { "main" },
-////    FetchDepth = 0,
-////    InvokedTargets = new[] { nameof(Compile) })]
-////[GitHubActions(
-////    "BuildDeploy",
-////    GitHubActionsImage.WindowsLatest,
-////    OnPushBranches = new[] { "main" },
-////    FetchDepth = 0,
-////    ImportSecrets = new[] { nameof(NuGetApiKey) },
-////    InvokedTargets = new[] { nameof(Compile), nameof(Deploy) })]
-partial class Build : NukeBuild
+namespace MQTTnet.Rx.Building;
+
+/// <summary>Defines the repository build pipeline.</summary>
+public sealed class Build : NukeBuild
 {
-    [GitRepository]
-    private readonly GitRepository Repository = default;
+    /// <summary>Gets the repository solution that the build pipeline operates on.</summary>
+    private static readonly AbsolutePath SolutionFile = RootDirectory / "src" / "MQTTnet.Rx.slnx";
 
-    [NerdbankGitVersioning]
-    private readonly NerdbankGitVersioning NerdbankVersioning = default;
-
-    [Parameter]
-    [Secret]
-    private readonly string NuGetApiKey = default;
-
+    /// <summary>Gets or sets the build configuration.</summary>
     [Parameter("Configuration to build - Default is 'Debug' (local) or 'Release' (server)")]
-    private readonly Configuration Configuration = IsLocalBuild ? Configuration.Debug : Configuration.Release;
+    public Configuration Configuration { get; set; } = IsLocalBuild ? Configuration.Debug : Configuration.Release;
 
-    public static int Main() => Execute<Build>(x => x.Test);
-
+    /// <summary>Gets the directory used for generated packages.</summary>
     private static AbsolutePath PackagesDirectory => RootDirectory / "output";
 
-    private static AbsolutePath SolutionFile => RootDirectory / "src" / "MQTTnet.Rx.slnx";
+    /// <summary>Gets the target that displays the effective build configuration and version override.</summary>
+    private Target Print => target => target
+        .Executes(() =>
+        {
+            Log.Information("Configuration = {Configuration}", Configuration);
+            Log.Information("MinVerVersionOverride = {Value}", Environment.GetEnvironmentVariable("MinVerVersionOverride") ?? "<auto>");
+        });
 
-    private Target Print => _ => _
-        .Executes(() => Log.Information("NerdbankVersioning = {Value}", NerdbankVersioning.NuGetPackageVersion));
-
-    private Target Clean => _ => _
+    /// <summary>Gets the target that cleans generated package output before a non-local restore.</summary>
+    private Target Clean => target => target
         .Before(Restore)
-        .Executes(async () =>
+        .Executes(() =>
         {
             if (IsLocalBuild)
             {
                 return;
             }
 
-            PackagesDirectory.CreateOrCleanDirectory();
-            await this.InstallDotNetSdk("8.x.x", "9.x.x", "10.x.x", "11.0.100-preview.6.26359.118");
+            _ = PackagesDirectory.CreateOrCleanDirectory();
         });
 
-    private Target Restore => _ => _
+    /// <summary>Gets the target that restores the repository solution dependencies.</summary>
+    private Target Restore => target => target
         .DependsOn(Clean)
         .Executes(() => DotNetRestore(s => s.SetProjectFile(SolutionFile)));
 
-    private Target Compile => _ => _
+    /// <summary>Gets the target that builds the repository solution for the selected configuration.</summary>
+    private Target Compile => target => target
         .DependsOn(Restore, Print)
         .Executes(() => DotNetBuild(s => s
                 .SetProjectFile(SolutionFile)
                 .SetConfiguration(Configuration)
-                .EnableNoRestore()));
+                .SetNoRestore(true)));
 
-    private Target Test => _ => _
-       .DependsOn(Compile)
-       .Executes(() => DotNetTest(settings => settings
-           .SetProjectFile(SolutionFile)
-           .SetConfiguration(Configuration)
-           .EnableNoBuild()
-           .EnableNoRestore()));
-
-    private Target Pack => _ => _
-    .After(Compile)
-    .Produces(PackagesDirectory / "*.nupkg")
-    .Executes(() =>
-    {
-        if (Repository.IsOnMainOrMasterBranch())
-        {
-            var packableProjects = SolutionFile
-                .ReadSolutionProjectInfos()
-                .GetPackableProjectInfos();
-
-            foreach (var project in packableProjects!)
-            {
-                Log.Information("Packing {Project}", project.Name);
-            }
-
-            DotNetPack(settings => settings
-                .SetConfiguration(Configuration)
-                .SetVersion(NerdbankVersioning.NuGetPackageVersion)
-                .SetOutputDirectory(PackagesDirectory)
-                .CombineWith(packableProjects, (packSettings, project) =>
-                    packSettings.SetProject(project.Path)));
-        }
-    });
-
-    private Target Deploy => _ => _
-    .DependsOn(Pack)
-    .Requires(() => !string.IsNullOrWhiteSpace(NuGetApiKey))
-    .Executes(() =>
-    {
-        if (Repository.IsOnMainOrMasterBranch())
-        {
-            DotNetNuGetPush(settings => settings
-                        .SetSource(this.PublicNuGetSource())
-                        .SetSkipDuplicate(true)
-                        .SetApiKey(NuGetApiKey)
-                        .CombineWith(PackagesDirectory.GlobFiles("*.nupkg"), (s, v) => s.SetTargetPath(v)),
-                    degreeOfParallelism: 5, completeOnFailure: true);
-        }
-    });
+    /// <summary>Runs the requested NUKE targets.</summary>
+    /// <returns>The process exit code.</returns>
+    public static int Main() => Execute<Build>(x => x.Compile);
 }

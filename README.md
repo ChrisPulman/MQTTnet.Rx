@@ -60,15 +60,25 @@ Reactive extensions and helpers for MQTTnet (v5) that make it simple to build ev
 Note on ManagedClient: Support for ManagedClient is removed because MQTTnet v5 no longer includes it. Use the Resilient client in MQTTnet.Rx.Client instead.
 
 ## Packages
-- MQTTnet.Rx.Client – Reactive MQTT client helpers (raw and resilient)
-- MQTTnet.Rx.Server – Reactive MQTT server helpers
-- MQTTnet.Rx.ABPlc – Allen-Bradley PLC bridges using IoT-Driver.ABPlcRx 1.0.1
-- MQTTnet.Rx.Mitsubishi – Mitsubishi PLC bridges using IoT-Driver.MitsubishiRx 1.0.1
-- MQTTnet.Rx.Modbus – Modbus bridges using IoT-Driver.ModbusRx 1.0.1
-- MQTTnet.Rx.OmronPlc – Omron PLC bridges using IoT-Driver.OmronPlcRx 1.0.1
-- MQTTnet.Rx.S7Plc – S7 PLC bridges using IoT-Driver.S7PlcRx 1.0.1
-- MQTTnet.SerialPort – Serial-port bridges using IoT-Driver.SerialPortRx 1.0.1
-- MQTTnet.TwinCATRx – TwinCAT bridges using IoT-Driver.TwinCATRx 1.0.1
+
+Each package is available in two variants compiled from the same source:
+
+- The base package family uses `ReactiveUI.Primitives` and `ReactiveUI.Primitives.Async` with lean `RxVoid` and `ISequencer` conventions.
+- The `.Reactive` package family uses `ReactiveUI.Primitives.Reactive` and `ReactiveUI.Primitives.Async.Reactive` with System.Reactive `Unit` and `IScheduler` conventions. Its public namespaces also add `.Reactive`, for example `MQTTnet.Rx.Client.Reactive`.
+
+| Lean package | System.Reactive-compatible package |
+| --- | --- |
+| `MQTTnet.Rx.Client` | `MQTTnet.Rx.Client.Reactive` |
+| `MQTTnet.Rx.Server` | `MQTTnet.Rx.Server.Reactive` |
+| `MQTTnet.Rx.ABPlc` | `MQTTnet.Rx.ABPlc.Reactive` |
+| `MQTTnet.Rx.Mitsubishi` | `MQTTnet.Rx.Mitsubishi.Reactive` |
+| `MQTTnet.Rx.Modbus` | `MQTTnet.Rx.Modbus.Reactive` |
+| `MQTTnet.Rx.OmronPlc` | `MQTTnet.Rx.OmronPlc.Reactive` |
+| `MQTTnet.Rx.S7Plc` | `MQTTnet.Rx.S7Plc.Reactive` |
+| `MQTTnet.SerialPort` | `MQTTnet.SerialPort.Reactive` |
+| `MQTTnet.TwinCATRx` | `MQTTnet.TwinCATRx.Reactive` |
+
+The industrial base packages depend on the matching `IoT-Driver.*` package; their `.Reactive` siblings depend on `IoT-Driver.*.Reactive`.
 
 ## Install
 ```bash
@@ -84,6 +94,15 @@ Note on ManagedClient: Support for ManagedClient is removed because MQTTnet v5 n
  dotnet add package MQTTnet.TwinCATRx
 ```
 
+For a System.Reactive-first application, install the matching `.Reactive` package instead:
+
+```bash
+dotnet add package MQTTnet.Rx.Client.Reactive
+dotnet add package MQTTnet.Rx.Modbus.Reactive
+```
+
+Then use the corresponding namespace, such as `MQTTnet.Rx.Client.Reactive` or `MQTTnet.Rx.Modbus.Reactive`.
+
 ---
 
 ## Quick start – Client (raw)
@@ -91,7 +110,7 @@ Publish an observable stream and subscribe to a topic.
 
 ```csharp
 using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Reactive.Signals;
+using ReactiveUI.Primitives.Signals;
 
 var messages = new ReplaySignal<(string topic, string payload)>(0);
 
@@ -117,7 +136,7 @@ The resilient client stays connected and queues outbound messages while reconnec
 
 ```csharp
 using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Reactive.Signals;
+using ReactiveUI.Primitives.Signals;
 
 var messages = new ReplaySignal<(string topic, string payload)>(0);
 
@@ -536,7 +555,7 @@ All publish helpers accept QoS and retain flags, with overloads for string or by
 
 ```csharp
 using MQTTnet.Protocol;
-using ReactiveUI.Primitives.Reactive.Signals;
+using ReactiveUI.Primitives.Signals;
 
 var msgs = new ReplaySignal<(string topic, string payload)>(0);
 
@@ -557,7 +576,7 @@ var pub2 = Create.MqttClient()
 ### Binary payloads (byte[])
 ```csharp
 using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Reactive.Signals;
+using ReactiveUI.Primitives.Signals;
 
 // Publish byte[] payloads with raw client
 var bytes = new ReplaySignal<(string topic, byte[] payload)>(0);
@@ -785,7 +804,7 @@ var safePub = client
 ```csharp
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Server;
-using ReactiveUI.Primitives.Reactive.Signals;
+using ReactiveUI.Primitives.Signals;
 
 // Publish retained and later clear it
 var msgsRetain = new ReplaySignal<(string topic, string payload)>(0);
@@ -995,7 +1014,7 @@ Publish framed serial data to MQTT using IoT-Driver.SerialPortRx `ISerialPortRx`
 using System;
 using IoT.Driver.Serial;
 using MQTTnet.Rx.SerialPort;
-using ReactiveUI.Primitives.Reactive.Signals;
+using ReactiveUI.Primitives.Signals;
 
 // Create and configure an ISerialPortRx (COM port, baud, parity, etc.)
 ISerialPortRx port = /* create and configure an ISerialPortRx */;

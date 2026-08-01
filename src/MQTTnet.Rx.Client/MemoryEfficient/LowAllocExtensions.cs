@@ -5,12 +5,21 @@
 using System.Buffers;
 using System.Text;
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
 using ReactiveUI.Primitives.Reactive.Signals;
-using IScheduler = System.Reactive.Concurrency.IScheduler;
 using RxLinq = System.Reactive.Linq;
+#else
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+using RxLinq = MQTTnet.Rx.Client.Linq;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 namespace MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 
 /// <summary>Provides low-allocation reactive extensions for MQTT message processing.</summary>
 /// <remarks>These extension methods minimize allocations in high-throughput scenarios by using pooled buffers, spans,

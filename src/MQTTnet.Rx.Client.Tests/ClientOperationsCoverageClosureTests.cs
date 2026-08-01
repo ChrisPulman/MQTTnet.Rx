@@ -2,9 +2,17 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 using MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -17,9 +25,7 @@ public sealed class ClientOperationsCoverageClosureTests
     /// <summary>Defines the bounded period used to establish subscriptions in this fixture.</summary>
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(1);
 
-    /// <summary>
-    /// Verifies synchronous connection waiting applies its timeout and periodic ping accepts its default interval.
-    /// </summary>
+    /// <summary>Verifies synchronous connection waiting applies its timeout and periodic ping accepts its default interval.</summary>
     /// <returns>A task that represents the asynchronous test operation.</returns>
     [Test]
     public async Task SynchronousOperations_UseTimeoutAndDefaultPeriodicIntervalAsync()
@@ -39,7 +45,7 @@ public sealed class ClientOperationsCoverageClosureTests
     [Test]
     public async Task LowAllocationBackPressure_OmittedCallbacksSafelyDropOverflowAsync()
     {
-        using var droppedSource = new ReactiveUI.Primitives.Signals.Signal<MqttApplicationMessageReceivedEventArgs>();
+        using var droppedSource = new TestSignal<MqttApplicationMessageReceivedEventArgs>();
         var first = TestDataHelpers.CreateMessageReceivedArgs("coverage/backpressure/first", "one");
         var second = TestDataHelpers.CreateMessageReceivedArgs("coverage/backpressure/second", "two");
         var dropped = 0;
@@ -52,7 +58,7 @@ public sealed class ClientOperationsCoverageClosureTests
 
         droppedSource.OnNext(first);
 
-        using var queuedSource = new ReactiveUI.Primitives.Signals.Signal<MqttApplicationMessageReceivedEventArgs>();
+        using var queuedSource = new TestSignal<MqttApplicationMessageReceivedEventArgs>();
         var queued = 0;
         using var queuedSubscription = queuedSource.WithBackPressureQueue(1).Subscribe(message =>
         {

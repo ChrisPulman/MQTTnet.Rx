@@ -2,12 +2,13 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.ModbusRx.Device;
 using MQTTnet.Protocol;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Reactive.Signals;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Modbus.Reactive;
+#else
 namespace MQTTnet.Rx.Modbus;
+#endif
 
 /// <summary>Provides compatible static entry points for the Modbus MQTT bridge.</summary>
 public static class Create

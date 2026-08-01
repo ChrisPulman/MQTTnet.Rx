@@ -14,14 +14,9 @@
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="CP.Nuke.BuildTools" />
     <PackageReference Include="Microsoft.Build.Tasks.Core" />
-    <PackageReference Include="Nerdbank.GitVersioning" />
     <PackageReference Include="NuGet.Packaging" />
     <PackageReference Include="Nuke.Common" />
     <PackageReference Include="System.Security.Cryptography.Xml" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageDownload Include="nbgv" Version="[3.9.50]" />
   </ItemGroup>
 
 </Project>

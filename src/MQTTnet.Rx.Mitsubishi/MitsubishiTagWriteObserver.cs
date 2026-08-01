@@ -2,10 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.Core;
-using IoT.Driver.MitsubishiRx;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Mitsubishi.Reactive;
+#else
 namespace MQTTnet.Rx.Mitsubishi;
+#endif
 
 /// <summary>Serializes MQTT payloads into ordered Mitsubishi logical-tag writes.</summary>
 /// <typeparam name="T">The logical-tag value type.</typeparam>

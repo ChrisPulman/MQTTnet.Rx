@@ -6,7 +6,11 @@ using System.Buffers;
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Server.Reactive;
+#else
 namespace MQTTnet.Rx.Server;
+#endif
 
 /// <summary>Represents the serializable state of a retained MQTT application message.</summary>
 public sealed class MqttRetainedMessageModel : IMqttRetainedMessageModel

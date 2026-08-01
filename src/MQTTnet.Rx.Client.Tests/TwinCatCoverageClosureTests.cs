@@ -4,13 +4,41 @@
 
 #if TWINCAT_TESTS
 using System.Reflection;
+#if REACTIVE_SHIM
+using CP.Collections.Reactive;
+#else
 using CP.Collections;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.TwinCATRx.Reactive;
+#else
 using IoT.Driver.TwinCATRx;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.TwinCATRx.Core.Reactive;
+#else
 using IoT.Driver.TwinCATRx.Core;
+#endif
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive;
+#else
 using MQTTnet.Rx.Client;
+#endif
+#if REACTIVE_SHIM
+using MQTTnet.Rx.TwinCAT.Reactive;
+#else
 using MQTTnet.Rx.TwinCAT;
+#endif
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
+using TwinCatCoreExtensions = IoT.Driver.TwinCATRx.Core.Reactive.TwinCatRxExtensions;
+using TwinCatCreate = MQTTnet.Rx.TwinCAT.Reactive.Create;
+using TwinCatCreateExtensions = MQTTnet.Rx.TwinCAT.Reactive.CreateExtensions;
+#else
+using TwinCatCoreExtensions = IoT.Driver.TwinCATRx.Core.TwinCatRxExtensions;
 using TwinCatCreate = MQTTnet.Rx.TwinCAT.Create;
+using TwinCatCreateExtensions = MQTTnet.Rx.TwinCAT.CreateExtensions;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -32,7 +60,7 @@ public sealed class TwinCatCoverageClosureTests
     public async Task SynchronousPublicSurface_RejectsMissingClientAsync()
     {
         var createMethods = typeof(TwinCatCreate).GetMethods(BindingFlags.Public | BindingFlags.Static);
-        var extensionMethods = typeof(CreateExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static);
+        var extensionMethods = typeof(TwinCatCreateExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static);
 
         await AssertMissingClientAsync(createMethods);
         await AssertMissingClientAsync(extensionMethods);
@@ -145,7 +173,7 @@ public sealed class TwinCatCoverageClosureTests
             Port = TwinCatPort,
             SettingsId = "twincat-coverage-closure",
         };
-        IoT.Driver.TwinCATRx.Core.TwinCatRxExtensions.AddNotification(settings, AdsVariable);
+        TwinCatCoreExtensions.AddNotification(settings, AdsVariable);
         _ = ads.RegisterSymbol(AdsVariable, 0);
         ads.Connect(settings);
         return ads;

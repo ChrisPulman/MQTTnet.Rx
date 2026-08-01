@@ -3,13 +3,33 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Text;
+#if REACTIVE_SHIM
+using IoT.Driver.Serial.Reactive;
+#else
 using IoT.Driver.Serial;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.SerialPort.Reactive;
+#else
 using MQTTnet.Rx.SerialPort;
+#endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using SerialAsyncCreate = MQTTnet.Rx.SerialPort.Reactive.ObservableAsyncCreateExtensions;
+#else
 using SerialAsyncCreate = MQTTnet.Rx.SerialPort.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using SerialCreate = MQTTnet.Rx.SerialPort.Reactive.Create;
+#else
 using SerialCreate = MQTTnet.Rx.SerialPort.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

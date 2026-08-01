@@ -2,12 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.Core;
-using IoT.Driver.MitsubishiRx;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Async;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Mitsubishi.Reactive;
+#else
 namespace MQTTnet.Rx.Mitsubishi;
+#endif
 
 /// <summary>Provides asynchronous-observable MQTT bridges for Mitsubishi logical tags.</summary>
 public static class ObservableAsyncCreateExtensions
@@ -30,10 +29,10 @@ public static class ObservableAsyncCreateExtensions
             Func<T, string> payloadFormatter)
         {
             ArgumentNullException.ThrowIfNull(client);
-            return client
-                .ToObservable()
-                .PublishMitsubishiTag(topic, tag, logicalTags, payloadFormatter)
-                .ToSignal();
+            return ObservableSignalConversion.ToSignal(
+                client
+                    .ToObservable()
+                    .PublishMitsubishiTag(topic, tag, logicalTags, payloadFormatter));
         }
 
         /// <summary>Subscribes to MQTT and writes parsed payloads to a Mitsubishi logical tag.</summary>

@@ -3,11 +3,29 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reflection;
+#if REACTIVE_SHIM
+using IoT.Driver.ModbusRx.Reactive.Device;
+#else
 using IoT.Driver.ModbusRx.Device;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Modbus.Reactive;
+#else
 using MQTTnet.Rx.Modbus;
-using ReactiveUI.Primitives.Reactive.Signals;
+#endif
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using ModbusCreate = MQTTnet.Rx.Modbus.Reactive.Create;
+using ModbusCreateExtensions = MQTTnet.Rx.Modbus.Reactive.CreateExtensions;
+#else
 using ModbusCreate = MQTTnet.Rx.Modbus.Create;
+using ModbusCreateExtensions = MQTTnet.Rx.Modbus.CreateExtensions;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -41,7 +59,7 @@ public sealed class ModbusCoverageClosureTests
     [Test]
     public async Task SynchronousExtensionForwarders_RejectMissingClientAsync()
     {
-        var methods = typeof(CreateExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static);
+        var methods = typeof(ModbusCreateExtensions).GetMethods(BindingFlags.Public | BindingFlags.Static);
 
         foreach (var method in methods)
         {

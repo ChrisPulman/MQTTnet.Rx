@@ -4,7 +4,11 @@
 
 using System.Buffers;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 namespace MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 
 /// <summary>Provides high-performance buffer management for MQTT operations using pooled memory.</summary>
 /// <remarks>

@@ -4,10 +4,19 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
 using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides reactive MQTT topic subscription, discovery, and payload conversion extensions.</summary>
 /// <remarks>These extensions simplify working with MQTT message streams by enabling topic-based subscriptions,

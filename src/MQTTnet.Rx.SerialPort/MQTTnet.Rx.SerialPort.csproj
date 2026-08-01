@@ -9,8 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="IoT-Driver.SerialPortRx" />
-    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
-    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Async" />
+    <PackageReference Include="ReactiveUI.Primitives" />
   </ItemGroup>
 
   <ItemGroup>

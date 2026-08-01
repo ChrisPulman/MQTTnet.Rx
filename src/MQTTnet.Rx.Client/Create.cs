@@ -2,13 +2,25 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
+#else
 using MQTTnet.Rx.Client.ResilientClient.Internal;
+#endif
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives.Signals;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides factory methods for creating MQTT clients and related options.</summary>
 /// <remarks>The Create class offers static members to facilitate the creation and configuration of MQTT clients,

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>true</IsPackable>
+    <PackageId>MQTTnet.Rx.ABPlc.Reactive</PackageId>
+    <DefineConstants>$(DefineConstants);REACTIVE_SHIM</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="IoT-Driver.ABPlcRx.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MQTTnet.Rx.Client.Reactive\MQTTnet.Rx.Client.Reactive.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.ABPlc\**\*.cs" Exclude="..\MQTTnet.Rx.ABPlc\ProjectGlobalUsings.cs;..\MQTTnet.Rx.ABPlc\bin\**\*.cs;..\MQTTnet.Rx.ABPlc\obj\**\*.cs" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+</Project>

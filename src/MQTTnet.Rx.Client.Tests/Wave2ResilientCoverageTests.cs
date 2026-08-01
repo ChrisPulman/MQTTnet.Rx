@@ -14,19 +14,16 @@ namespace MQTTnet.Rx.Client.Tests;
 public partial class Wave2ResilientCoverageTests
 {
     /// <summary>The internal resilient-client type name.</summary>
-    private const string ResilientClientTypeName = "MQTTnet.Rx.Client.ResilientClient.Internal.ResilientMqttClient";
+    private const string ResilientClientTypeName = TestTypeNames.ResilientClient;
 
     /// <summary>The internal resilient-message builder type name.</summary>
-    private const string ResilientMessageBuilderTypeName =
-        "MQTTnet.Rx.Client.ResilientClient.Internal.ResilientMqttApplicationMessageBuilder";
+    private const string ResilientMessageBuilderTypeName = TestTypeNames.ResilientApplicationMessageBuilder;
 
     /// <summary>The internal subscription-results type name.</summary>
-    private const string SendSubscriptionResultsTypeName =
-        "MQTTnet.Rx.Client.ResilientClient.Internal.SendSubscriptionResults";
+    private const string SendSubscriptionResultsTypeName = TestTypeNames.SendSubscriptionResults;
 
     /// <summary>The internal storage-manager type name.</summary>
-    private const string StorageManagerTypeName =
-        "MQTTnet.Rx.Client.ResilientClient.Internal.ResilientMqttClientStorageManager";
+    private const string StorageManagerTypeName = TestTypeNames.ResilientClientStorageManager;
 
     /// <summary>The MQTT host used for option construction.</summary>
     private const string BrokerHost = "coverage-broker";

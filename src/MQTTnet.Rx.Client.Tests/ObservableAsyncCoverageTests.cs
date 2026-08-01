@@ -3,10 +3,17 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Reflection;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 using MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 using ReactiveUI.Primitives.Async;
-using ClientAsyncBridge = MQTTnet.Rx.Client.ObservableAsyncBridgeExtensions;
+#if REACTIVE_SHIM
+using LowAllocAsyncBridge = MQTTnet.Rx.Client.Reactive.MemoryEfficient.ObservableAsyncBridgeExtensions;
+#else
 using LowAllocAsyncBridge = MQTTnet.Rx.Client.MemoryEfficient.ObservableAsyncBridgeExtensions;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

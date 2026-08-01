@@ -4,8 +4,16 @@
 
 using IoT.Driver.Core;
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
+using S7AsyncExtensions = MQTTnet.Rx.S7Plc.Reactive.ObservableAsyncCreateExtensions;
+#else
 using S7AsyncExtensions = MQTTnet.Rx.S7Plc.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using S7Extensions = MQTTnet.Rx.S7Plc.Reactive.S7PlcExtensions;
+#else
 using S7Extensions = MQTTnet.Rx.S7Plc.S7PlcExtensions;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

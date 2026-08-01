@@ -5,9 +5,17 @@
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives.Signals;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides fluent extensions for configuring MQTT client connections.</summary>
 /// <remarks>
@@ -391,6 +399,7 @@ public static class ClientOptionsExtensions
     /// <summary>Tracks whether a reconnect operation is currently running.</summary>
     private sealed class ReconnectState
     {
+        /// <summary>Tracks whether a reconnect operation is in progress.</summary>
         private int _inProgress;
 
         /// <summary>Attempts to mark the reconnect operation as in progress.</summary>
