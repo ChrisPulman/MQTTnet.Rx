@@ -7,17 +7,16 @@
     <DefineConstants>$(DefineConstants);REACTIVE_SHIM</DefineConstants>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="MQTTnet" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+  </ItemGroup>
 
   <ItemGroup>
     <Compile Include="..\MQTTnet.Rx.Client\**\*.cs"
              Exclude="..\MQTTnet.Rx.Client\bin\**;..\MQTTnet.Rx.Client\obj\**"
              Link="%(RecursiveDir)%(Filename)%(Extension)" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="MQTTnet" />
-    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
-    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
   </ItemGroup>
 
   <ItemGroup>

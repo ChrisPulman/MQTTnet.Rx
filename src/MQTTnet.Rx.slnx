@@ -1,38 +1,42 @@
 <Solution>
-  <Folder Name="/SolutionConfig/">
+  <Folder Name="/Config/">
     <File Path="../.editorconfig" />
     <File Path="../.gitignore" />
     <File Path="../Directory.Build.props" />
     <File Path="../Directory.Packages.props" />
+    <File Path="../global.json" />
     <File Path="../LICENSE" />
     <File Path="../nuget.config" />
     <File Path="../README.md" />
-    <File Path="../global.json" />
     <File Path="testconfig.json" />
+  </Folder>
+  <Folder Name="/Reactive/">
+    <Project Path="MQTTnet.Rx.ABPlc.Reactive/MQTTnet.Rx.ABPlc.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.Client.Reactive/MQTTnet.Rx.Client.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.Mitsubishi.Reactive/MQTTnet.Rx.Mitsubishi.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.Modbus.Reactive/MQTTnet.Rx.Modbus.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.OmronPlc.Reactive/MQTTnet.Rx.OmronPlc.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.S7Plc.Reactive/MQTTnet.Rx.S7Plc.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.SerialPort.Reactive/MQTTnet.Rx.SerialPort.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.Server.Reactive/MQTTnet.Rx.Server.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.TwinCAT.Reactive/MQTTnet.Rx.TwinCAT.Reactive.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="MQTTnet.Rx.Client.Reactive.Tests/MQTTnet.Rx.Client.Reactive.Tests.csproj" />
+    <Project Path="MQTTnet.Rx.Client.TestApp/MQTTnet.Rx.Client.TestApp.csproj" />
+    <Project Path="MQTTnet.Rx.Client.Tests/MQTTnet.Rx.Client.Tests.csproj" />
+    <Project Path="TestSingleClient/TestSingleClient.csproj" />
   </Folder>
   <Project Path="../build/_build.csproj">
     <Build Project="false" />
   </Project>
   <Project Path="MQTTnet.Rx.ABPlc/MQTTnet.Rx.ABPlc.csproj" />
-  <Project Path="MQTTnet.Rx.ABPlc.Reactive/MQTTnet.Rx.ABPlc.Reactive.csproj" />
-  <Project Path="MQTTnet.Rx.Client.TestApp/MQTTnet.Rx.Client.TestApp.csproj" />
-  <Project Path="MQTTnet.Rx.Client.Reactive.Tests/MQTTnet.Rx.Client.Reactive.Tests.csproj" />
-  <Project Path="MQTTnet.Rx.Client.Reactive/MQTTnet.Rx.Client.Reactive.csproj" />
-  <Project Path="MQTTnet.Rx.Client.Tests/MQTTnet.Rx.Client.Tests.csproj" />
   <Project Path="MQTTnet.Rx.Client/MQTTnet.Rx.Client.csproj" />
   <Project Path="MQTTnet.Rx.Mitsubishi/MQTTnet.Rx.Mitsubishi.csproj" />
-  <Project Path="MQTTnet.Rx.Mitsubishi.Reactive/MQTTnet.Rx.Mitsubishi.Reactive.csproj" />
   <Project Path="MQTTnet.Rx.Modbus/MQTTnet.Rx.Modbus.csproj" />
-  <Project Path="MQTTnet.Rx.Modbus.Reactive/MQTTnet.Rx.Modbus.Reactive.csproj" />
   <Project Path="MQTTnet.Rx.OmronPlc/MQTTnet.Rx.OmronPlc.csproj" />
-  <Project Path="MQTTnet.Rx.OmronPlc.Reactive/MQTTnet.Rx.OmronPlc.Reactive.csproj" />
   <Project Path="MQTTnet.Rx.S7Plc/MQTTnet.Rx.S7Plc.csproj" />
-  <Project Path="MQTTnet.Rx.S7Plc.Reactive/MQTTnet.Rx.S7Plc.Reactive.csproj" />
   <Project Path="MQTTnet.Rx.SerialPort/MQTTnet.Rx.SerialPort.csproj" />
-  <Project Path="MQTTnet.Rx.SerialPort.Reactive/MQTTnet.Rx.SerialPort.Reactive.csproj" />
   <Project Path="MQTTnet.Rx.Server/MQTTnet.Rx.Server.csproj" />
-  <Project Path="MQTTnet.Rx.Server.Reactive/MQTTnet.Rx.Server.Reactive.csproj" />
   <Project Path="MQTTnet.Rx.TwinCAT/MQTTnet.Rx.TwinCAT.csproj" />
-  <Project Path="MQTTnet.Rx.TwinCAT.Reactive/MQTTnet.Rx.TwinCAT.Reactive.csproj" />
-  <Project Path="TestSingleClient/TestSingleClient.csproj" />
 </Solution>

@@ -17,6 +17,11 @@ using MQTTnet.Rx.Mitsubishi;
 #endif
 using ReactiveUI.Primitives.Async;
 #if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
 using MitsubishiClient = IoT.Driver.MitsubishiRx.Reactive.MitsubishiRx;
 #else
 using MitsubishiClient = IoT.Driver.MitsubishiRx.MitsubishiRx;
@@ -47,6 +52,9 @@ public class MitsubishiBridgeBranchTests
 
     /// <summary>The valid MQTT topic used by guard tests.</summary>
     private const string Topic = "tests/mitsubishi/branches";
+
+    /// <summary>The maximum duration for a resilient logical-tag observation.</summary>
+    private static readonly TimeSpan ObservationTimeout = TimeSpan.FromSeconds(5);
 
     /// <summary>Gets the closed internal observer type from the production assembly.</summary>
     private static readonly Type InternalObserverType =
@@ -169,6 +177,182 @@ public class MitsubishiBridgeBranchTests
             null!,
             null,
             CancellationToken.None)).Throws<ArgumentNullException>();
+    }
+
+    /// <summary>Verifies every resilient synchronous publish argument guard.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task PublicResilientSyncPublish_RejectsInvalidArgumentsAsync()
+    {
+        await using var broker = await LiveMqttBroker.StartAsync();
+        await using var fixture = CreateFixture(broker.Port, LogicalTagAccessMode.ReadWrite);
+        IObservable<IResilientMqttClient> resilientClient = Signal.None<IResilientMqttClient>();
+
+        await Assert.That(() => ((IObservable<IResilientMqttClient>)null!).PublishMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            static value => value.ToString())).Throws<ArgumentNullException>();
+        await Assert.That(() => resilientClient.PublishMitsubishiTag(
+            " ",
+            fixture.Tag,
+            fixture.LogicalTags,
+            static value => value.ToString())).Throws<ArgumentException>();
+        await Assert.That(() => resilientClient.PublishMitsubishiTag<ushort>(
+            Topic,
+            null!,
+            fixture.LogicalTags,
+            static value => value.ToString())).Throws<ArgumentNullException>();
+        await Assert.That(() => resilientClient.PublishMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            null!,
+            static value => value.ToString())).Throws<ArgumentNullException>();
+        await Assert.That(() => resilientClient.PublishMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            null!)).Throws<ArgumentNullException>();
+
+        var published = resilientClient.PublishMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            static value => value.ToString());
+        await Assert.That(published).IsNotNull();
+    }
+
+    /// <summary>Verifies resilient publishing formats a value emitted by the Mitsubishi logical-tag source.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task PublicResilientSyncPublish_FormatsObservedTagAsync()
+    {
+        await using var broker = await LiveMqttBroker.StartAsync();
+        await using var fixture = CreateFixture(broker.Port, LogicalTagAccessMode.ReadWrite);
+        fixture.Memory.WriteWord(Address, SuccessfulWriteValue);
+        var formatted = new TaskCompletionSource<ushort>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var mqttClient = new MockResilientMqttClient();
+
+        using var subscription = Signal.Emit<IResilientMqttClient>(mqttClient)
+            .PublishMitsubishiTag(
+                Topic,
+                fixture.Tag,
+                fixture.LogicalTags,
+                value =>
+                {
+                    _ = formatted.TrySetResult(value);
+                    return value.ToString();
+                })
+            .Subscribe(static _ => { });
+        var formattedValue = await formatted.Task.WaitAsync(ObservationTimeout);
+
+        await Assert.That(formattedValue).IsEqualTo(SuccessfulWriteValue);
+    }
+
+    /// <summary>Verifies every resilient synchronous subscribe argument guard and the usable subscription surface.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task PublicResilientSyncSubscribe_RejectsInvalidArgumentsAsync()
+    {
+        await using var broker = await LiveMqttBroker.StartAsync();
+        await using var fixture = CreateFixture(broker.Port, LogicalTagAccessMode.ReadWrite);
+        IObservable<IResilientMqttClient> resilientClient = Signal.None<IResilientMqttClient>();
+
+        await Assert.That(() => ((IObservable<IResilientMqttClient>)null!).SubscribeMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            static _ => (ushort)1,
+            null,
+            CancellationToken.None)).Throws<ArgumentNullException>();
+        await Assert.That(() => resilientClient.SubscribeMitsubishiTag(
+            " ",
+            fixture.Tag,
+            fixture.LogicalTags,
+            static _ => (ushort)1,
+            null,
+            CancellationToken.None)).Throws<ArgumentException>();
+        await Assert.That(() => resilientClient.SubscribeMitsubishiTag(
+            Topic,
+            null!,
+            fixture.LogicalTags,
+            static _ => (ushort)1,
+            null,
+            CancellationToken.None)).Throws<ArgumentNullException>();
+        await Assert.That(() => resilientClient.SubscribeMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            null!,
+            static _ => (ushort)1,
+            null,
+            CancellationToken.None)).Throws<ArgumentNullException>();
+        await Assert.That(() => resilientClient.SubscribeMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            null!,
+            null,
+            CancellationToken.None)).Throws<ArgumentNullException>();
+
+        using var subscription = resilientClient.SubscribeMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            static _ => (ushort)1,
+            null,
+            CancellationToken.None);
+        await Assert.That(subscription).IsNotNull();
+    }
+
+    /// <summary>Verifies resilient asynchronous bridge guards and usable publish and subscribe surfaces.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task PublicResilientAsyncBridge_RejectsInvalidArgumentsAsync()
+    {
+        await using var broker = await LiveMqttBroker.StartAsync();
+        await using var fixture = CreateFixture(broker.Port, LogicalTagAccessMode.ReadWrite);
+        IObservableAsync<IResilientMqttClient> resilientClient = SignalAsync.None<IResilientMqttClient>();
+
+        await Assert.That(() => ((IObservableAsync<IResilientMqttClient>)null!).PublishMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            static value => value.ToString())).Throws<ArgumentNullException>();
+        await Assert.That(() => ((IObservableAsync<IResilientMqttClient>)null!).SubscribeMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            static _ => (ushort)1,
+            null,
+            CancellationToken.None)).Throws<ArgumentNullException>();
+        await Assert.That(() => resilientClient.PublishMitsubishiTag<ushort>(
+            Topic,
+            null!,
+            fixture.LogicalTags,
+            static value => value.ToString())).Throws<ArgumentNullException>();
+        await Assert.That(() => resilientClient.SubscribeMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            null!,
+            null,
+            CancellationToken.None)).Throws<ArgumentNullException>();
+
+        var published = resilientClient.PublishMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            static value => value.ToString());
+        using var subscription = resilientClient.SubscribeMitsubishiTag(
+            Topic,
+            fixture.Tag,
+            fixture.LogicalTags,
+            static _ => (ushort)1,
+            null,
+            CancellationToken.None);
+
+        await Assert.That(published).IsNotNull();
+        await Assert.That(subscription).IsNotNull();
     }
 
     /// <summary>Exercises observer completion, source errors, attachment, repeated disposal, and null guards.</summary>

@@ -70,4 +70,59 @@ public static class ObservableAsyncCreateExtensions
                     cancellationToken);
         }
     }
+
+    /// <summary>Provides asynchronous-observable Mitsubishi logical-tag bridge operations.</summary>
+    /// <param name="client">The asynchronous resilient MQTT clients used by the bridge.</param>
+    extension(IObservableAsync<IResilientMqttClient> client)
+    {
+        /// <summary>Publishes each observed Mitsubishi logical-tag value through a resilient MQTT client.</summary>
+        /// <typeparam name="T">The logical-tag value type.</typeparam>
+        /// <param name="topic">The MQTT topic that receives the formatted values.</param>
+        /// <param name="tag">The typed logical tag to observe.</param>
+        /// <param name="logicalTags">The Mitsubishi logical-tag client that supplies values.</param>
+        /// <param name="payloadFormatter">Converts each tag value to an MQTT string payload.</param>
+        /// <returns>An asynchronous observable containing each resilient MQTT publish result.</returns>
+        public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishMitsubishiTag<T>(
+            string topic,
+            LogicalTagKey<T> tag,
+            MitsubishiLogicalTagClient logicalTags,
+            Func<T, string> payloadFormatter)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            return ObservableSignalConversion.ToSignal(
+                client
+                    .ToObservable()
+                    .PublishMitsubishiTag(topic, tag, logicalTags, payloadFormatter));
+        }
+
+        /// <summary>Subscribes through a resilient MQTT client and writes payloads to a Mitsubishi logical tag.</summary>
+        /// <typeparam name="T">The logical-tag value type.</typeparam>
+        /// <param name="topic">The MQTT topic to subscribe to.</param>
+        /// <param name="tag">The typed logical tag to write.</param>
+        /// <param name="logicalTags">The Mitsubishi logical-tag client that performs writes.</param>
+        /// <param name="payloadParser">Converts each MQTT string payload to a logical-tag value.</param>
+        /// <param name="onError">A callback for source, conversion, or logical-tag write failures, or
+        /// <see langword="null"/>.</param>
+        /// <param name="cancellationToken">A token that cancels queued and in-flight logical-tag writes.</param>
+        /// <returns>A disposable subscription that deterministically tears down the bridge.</returns>
+        public IDisposable SubscribeMitsubishiTag<T>(
+            string topic,
+            LogicalTagKey<T> tag,
+            MitsubishiLogicalTagClient logicalTags,
+            Func<string, T> payloadParser,
+            Action<Exception>? onError,
+            CancellationToken cancellationToken)
+        {
+            ArgumentNullException.ThrowIfNull(client);
+            return client
+                .ToObservable()
+                .SubscribeMitsubishiTag(
+                    topic,
+                    tag,
+                    logicalTags,
+                    payloadParser,
+                    onError,
+                    cancellationToken);
+        }
+    }
 }

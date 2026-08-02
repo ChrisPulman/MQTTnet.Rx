@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
@@ -16,15 +16,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.Server\*.cs"
+             Exclude="..\MQTTnet.Rx.Server\bin\**;..\MQTTnet.Rx.Server\obj\**"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="ReactiveUI.Primitives.Async" />
     <Using Include="ReactiveUI.Primitives.Async.Disposables" />
     <Using Include="ReactiveUI.Primitives.Disposables" />
     <Using Include="ReactiveUI.Primitives.Reactive" />
     <Using Include="ReactiveUI.Primitives.Reactive.Signals" />
     <Using Include="ReactiveUI.Primitives.Reactive.Signals.Signal" Alias="SignalFactory" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Include="..\MQTTnet.Rx.Server\*.cs" Link="%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

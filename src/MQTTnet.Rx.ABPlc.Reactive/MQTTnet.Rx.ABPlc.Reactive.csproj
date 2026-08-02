@@ -16,6 +16,18 @@
     <ProjectReference Include="..\MQTTnet.Rx.Client.Reactive\MQTTnet.Rx.Client.Reactive.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\MQTTnet.Rx.ABPlc\**\*.cs" Exclude="..\MQTTnet.Rx.ABPlc\ProjectGlobalUsings.cs;..\MQTTnet.Rx.ABPlc\bin\**\*.cs;..\MQTTnet.Rx.ABPlc\obj\**\*.cs" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    <Using Include="IoT.Driver.ABPlcRx.Reactive" />
+    <Using Include="IoT.Driver.Core" />
+    <Using Include="MQTTnet.Rx.Client.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Async" />
+    <Using Include="ReactiveUI.Primitives.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Reactive.Advanced" />
+    <Using Include="MQTTnet.Rx.Client.Reactive.ObservableBridgeCompatibilityExtensions" Alias="ObservableSignalConversion" />
+    <Using Include="System.Reactive.Observer" Alias="ObserverFactory" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.ABPlc\**\*.cs"
+             Exclude="..\MQTTnet.Rx.ABPlc\bin\**\*.cs;..\MQTTnet.Rx.ABPlc\obj\**\*.cs"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

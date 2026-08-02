@@ -11,7 +11,7 @@
     <Nullable>enable</Nullable>
     <PackageIcon>logo.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
-    <PackageReleaseNotes>Central package management, ReactiveUI.Primitives migration, IoT-Driver 1.0.1 integrations, and .NET 8 / 9 / 10 / 11 compatibility</PackageReleaseNotes>
+    <PackageReleaseNotes>Central package management, ReactiveUI.Primitives migration, IoT-Driver integrations, and .NET 8 / 9 / 10 / 11 compatibility</PackageReleaseNotes>
     <PackageTags>MQTT;MQTTnet;ReactiveUI;Primitives;S7Plc;Allen;Bradley;Rockwell;Mitsubishi;Omron;Modbus;Siemens;Serial;Beckhoff;TwinCAT;rx;reactive;extensions;observable;LINQ;net</PackageTags>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
@@ -39,6 +39,13 @@
 
   <PropertyGroup Condition="'$(IsTestProject)' == 'true'">
     <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <MinVerAutoIncrement>minor</MinVerAutoIncrement>
+    <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
+    <MinVerTagPrefix>v</MinVerTagPrefix>
+    <MinVerMinimumMajorMinor>4.1</MinVerMinimumMajorMinor>
   </PropertyGroup>
 
   <ItemGroup Condition="'$(IsTestProject)' != 'true'">

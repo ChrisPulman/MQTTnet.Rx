@@ -2,7 +2,14 @@
   "sdk": {
     "version": "11.0.100-preview.6.26359.118",
     "rollForward": "disable",
-    "allowPrerelease": true
+    "allowPrerelease": true,
+    "paths": [
+      "artifacts/dotnet-11",
+      ".nuke/temp/dotnet-win",
+      ".nuke/temp/dotnet-unix",
+      "$host$"
+    ],
+    "errorMessage": "MQTTnet.Rx requires .NET SDK 11.0.100-preview.6.26359.118. Install that SDK or run build.ps1/build.sh once to bootstrap the repository-local SDK."
   },
   "test": {
     "runner": "Microsoft.Testing.Platform"

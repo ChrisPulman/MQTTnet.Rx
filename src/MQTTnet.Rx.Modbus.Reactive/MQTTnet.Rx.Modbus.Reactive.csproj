@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
@@ -10,9 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\MQTTnet.Rx.Modbus\**\*.cs"
-             Exclude="..\MQTTnet.Rx.Modbus\bin\**;..\MQTTnet.Rx.Modbus\obj\**"
-             Link="%(RecursiveDir)%(Filename)%(Extension)" />
     <PackageReference Include="IoT-Driver.ModbusRx.Reactive" />
     <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
     <PackageReference Include="ReactiveUI.Primitives.Reactive" />
@@ -20,6 +17,23 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MQTTnet.Rx.Client.Reactive\MQTTnet.Rx.Client.Reactive.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="IoT.Driver.ModbusRx.Reactive" />
+    <Using Include="IoT.Driver.ModbusRx.Reactive.Device" />
+    <Using Include="MQTTnet.Rx.Client.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Advanced" />
+    <Using Include="ReactiveUI.Primitives.Async" />
+    <Using Include="ReactiveUI.Primitives.Disposables" />
+    <Using Include="ReactiveUI.Primitives.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Reactive.Signals" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.Modbus\**\*.cs"
+             Exclude="..\MQTTnet.Rx.Modbus\bin\**;..\MQTTnet.Rx.Modbus\obj\**"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

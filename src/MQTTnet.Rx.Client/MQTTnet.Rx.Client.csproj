@@ -6,7 +6,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="bin\**;obj\**" />
     <PackageReference Include="MQTTnet" />
     <PackageReference Include="ReactiveUI.Primitives" />
     <PackageReference Include="ReactiveUI.Primitives.Async" />
