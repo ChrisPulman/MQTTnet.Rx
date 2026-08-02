@@ -24,9 +24,9 @@ EXPECTED_PACKAGE_IDS = {
     "MQTTnet.Rx.S7Plc.Reactive",
     "MQTTnet.Rx.Server",
     "MQTTnet.Rx.Server.Reactive",
-    "MQTTnet.SerialPort",
+    "MQTTnet.Rx.SerialPort",
     "MQTTnet.SerialPort.Reactive",
-    "MQTTnet.TwinCATRx",
+    "MQTTnet.Rx.TwinCAT",
     "MQTTnet.TwinCATRx.Reactive",
 }
 
