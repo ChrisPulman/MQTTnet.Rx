@@ -59,6 +59,18 @@ Reactive extensions and helpers for MQTTnet (v5) that make it simple to build ev
 
 Note on ManagedClient: Support for ManagedClient is removed because MQTTnet v5 no longer includes it. Use the Resilient client in MQTTnet.Rx.Client instead.
 
+## Building
+
+The solution is pinned by `global.json` to .NET SDK `11.0.100-preview.6.26359.118`. On Windows, use Visual Studio 2026 Insiders 18.9 or newer; a Visual Studio release that only supports .NET 10 cannot load the .NET 11 targets.
+
+If the exact SDK is not installed machine-wide, bootstrap the repository-local SDK before opening the solution:
+
+```powershell
+.\build.ps1
+```
+
+On macOS or Linux, use `./build.sh`. The bootstrap installs the pinned SDK under `.nuke/temp`, and `global.json` makes that SDK discoverable by both Visual Studio and the `dotnet` CLI. Restart Visual Studio after bootstrapping, then open `src/MQTTnet.Rx.slnx`.
+
 ## Packages
 
 Each package is available in two variants compiled from the same source:

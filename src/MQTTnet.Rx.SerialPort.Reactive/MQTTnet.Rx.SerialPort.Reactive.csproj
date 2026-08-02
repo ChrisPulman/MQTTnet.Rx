@@ -10,9 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\MQTTnet.Rx.SerialPort\**\*.cs"
-             Exclude="..\MQTTnet.Rx.SerialPort\bin\**;..\MQTTnet.Rx.SerialPort\obj\**"
-             Link="%(RecursiveDir)%(Filename)%(Extension)" />
     <PackageReference Include="IoT-Driver.SerialPortRx.Reactive" />
     <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
     <PackageReference Include="ReactiveUI.Primitives.Reactive" />
@@ -20,6 +17,20 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MQTTnet.Rx.Client.Reactive\MQTTnet.Rx.Client.Reactive.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="IoT.Driver.Serial.Reactive" />
+    <Using Include="MQTTnet.Rx.Client.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Advanced" />
+    <Using Include="ReactiveUI.Primitives.Async" />
+    <Using Include="ReactiveUI.Primitives.Reactive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.SerialPort\**\*.cs"
+             Exclude="..\MQTTnet.Rx.SerialPort\bin\**;..\MQTTnet.Rx.SerialPort\obj\**"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
 </Project>

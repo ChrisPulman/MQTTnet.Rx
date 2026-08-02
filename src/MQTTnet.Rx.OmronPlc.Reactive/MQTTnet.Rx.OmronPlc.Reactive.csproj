@@ -16,6 +16,16 @@
     <ProjectReference Include="..\MQTTnet.Rx.Client.Reactive\MQTTnet.Rx.Client.Reactive.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\MQTTnet.Rx.OmronPlc\**\*.cs" Exclude="..\MQTTnet.Rx.OmronPlc\ProjectGlobalUsings.cs;..\MQTTnet.Rx.OmronPlc\bin\**\*.cs;..\MQTTnet.Rx.OmronPlc\obj\**\*.cs" Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    <Using Include="IoT.Driver.Core" />
+    <Using Include="IoT.Driver.OmronPlcRx.Reactive" />
+    <Using Include="MQTTnet.Rx.Client.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Async" />
+    <Using Include="ReactiveUI.Primitives.Reactive" />
+    <Using Include="MQTTnet.Rx.Client.Reactive.ObservableBridgeCompatibilityExtensions" Alias="ObservableSignalConversion" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.OmronPlc\**\*.cs"
+             Exclude="..\MQTTnet.Rx.OmronPlc\bin\**\*.cs;..\MQTTnet.Rx.OmronPlc\obj\**\*.cs"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

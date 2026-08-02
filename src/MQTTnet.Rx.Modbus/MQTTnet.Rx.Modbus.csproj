@@ -16,4 +16,15 @@
     <ProjectReference Include="..\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="IoT.Driver.ModbusRx" />
+    <Using Include="IoT.Driver.ModbusRx.Device" />
+    <Using Include="MQTTnet.Rx.Client" />
+    <Using Include="ReactiveUI.Primitives" />
+    <Using Include="ReactiveUI.Primitives.Advanced" />
+    <Using Include="ReactiveUI.Primitives.Async" />
+    <Using Include="ReactiveUI.Primitives.Disposables" />
+    <Using Include="ReactiveUI.Primitives.Signals" />
+  </ItemGroup>
+
 </Project>
