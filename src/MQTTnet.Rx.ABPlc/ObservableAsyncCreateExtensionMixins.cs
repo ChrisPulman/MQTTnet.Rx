@@ -2,11 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.ABPlcRx;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Async;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.ABPlc.Reactive;
+#else
 namespace MQTTnet.Rx.ABPlc;
+#endif
 
 /// <summary>Provides asynchronous MQTT extensions for Allen-Bradley PLC tags.</summary>
 public static class ObservableAsyncCreateExtensionMixins
@@ -34,7 +34,8 @@ public static class ObservableAsyncCreateExtensionMixins
             ArgumentNullException.ThrowIfNull(plc);
             ArgumentNullException.ThrowIfNull(typeWitness);
 
-            return client.ToObservable().PublishABPlcTag(topic, plcVariable, plc, typeWitness).ToSignal();
+            return ObservableSignalConversion.ToSignal(
+                client.ToObservable().PublishABPlcTag(topic, plcVariable, plc, typeWitness));
         }
 
         /// <summary>Subscribes to an MQTT topic and writes received values to an Allen-Bradley PLC tag.</summary>
@@ -83,7 +84,8 @@ public static class ObservableAsyncCreateExtensionMixins
             ArgumentNullException.ThrowIfNull(plc);
             ArgumentNullException.ThrowIfNull(typeWitness);
 
-            return client.ToObservable().PublishABPlcTag(topic, plcVariable, plc, typeWitness).ToSignal();
+            return ObservableSignalConversion.ToSignal(
+                client.ToObservable().PublishABPlcTag(topic, plcVariable, plc, typeWitness));
         }
 
         /// <summary>Subscribes to a topic and writes values to a configured Allen-Bradley PLC connection.</summary>

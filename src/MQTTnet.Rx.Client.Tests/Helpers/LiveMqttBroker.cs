@@ -6,7 +6,11 @@ using System.Net;
 using System.Net.Sockets;
 using MQTTnet.Protocol;
 using MQTTnet.Server;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests.Helpers;
 
@@ -229,6 +233,45 @@ public sealed class LiveMqttBroker : IAsyncDisposable
         }
 
         TeardownException = failure;
+    }
+
+    /// <summary>Starts a bridge subscription and waits for the broker to confirm that the topic is installed.</summary>
+    /// <param name="topic">The exact bridge topic expected by the broker.</param>
+    /// <param name="subscribe">Creates the bridge subscription.</param>
+    /// <returns>The ready bridge subscription.</returns>
+    internal async Task<IDisposable> SubscribeWhenReadyAsync(string topic, Func<IDisposable> subscribe)
+    {
+        ObjectDisposedException.ThrowIf(IsDisposed, this);
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
+        ArgumentNullException.ThrowIfNull(subscribe);
+
+        var subscriptionReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        Func<ClientSubscribedTopicEventArgs, Task> handler = eventArgs =>
+        {
+            if (string.Equals(eventArgs.TopicFilter.Topic, topic, StringComparison.Ordinal))
+            {
+                _ = subscriptionReady.TrySetResult();
+            }
+
+            return Task.CompletedTask;
+        };
+        _server.ClientSubscribedTopicAsync += handler;
+        IDisposable? subscription = null;
+        try
+        {
+            subscription = subscribe();
+            await subscriptionReady.Task.WaitAsync(OperationTimeout).ConfigureAwait(false);
+            return subscription;
+        }
+        catch
+        {
+            subscription?.Dispose();
+            throw;
+        }
+        finally
+        {
+            _server.ClientSubscribedTopicAsync -= handler;
+        }
     }
 
     /// <summary>Creates a linked cancellation source with the fixture operation timeout.</summary>

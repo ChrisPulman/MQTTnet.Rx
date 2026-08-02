@@ -3,18 +3,50 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Text;
+#if REACTIVE_SHIM
+using IoT.Driver.ABPlcRx.Reactive;
+#else
 using IoT.Driver.ABPlcRx;
+#endif
 using IoT.Driver.Core;
 using MQTTnet.Protocol;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.ABPlc.Reactive;
+#else
 using MQTTnet.Rx.ABPlc;
+#endif
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive;
+#else
 using MQTTnet.Rx.Client;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Concurrency;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using ISequencer = System.Reactive.Concurrency.IScheduler;
+#else
+using ISequencer = ReactiveUI.Primitives.Concurrency.ISequencer;
+#endif
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using AbAsyncCreate = MQTTnet.Rx.ABPlc.Reactive.ObservableAsyncCreateExtensions;
+#else
 using AbAsyncCreate = MQTTnet.Rx.ABPlc.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using AbCreate = MQTTnet.Rx.ABPlc.Reactive.Create;
+#else
 using AbCreate = MQTTnet.Rx.ABPlc.Create;
+#endif
+#if REACTIVE_SHIM
+using MqttCreate = MQTTnet.Rx.Client.Reactive.Create;
+#else
 using MqttCreate = MQTTnet.Rx.Client.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

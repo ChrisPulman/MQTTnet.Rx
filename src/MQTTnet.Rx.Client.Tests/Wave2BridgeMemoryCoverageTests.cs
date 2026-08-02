@@ -3,17 +3,36 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Buffers;
-using System.Reactive.Concurrency;
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 using MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using ReactiveUI.Primitives.Reactive;
+#else
 using ReactiveUI.Primitives;
+#endif
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using AsyncMemoryBridge = MQTTnet.Rx.Client.Reactive.MemoryEfficient.ObservableAsyncBridgeExtensions;
+#else
 using AsyncMemoryBridge = MQTTnet.Rx.Client.MemoryEfficient.ObservableAsyncBridgeExtensions;
+#endif
+#if REACTIVE_SHIM
+using SynchronousMemoryBridge = MQTTnet.Rx.Client.Reactive.MemoryEfficient.LowAllocExtensions;
+#else
 using SynchronousMemoryBridge = MQTTnet.Rx.Client.MemoryEfficient.LowAllocExtensions;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -54,7 +73,7 @@ public class Wave2BridgeMemoryCoverageTests
             .BatchProcess(source, OperatorInterval, static batch => batch.Count)
             .CollectAsync(Timeout);
         var scheduledBatch = await SynchronousMemoryBridge
-            .BatchProcess(source, OperatorInterval, static batch => batch.Count, TaskPoolScheduler.Default)
+            .BatchProcess(source, OperatorInterval, static batch => batch.Count, TestSchedulers.TaskPool)
             .CollectAsync(Timeout);
         var throttled = await SynchronousMemoryBridge
             .ThrottleMessages(source, OperatorInterval)
@@ -63,7 +82,7 @@ public class Wave2BridgeMemoryCoverageTests
             .ThrottleMessages(source, OperatorInterval, null)
             .CollectAsync(Timeout);
         var throttledScheduled = await SynchronousMemoryBridge
-            .ThrottleMessages(source, OperatorInterval, TaskPoolScheduler.Default)
+            .ThrottleMessages(source, OperatorInterval, TestSchedulers.TaskPool)
             .CollectAsync(Timeout);
         var sampled = await SynchronousMemoryBridge
             .SampleMessages(source, OperatorInterval)
@@ -72,9 +91,9 @@ public class Wave2BridgeMemoryCoverageTests
             .SampleMessages(source, OperatorInterval, null)
             .CollectAsync(Timeout);
         var sampledScheduled = await SynchronousMemoryBridge
-            .SampleMessages(source, OperatorInterval, TaskPoolScheduler.Default)
+            .SampleMessages(source, OperatorInterval, TestSchedulers.TaskPool)
             .CollectAsync(Timeout);
-        var groups = await ReactiveUI.Primitives.Reactive.LinqExtensions.Select(
+        var groups = await TestLinqExtensions.Select(
                 SynchronousMemoryBridge.GroupByTopic(source),
                 static group => group.Key)
             .CollectAsync(Timeout);
@@ -108,7 +127,7 @@ public class Wave2BridgeMemoryCoverageTests
         var empty = CreateMessage("empty", ReadOnlySequence<byte>.Empty);
         var multi = CreateMessage("devices/multi", CreateSequence("mul"u8.ToArray(), "ti"u8.ToArray()));
         IObservableAsync<MqttApplicationMessageReceivedEventArgs> source =
-            Signal.FromEnumerable([empty, multi]).ToSignal();
+            TestObservableBridge.ToSignal(Signal.FromEnumerable([empty, multi]));
 
         await VerifyAsyncPayloadTransformsAsync(source);
         await VerifyAsyncFlowOperatorsAsync(source);
@@ -125,13 +144,13 @@ public class Wave2BridgeMemoryCoverageTests
         var first = Helpers.TestDataHelpers.CreateMessageReceivedArgs("root/alpha/value", complexJson);
         var second = Helpers.TestDataHelpers.CreateMessageReceivedArgs("root/beta/value", "[]");
         IObservableAsync<MqttApplicationMessageReceivedEventArgs> source =
-            Signal.FromEnumerable([first, second]).ToSignal();
+            TestObservableBridge.ToSignal(Signal.FromEnumerable([first, second]));
 
-        var topics = await ReactiveUI.Primitives.Reactive.LinqExtensions.Select(
-                source.GroupByTopic().ToObservable(),
+        var topics = await TestLinqExtensions.Select(
+                ClientAsyncBridge.GroupByTopic(source).ToObservable(),
                 static group => group.Key)
             .CollectAsync(Timeout);
-        var levels = await ReactiveUI.Primitives.Reactive.LinqExtensions.Select(
+        var levels = await TestLinqExtensions.Select(
                 source.GroupByTopicLevel(1).ToObservable(),
                 static group => group.Key)
             .CollectAsync(Timeout);
@@ -195,12 +214,13 @@ public class Wave2BridgeMemoryCoverageTests
     {
         await VerifyCanceledSubscriptionAsync();
 
-        using var subject = new ReactiveUI.Primitives.Signals.Signal<int>();
+        using var subject = new TestSignal<int>();
         var firstEntered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var releaseFirst = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        var completed = new TaskCompletionSource<Result>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completed = new TaskCompletionSource<TestResult>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
         List<int> received = [];
-        await using var subscription = await subject.ToSignal().SubscribeAsync(
+        await using var subscription = await TestObservableBridge.ToSignal(subject).SubscribeAsync(
             async (value, cancellationToken) =>
             {
                 received.Add(value);
@@ -226,8 +246,8 @@ public class Wave2BridgeMemoryCoverageTests
 
         var failure = new InvalidOperationException("bridge failure");
         var observedFailure = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
-        using var failedSubscription = System.ObservableExtensions.Subscribe(
-            Signal.Fail<int>(failure).ToSignal().ToObservable(),
+        using var failedSubscription = TestObservableExtensions.Subscribe(
+            TestObservableBridge.ToSignal(Signal.Fail<int>(failure)).ToObservable(),
             static _ => { },
             exception => _ = observedFailure.TrySetResult(exception));
         var forwardedFailure = await observedFailure.Task.WaitAsync(Timeout);
@@ -237,7 +257,7 @@ public class Wave2BridgeMemoryCoverageTests
 
         var disposal = new RecordingAsyncDisposable();
         var disposableSignal = SignalAsync.Create<int>((_, _) => new ValueTask<IAsyncDisposable>(disposal));
-        var disposableSubscription = System.ObservableExtensions.Subscribe(disposableSignal.ToObservable());
+        var disposableSubscription = TestObservableExtensions.Subscribe(disposableSignal.ToObservable());
         disposableSubscription.Dispose();
         await disposal.Disposed.Task.WaitAsync(Timeout);
 
@@ -289,21 +309,21 @@ public class Wave2BridgeMemoryCoverageTests
             .BatchProcess(source, OperatorInterval, static batch => batch.Count)
             .ToObservable().CollectAsync(Timeout);
         var timedScheduled = await AsyncMemoryBridge
-            .BatchProcess(source, OperatorInterval, static batch => batch.Count, TaskPoolScheduler.Default)
+            .BatchProcess(source, OperatorInterval, static batch => batch.Count, TestSchedulers.TaskPool)
             .ToObservable().CollectAsync(Timeout);
         var throttled = await AsyncMemoryBridge
             .ThrottleMessages(source, OperatorInterval)
             .ToObservable().CollectAsync(Timeout);
         var throttledScheduled = await AsyncMemoryBridge
-            .ThrottleMessages(source, OperatorInterval, TaskPoolScheduler.Default)
+            .ThrottleMessages(source, OperatorInterval, TestSchedulers.TaskPool)
             .ToObservable().CollectAsync(Timeout);
         var sampled = await AsyncMemoryBridge
             .SampleMessages(source, OperatorInterval)
             .ToObservable().CollectAsync(Timeout);
         var sampledScheduled = await AsyncMemoryBridge
-            .SampleMessages(source, OperatorInterval, TaskPoolScheduler.Default)
+            .SampleMessages(source, OperatorInterval, TestSchedulers.TaskPool)
             .ToObservable().CollectAsync(Timeout);
-        var groups = await ReactiveUI.Primitives.Reactive.LinqExtensions.Select(
+        var groups = await TestLinqExtensions.Select(
                 AsyncMemoryBridge.GroupByTopic(source).ToObservable(),
                 static group => group.Key)
             .CollectAsync(Timeout);
@@ -341,23 +361,21 @@ public class Wave2BridgeMemoryCoverageTests
     /// <returns>A task that represents the asynchronous verification.</returns>
     private static async Task VerifyScalarConversionsAsync()
     {
-        IObservableAsync<object?> values = Signal
+        IObservableAsync<object?> values = TestObservableBridge.ToSignal(Signal
             .FromEnumerable<object?>([
                 true,
                 ConversionValue,
                 ConversionValue.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            ])
-            .ToSignal();
-        IObservableAsync<object?> booleanValues = Signal
-            .FromEnumerable<object?>([true, false, "true"])
-            .ToSignal();
+            ]));
+        IObservableAsync<object?> booleanValues = TestObservableBridge.ToSignal(Signal
+            .FromEnumerable<object?>([true, false, "true"]));
         var booleans = await booleanValues.ToBool().ToObservable().CollectAsync(Timeout);
         var bytes = await values.ToByte().ToObservable().CollectAsync(Timeout);
         var int16s = await values.ToInt16().ToObservable().CollectAsync(Timeout);
         var int64s = await values.ToInt64().ToObservable().CollectAsync(Timeout);
         var singles = await values.ToSingle().ToObservable().CollectAsync(Timeout);
         var doubles = await values.ToDouble().ToObservable().CollectAsync(Timeout);
-        var strings = await MQTTnet.Rx.Client.ObservableAsyncBridgeExtensions
+        var strings = await ClientAsyncBridge
             .ToString(values)
             .ToObservable().CollectAsync(Timeout);
 
@@ -382,8 +400,8 @@ public class Wave2BridgeMemoryCoverageTests
         });
         using var canceled = new CancellationTokenSource();
         await canceled.CancelAsync();
-        await using var canceledSubscription = await canceledSource
-            .ToSignal()
+        await using var canceledSubscription = await TestObservableBridge
+            .ToSignal(canceledSource)
             .SubscribeAsync(static (_, _) => ValueTask.CompletedTask, canceled.Token);
 
         await Assert.That(sourceSubscribed).IsFalse();

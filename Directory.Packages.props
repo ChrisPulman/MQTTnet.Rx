@@ -8,12 +8,19 @@
     <PackageVersion Include="ConsoleMenu-simple" Version="2.7.0" />
     <PackageVersion Include="CP.Nuke.BuildTools" Version="3.0.2" />
     <PackageVersion Include="IoT-Driver.ABPlcRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.ABPlcRx.Reactive" Version="1.0.1" />
     <PackageVersion Include="IoT-Driver.MitsubishiRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.MitsubishiRx.Reactive" Version="1.0.1" />
     <PackageVersion Include="IoT-Driver.ModbusRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.ModbusRx.Reactive" Version="1.0.1" />
     <PackageVersion Include="IoT-Driver.OmronPlcRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.OmronPlcRx.Reactive" Version="1.0.1" />
     <PackageVersion Include="IoT-Driver.S7PlcRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.S7PlcRx.Reactive" Version="1.0.1" />
     <PackageVersion Include="IoT-Driver.SerialPortRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.SerialPortRx.Reactive" Version="1.0.1" />
     <PackageVersion Include="IoT-Driver.TwinCATRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.TwinCATRx.Reactive" Version="1.0.1" />
     <PackageVersion Include="Microsoft.Build.Tasks.Core" Version="18.8.2" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
@@ -21,12 +28,13 @@
     <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
     <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
     <PackageVersion Include="MQTTnet.Server" Version="5.2.0.1603" />
-    <PackageVersion Include="Nerdbank.GitVersioning" Version="3.10.91" />
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <PackageVersion Include="NuGet.Packaging" Version="7.6.0" />
     <PackageVersion Include="Nuke.Common" Version="10.1.0" />
+    <PackageVersion Include="MinVer" Version="7.0.0" />
     <PackageVersion Include="PerformanceSharp.Analyzers" Version="3.40.1" />
     <PackageVersion Include="ReactiveUI.Primitives" Version="7.1.0" />
+    <PackageVersion Include="ReactiveUI.Primitives.Async" Version="7.1.0" />
     <PackageVersion Include="ReactiveUI.Primitives.Async.Reactive" Version="7.1.0" />
     <PackageVersion Include="ReactiveUI.Primitives.Reactive" Version="7.1.0" />
     <PackageVersion Include="SecuritySharp.Analyzers" Version="3.40.1" />

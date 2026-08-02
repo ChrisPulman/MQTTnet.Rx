@@ -8,8 +8,8 @@
 
   <ItemGroup>
     <PackageReference Include="IoT-Driver.S7PlcRx" />
-    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
-    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives" />
+    <PackageReference Include="ReactiveUI.Primitives.Async" />
   </ItemGroup>
 
   <ItemGroup>

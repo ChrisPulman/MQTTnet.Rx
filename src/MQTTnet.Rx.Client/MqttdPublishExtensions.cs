@@ -3,10 +3,19 @@
 // See the LICENSE file in the project root for full license information.
 
 using MQTTnet.Protocol;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
 using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides observable MQTT message publishing extensions.</summary>
 public static class MqttdPublishExtensions

@@ -5,8 +5,16 @@
 using System.Buffers;
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives;
+#endif
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -22,7 +30,7 @@ public sealed class MqttdPublishExtensionsTests
         const int PublishCompletionDelayMilliseconds = 100;
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act
         using var subscription = clientObservable
@@ -48,7 +56,7 @@ public sealed class MqttdPublishExtensionsTests
         const string Payload = "payload";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act
         using var subscription = clientObservable
@@ -75,7 +83,7 @@ public sealed class MqttdPublishExtensionsTests
         const string Payload = "payload";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act
         using var subscription = clientObservable
@@ -103,7 +111,7 @@ public sealed class MqttdPublishExtensionsTests
         const string SecondTopic = "topic2";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act
         using var subscription = clientObservable
@@ -129,7 +137,7 @@ public sealed class MqttdPublishExtensionsTests
         const string Topic = "topic";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act
         using var subscription = clientObservable
@@ -157,7 +165,7 @@ public sealed class MqttdPublishExtensionsTests
         const string Topic = "topic";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, byte[] Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, byte[] Payload)>();
         var binaryData = new byte[] { 0x01, 0x02, 0x03, 0x04 };
 
         // Act
@@ -188,7 +196,7 @@ public sealed class MqttdPublishExtensionsTests
         const string SecondTopic = "topic2";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
         var results = new List<MqttClientPublishResult>();
 
         // Act
@@ -218,7 +226,7 @@ public sealed class MqttdPublishExtensionsTests
         const string SecondTopic = "topic2";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act - only publish messages with non-empty payloads
         using var subscription = clientObservable
@@ -246,7 +254,7 @@ public sealed class MqttdPublishExtensionsTests
         var mockClient2 = new MockMqttClient();
         var clientObservable1 = Signal.Emit<IMqttClient>(mockClient1);
         var clientObservable2 = Signal.Emit<IMqttClient>(mockClient2);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act
         using var subscription1 = clientObservable1
@@ -276,7 +284,7 @@ public sealed class MqttdPublishExtensionsTests
         const string SecondTopic = "topic2";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act
         var subscription = clientObservable
@@ -306,7 +314,7 @@ public sealed class MqttdPublishExtensionsTests
         const string Payload = "payload";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act
         using var subscription = clientObservable
@@ -332,7 +340,7 @@ public sealed class MqttdPublishExtensionsTests
         const string Payload = "payload";
         var mockClient = new MockMqttClient();
         var clientObservable = Signal.Emit<IMqttClient>(mockClient);
-        using var messageSubject = new ReactiveUI.Primitives.Signals.Signal<(string Topic, string Payload)>();
+        using var messageSubject = new TestSignal<(string Topic, string Payload)>();
 
         // Act
         using var subscription = clientObservable

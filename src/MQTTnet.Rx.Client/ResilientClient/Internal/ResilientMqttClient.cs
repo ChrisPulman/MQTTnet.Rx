@@ -8,7 +8,11 @@ using MQTTnet.Internal;
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
+#else
 namespace MQTTnet.Rx.Client.ResilientClient.Internal;
+#endif
 
 /// <summary>Provides a resilient MQTT client with queued delivery and automatic reconnection.</summary>
 /// <remarks>The ResilientMqttClient is designed to handle transient network failures and broker disconnects by

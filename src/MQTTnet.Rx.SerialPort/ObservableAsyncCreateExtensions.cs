@@ -2,11 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.Serial;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Async;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.SerialPort.Reactive;
+#else
 namespace MQTTnet.Rx.SerialPort;
+#endif
 
 /// <summary>Provides asynchronous-observable MQTT and serial-port bridge operations.</summary>
 public static class ObservableAsyncCreateExtensions
@@ -35,7 +35,7 @@ public static class ObservableAsyncCreateExtensions
 
             return client.ToObservable()
                 .PublishSerialPort(topic, serialPort, startsWith.ToObservable(), endsWith.ToObservable(), timeOut)
-                .ToSignal();
+                .ToMqttAsyncSignal();
         }
 
         /// <summary>Writes matching MQTT payloads as serial-port lines.</summary>
@@ -105,7 +105,7 @@ public static class ObservableAsyncCreateExtensions
 
             return client.ToObservable()
                 .PublishSerialPort(topic, serialPort, startsWith.ToObservable(), endsWith.ToObservable(), timeOut)
-                .ToSignal();
+                .ToMqttAsyncSignal();
         }
 
         /// <summary>Writes matching MQTT payloads as serial-port lines.</summary>

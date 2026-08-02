@@ -4,7 +4,11 @@
 
 using MQTTnet.Packets;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides information about a failed resilient-client operation.</summary>
 /// <remarks>This event argument is typically used to notify subscribers about failures in a resilient process,

@@ -2,12 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using CP.Collections;
-using IoT.Driver.TwinCATRx;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Async;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.TwinCAT.Reactive;
+#else
 namespace MQTTnet.Rx.TwinCAT;
+#endif
 
 /// <summary>Provides asynchronous MQTT helpers for TwinCAT PLC variables.</summary>
 public static class ObservableAsyncCreateExtensions
@@ -34,7 +33,7 @@ public static class ObservableAsyncCreateExtensions
             ArgumentNullException.ThrowIfNull(plcVariable);
             ArgumentNullException.ThrowIfNull(plc);
 
-            return client.ToObservable().PublishTcPlcTag(topic, plcVariable, plc, typeWitness).ToSignal();
+            return client.ToObservable().PublishTcPlcTag(topic, plcVariable, plc, typeWitness).ToMqttAsyncSignal();
         }
 
         /// <summary>Publishes a TwinCAT hash-table value to an MQTT topic asynchronously.</summary>
@@ -55,7 +54,7 @@ public static class ObservableAsyncCreateExtensions
             ArgumentNullException.ThrowIfNull(plcVariable);
             ArgumentNullException.ThrowIfNull(plc);
 
-            return client.ToObservable().PublishTcPlcTag(topic, plcVariable, plc, typeWitness).ToSignal();
+            return client.ToObservable().PublishTcPlcTag(topic, plcVariable, plc, typeWitness).ToMqttAsyncSignal();
         }
 
         /// <summary>Subscribes to an MQTT topic and writes received values to a TwinCAT PLC variable.</summary>
@@ -104,7 +103,7 @@ public static class ObservableAsyncCreateExtensions
             ArgumentNullException.ThrowIfNull(plcVariable);
             ArgumentNullException.ThrowIfNull(plc);
 
-            return client.ToObservable().PublishTcPlcTag(topic, plcVariable, plc, typeWitness).ToSignal();
+            return client.ToObservable().PublishTcPlcTag(topic, plcVariable, plc, typeWitness).ToMqttAsyncSignal();
         }
 
         /// <summary>Publishes a TwinCAT hash-table value through a resilient MQTT client asynchronously.</summary>
@@ -125,7 +124,7 @@ public static class ObservableAsyncCreateExtensions
             ArgumentNullException.ThrowIfNull(plcVariable);
             ArgumentNullException.ThrowIfNull(plc);
 
-            return client.ToObservable().PublishTcPlcTag(topic, plcVariable, plc, typeWitness).ToSignal();
+            return client.ToObservable().PublishTcPlcTag(topic, plcVariable, plc, typeWitness).ToMqttAsyncSignal();
         }
 
         /// <summary>Subscribes to an MQTT topic and writes received values through a TwinCAT connection.</summary>

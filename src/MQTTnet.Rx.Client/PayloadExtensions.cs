@@ -4,9 +4,17 @@
 
 using System.Buffers;
 using System.Text;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
+#else
+using ReactiveUI.Primitives;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides MQTT application message payload helpers.</summary>
 public static class PayloadExtensions

@@ -3,9 +3,17 @@
 // See the LICENSE file in the project root for full license information.
 
 using MQTTnet.Diagnostics.Logger;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
+#else
 using MQTTnet.Rx.Client.ResilientClient.Internal;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Creates resilient MQTT clients around caller-owned MQTTnet clients.</summary>
 /// <remarks>

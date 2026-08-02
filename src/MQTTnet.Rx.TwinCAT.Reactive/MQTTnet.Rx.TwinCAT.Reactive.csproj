@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows10.0.17763;net9.0-windows10.0.17763</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <DefineConstants>$(DefineConstants);REACTIVE_SHIM</DefineConstants>
+    <PackageId>MQTTnet.TwinCATRx.Reactive</PackageId>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.TwinCAT\**\*.cs"
+             Exclude="..\MQTTnet.Rx.TwinCAT\bin\**;..\MQTTnet.Rx.TwinCAT\obj\**"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
+    <PackageReference Include="IoT-Driver.TwinCATRx.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MQTTnet.Rx.Client.Reactive\MQTTnet.Rx.Client.Reactive.csproj" />
+  </ItemGroup>
+
+</Project>

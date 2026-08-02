@@ -4,13 +4,30 @@
 
 #if TWINCAT_TESTS
 using System.Globalization;
+#if REACTIVE_SHIM
+using CP.Collections.Reactive;
+#else
 using CP.Collections;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.TwinCATRx.Reactive;
+#else
 using IoT.Driver.TwinCATRx;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.TwinCATRx.Core.Reactive;
+#else
 using IoT.Driver.TwinCATRx.Core;
+#endif
 using MQTTnet.Packets;
 using MQTTnet.Rx.Client.Tests.Helpers;
 using NSubstitute;
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
+using TwinCatCoreExtensions = IoT.Driver.TwinCATRx.Core.Reactive.TwinCatRxExtensions;
+#else
+using TwinCatCoreExtensions = IoT.Driver.TwinCATRx.Core.TwinCatRxExtensions;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -45,8 +62,8 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
             Port = TwinCat3Port,
             SettingsId = "mqtt-live-bridge",
         };
-        IoT.Driver.TwinCATRx.Core.TwinCatRxExtensions.AddNotification(settings, AdsVariable);
-        IoT.Driver.TwinCATRx.Core.TwinCatRxExtensions.AddWriteVariable(settings, AdsVariable);
+        TwinCatCoreExtensions.AddNotification(settings, AdsVariable);
+        TwinCatCoreExtensions.AddWriteVariable(settings, AdsVariable);
         _ = ads.RegisterSymbol(AdsVariable, 0);
         ads.Connect(settings);
         return ads;
@@ -67,7 +84,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
     /// <returns>The composed resilient test facade.</returns>
     private static IResilientMqttClient CreateLiveResilientClient(
         IMqttClient internalClient,
-        ReactiveUI.Primitives.Signals.Signal<ApplicationMessageProcessedEventArgs> processed)
+        TestSignal<ApplicationMessageProcessedEventArgs> processed)
     {
         var receivedAsync = internalClient.ObserveApplicationMessageReceived();
         var received = receivedAsync.ToObservable();
@@ -125,7 +142,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
     /// <returns>A task representing network publication and result emission.</returns>
     private static async Task PublishResilientMessageAsync(
         IMqttClient internalClient,
-        ReactiveUI.Primitives.Signals.Signal<ApplicationMessageProcessedEventArgs> processed,
+        TestSignal<ApplicationMessageProcessedEventArgs> processed,
         MqttApplicationMessage message)
     {
         var managed = new ResilientMqttApplicationMessage { ApplicationMessage = message };
@@ -139,7 +156,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
     /// <returns>A task representing network publication and result emission.</returns>
     private static async Task PublishResilientMessageAsync(
         IMqttClient internalClient,
-        ReactiveUI.Primitives.Signals.Signal<ApplicationMessageProcessedEventArgs> processed,
+        TestSignal<ApplicationMessageProcessedEventArgs> processed,
         ResilientMqttApplicationMessage managed)
     {
         Exception? failure = null;

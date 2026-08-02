@@ -2,10 +2,22 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using IoT.Driver.Serial.Reactive;
+#else
 using IoT.Driver.Serial;
+#endif
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
+using SerialAsyncCreate = MQTTnet.Rx.SerialPort.Reactive.ObservableAsyncCreateExtensions;
+#else
 using SerialAsyncCreate = MQTTnet.Rx.SerialPort.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using SerialCreate = MQTTnet.Rx.SerialPort.Reactive.Create;
+#else
 using SerialCreate = MQTTnet.Rx.SerialPort.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

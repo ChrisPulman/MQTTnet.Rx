@@ -4,11 +4,23 @@
 
 using System.Reflection;
 using IoT.Driver.Core;
+#if REACTIVE_SHIM
+using IoT.Driver.MitsubishiRx.Reactive;
+#else
 using IoT.Driver.MitsubishiRx;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Mitsubishi.Reactive;
+#else
 using MQTTnet.Rx.Mitsubishi;
+#endif
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
+using MitsubishiClient = IoT.Driver.MitsubishiRx.Reactive.MitsubishiRx;
+#else
 using MitsubishiClient = IoT.Driver.MitsubishiRx.MitsubishiRx;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -39,7 +51,7 @@ public class MitsubishiBridgeBranchTests
     /// <summary>Gets the closed internal observer type from the production assembly.</summary>
     private static readonly Type InternalObserverType =
         (typeof(MitsubishiMqttExtensions).Assembly
-            .GetType("MQTTnet.Rx.Mitsubishi.MitsubishiTagWriteObserver`1", throwOnError: true)
+            .GetType(TestTypeNames.MitsubishiTagWriteObserver, throwOnError: true)
             ?? throw new TypeLoadException("The Mitsubishi MQTT write observer type is unavailable."))
             .MakeGenericType(typeof(ushort));
 

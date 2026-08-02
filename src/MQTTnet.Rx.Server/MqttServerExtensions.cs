@@ -3,9 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 using MQTTnet.Server;
-using ReactiveUI.Primitives.Async;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Server.Reactive;
+#else
 namespace MQTTnet.Rx.Server;
+#endif
 
 /// <summary>Provides MQTT server event observable extensions.</summary>
 public static class MqttServerExtensions

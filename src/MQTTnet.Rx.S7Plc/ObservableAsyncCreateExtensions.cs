@@ -2,12 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.Core;
-using IoT.Driver.S7PlcRx;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Async;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.S7Plc.Reactive;
+#else
 namespace MQTTnet.Rx.S7Plc;
+#endif
 
 /// <summary>Provides asynchronous-observable MQTT bridges for typed S7 PLC tags.</summary>
 public static class ObservableAsyncCreateExtensions
@@ -32,7 +31,8 @@ public static class ObservableAsyncCreateExtensions
             ArgumentNullException.ThrowIfNull(tag);
             ArgumentNullException.ThrowIfNull(plc);
 
-            return client.ToObservable().PublishS7PlcTag(topic, tag, plc).ToSignal();
+            return ObservableSignalConversion.ToSignal(
+                client.ToObservable().PublishS7PlcTag(topic, tag, plc));
         }
 
         /// <summary>Writes converted MQTT payloads to an S7 tag.</summary>
@@ -80,7 +80,8 @@ public static class ObservableAsyncCreateExtensions
             ArgumentNullException.ThrowIfNull(tag);
             ArgumentNullException.ThrowIfNull(plc);
 
-            return client.ToObservable().PublishS7PlcTag(topic, tag, plc).ToSignal();
+            return ObservableSignalConversion.ToSignal(
+                client.ToObservable().PublishS7PlcTag(topic, tag, plc));
         }
 
         /// <summary>Writes converted MQTT payloads to an S7 tag.</summary>

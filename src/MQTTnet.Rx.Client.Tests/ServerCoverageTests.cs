@@ -6,11 +6,19 @@ using System.Buffers;
 using System.Text.Json;
 using MQTTnet.Packets;
 using MQTTnet.Protocol;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Server.Reactive;
+#else
 using MQTTnet.Rx.Server;
+#endif
 using MQTTnet.Server;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
+using ServerCreate = MQTTnet.Rx.Server.Reactive.Create;
+#else
 using ServerCreate = MQTTnet.Rx.Server.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -281,6 +289,14 @@ public class ServerCoverageTests
             var persistedSubscription = await SubscribeFirstAsync(persisted);
             await Assert.That(persistedSubscription.Value.Server.IsStarted).IsTrue();
             persistedSubscription.Subscription.Dispose();
+
+            await File.WriteAllTextAsync(storePath, "null");
+            var empty = ServerCreate.MqttServerWithRetainedMessages(
+                static builder => builder.WithoutDefaultEndpoint().Build(),
+                directory);
+            var emptySubscription = await SubscribeFirstAsync(empty);
+            await Assert.That(emptySubscription.Value.Server.IsStarted).IsTrue();
+            emptySubscription.Subscription.Dispose();
 
             File.Delete(storePath);
             var missing = ServerCreate.MqttServerWithRetainedMessages(

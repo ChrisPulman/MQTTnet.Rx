@@ -389,7 +389,7 @@ public class ResilientMqttClientCoverageTests
     private static IResilientMqttClient CreateClient(IMqttClient internalClient)
     {
         var resilientType = typeof(Create).Assembly.GetType(
-            "MQTTnet.Rx.Client.ResilientClient.Internal.ResilientMqttClient",
+            TestTypeNames.ResilientClient,
             throwOnError: true)
             ?? throw new InvalidOperationException("The resilient MQTT client type could not be resolved.");
         var factory = new MqttClientFactory();

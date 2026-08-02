@@ -3,9 +3,12 @@
 // See the LICENSE file in the project root for full license information.
 
 using MQTTnet.Server;
-using ReactiveUI.Primitives.Disposables;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Server.Reactive;
+#else
 namespace MQTTnet.Rx.Server;
+#endif
 
 /// <summary>Owns one subscription to a shared MQTT server and its associated resources.</summary>
 /// <remarks>

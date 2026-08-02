@@ -4,10 +4,17 @@
 
 using System.Buffers;
 using MQTTnet.Packets;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 using MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Signals;
+#else
+using ReactiveUI.Primitives;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -105,7 +112,7 @@ public sealed class MemoryEfficientCoverageTests
         using var poolSubscription = messages.ToUtf8StringLowAlloc(0).Subscribe(pooledText.Add);
         using var prefixSubscription = messages.WhereTopicStartsWith("sensors/").Subscribe(prefixed.Add);
         using var suffixSubscription = messages.WhereTopicEndsWith("status").Subscribe(suffixed.Add);
-        using var groupingSubscription = messages.GroupByTopic()
+        using var groupingSubscription = LowAllocExtensions.GroupByTopic(messages)
             .Select(static group => group.Key)
             .Subscribe(groups.Add);
         using var batchingSubscription = messages.BatchProcess(QueueCapacity, static batch => batch.Count)
@@ -134,7 +141,7 @@ public sealed class MemoryEfficientCoverageTests
     [Test]
     public async Task LowAllocExtensions_BackPressureDropAndQueueHandleReentrantMessagesAsync()
     {
-        using var dropSource = new Signal<MqttApplicationMessageReceivedEventArgs>();
+        using var dropSource = new TestSignal<MqttApplicationMessageReceivedEventArgs>();
         var first = CreateMessage(MatchingTopic, new(FirstPayload));
         var dropped = CreateMessage(OtherTopic, new("dropped"u8.ToArray()));
         List<MqttApplicationMessageReceivedEventArgs> delivered = [];
@@ -147,7 +154,7 @@ public sealed class MemoryEfficientCoverageTests
         });
         dropSource.OnNext(first);
 
-        using var queueSource = new Signal<MqttApplicationMessageReceivedEventArgs>();
+        using var queueSource = new TestSignal<MqttApplicationMessageReceivedEventArgs>();
         var queued = CreateMessage(MatchingTopic, new("queued"u8.ToArray()));
         var overflow = CreateMessage(OtherTopic, new("overflow"u8.ToArray()));
         List<MqttApplicationMessageReceivedEventArgs> queuedDelivered = [];
@@ -181,7 +188,7 @@ public sealed class MemoryEfficientCoverageTests
         var first = CreateMessage(MatchingTopic, new(FirstPayload));
         var second = CreateMessage(OtherTopic, CreateSequence(MultiPayloadFirstSegment, MultiPayloadFinalSegment));
         MqttApplicationMessageReceivedEventArgs[] messageItems = [first, second];
-        var source = messageItems.ToObservable().ToSignal();
+        var source = TestObservableBridge.ToSignal(messageItems.ToObservable());
         List<(byte[] Buffer, int Length, Action ReturnBuffer)> pooled = [];
         List<string> text = [];
         List<MqttApplicationMessageReceivedEventArgs> filtered = [];

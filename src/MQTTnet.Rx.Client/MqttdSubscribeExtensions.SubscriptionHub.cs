@@ -4,11 +4,24 @@
 
 using System.Runtime.InteropServices;
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
 using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+#endif
+#if REACTIVE_SHIM
+using MqttFactoryProvider = MQTTnet.Rx.Client.Reactive.Create;
+#else
 using MqttFactoryProvider = MQTTnet.Rx.Client.Create;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Contains shared subscription hub infrastructure for MQTT topic streams.</summary>
 public static partial class MqttdSubscribeExtensions

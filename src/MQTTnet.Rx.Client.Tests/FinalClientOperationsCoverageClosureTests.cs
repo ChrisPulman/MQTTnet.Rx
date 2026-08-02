@@ -6,8 +6,16 @@ using MQTTnet.Rx.Client.Tests.Helpers;
 using NSubstitute;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives;
+#endif
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -123,10 +131,11 @@ public sealed class FinalClientOperationsCoverageClosureTests
         using var client = new MockResilientMqttClient();
         var clients = Signal.Emit<IResilientMqttClient>(client);
         var processed = new List<ApplicationMessageProcessedEventArgs>();
+        byte[] payload = [1];
         using var subscriptions = new MultipleDisposable
         {
             clients.PublishMessage(Signal.Emit(("coverage/final/text", "payload"))).Subscribe(processed.Add),
-            clients.PublishMessage(Signal.Emit(("coverage/final/bytes", new byte[] { 1 }))).Subscribe(processed.Add),
+            clients.PublishMessage(Signal.Emit(("coverage/final/bytes", payload))).Subscribe(processed.Add),
         };
 
         await client.SimulateApplicationMessageProcessedAsync();

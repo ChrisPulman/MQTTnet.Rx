@@ -6,11 +6,19 @@ using MQTTnet.Packets;
 using MQTTnet.Protocol;
 using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
 using ReactiveUI.Primitives.Reactive.Signals;
-using RxUnit = System.Reactive.Unit;
+#else
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides reactive MQTT client operation extensions.</summary>
 /// <remarks>

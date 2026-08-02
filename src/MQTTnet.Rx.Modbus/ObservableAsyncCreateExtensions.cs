@@ -2,11 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.ModbusRx.Device;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Async;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Modbus.Reactive;
+#else
 namespace MQTTnet.Rx.Modbus;
+#endif
 
 /// <summary>Provides compatible static entry points for asynchronous Modbus MQTT sequences.</summary>
 /// <remarks>
@@ -35,7 +35,7 @@ public static class ObservableAsyncCreateExtensions
         Func<ModbusIpMaster> factory)
     {
         ArgumentNullException.ThrowIfNull(factory);
-        return Create.FromFactory(factory).ToSignal();
+        return Create.FromFactory(factory).ToMqttAsyncSignal();
     }
 
     /// <summary>Creates an asynchronous observable sequence from an existing master.</summary>
@@ -45,6 +45,6 @@ public static class ObservableAsyncCreateExtensions
         ModbusIpMaster master)
     {
         ArgumentNullException.ThrowIfNull(master);
-        return Create.FromMaster(master).ToSignal();
+        return Create.FromMaster(master).ToMqttAsyncSignal();
     }
 }

@@ -3,13 +3,35 @@
 // See the LICENSE file in the project root for full license information.
 
 #if TWINCAT_TESTS
+#if !REACTIVE_SHIM
 using CP.Collections;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.TwinCATRx.Reactive;
+#else
 using IoT.Driver.TwinCATRx;
+#endif
+#if REACTIVE_SHIM
+using MQTTnet.Rx.TwinCAT.Reactive;
+#else
 using MQTTnet.Rx.TwinCAT;
+#endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using TwinCatAsync = MQTTnet.Rx.TwinCAT.Reactive.ObservableAsyncCreateExtensions;
+#else
 using TwinCatAsync = MQTTnet.Rx.TwinCAT.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using TwinCatCreate = MQTTnet.Rx.TwinCAT.Reactive.Create;
+#else
 using TwinCatCreate = MQTTnet.Rx.TwinCAT.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

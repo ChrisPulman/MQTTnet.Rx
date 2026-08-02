@@ -4,11 +4,23 @@
 
 using System.Net;
 using IoT.Driver.Core;
+#if REACTIVE_SHIM
+using IoT.Driver.S7PlcRx.Reactive;
+#else
 using IoT.Driver.S7PlcRx;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.S7PlcRx.Reactive.Enums;
+#else
 using IoT.Driver.S7PlcRx.Enums;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Advanced;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -190,7 +202,7 @@ public sealed partial class S7PlcLiveBridgeTests
         /// <returns>A connected, owned resilient source.</returns>
         internal static async Task<LiveResilientSource> StartAsync(LiveMqttBroker broker)
         {
-            var source = MQTTnet.Rx.Client.Create.ResilientMqttClient();
+            var source = TestClientCreate.ResilientMqttClient();
             IResilientMqttClient? client = null;
             var owner = source.Subscribe(Witness.Create<IResilientMqttClient>(value => client = value));
             var options = new ResilientMqttClientOptionsBuilder()

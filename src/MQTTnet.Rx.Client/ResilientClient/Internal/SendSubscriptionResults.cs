@@ -2,7 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
+#else
 namespace MQTTnet.Rx.Client.ResilientClient.Internal;
+#endif
 
 /// <summary>Represents the results of subscribe and unsubscribe operations for an MQTT client.</summary>
 /// <param name="subscribeResults">A list of results for each subscribe operation performed. Cannot be null.</param>

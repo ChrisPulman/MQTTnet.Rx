@@ -7,8 +7,16 @@ using System.Text.Json;
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Disposables;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Reactive.Signals;
+#else
+using ReactiveUI.Primitives;
+#endif
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -175,7 +183,7 @@ public sealed class MqttdExtensionsCoverageTests
         const string nestedJson =
             "{\"text\":\"value\",\"integer\":2,\"decimal\":2.5,\"enabled\":true,\"disabled\":false,"
             + "\"empty\":null,\"array\":[1],\"object\":{\"child\":\"value\"}}";
-        using var dictionaries = new ReactiveUI.Primitives.Signals.Signal<Dictionary<string, object>>();
+        using var dictionaries = new TestSignal<Dictionary<string, object>>();
         var observedValues = new List<object?>();
         var dictionariesResult = new List<Dictionary<string, object?>?>();
         var typedResult = new List<CoveragePayload?>();

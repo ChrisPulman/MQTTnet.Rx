@@ -31,7 +31,7 @@ public sealed class BridgePayloadFinalClosureTests
     [Test]
     public async Task ToSignal_CanceledSubscriptionDoesNotAttachSourceAsync()
     {
-        using ReactiveUI.Primitives.Signals.Signal<int> source = new();
+        using TestSignal<int> source = new();
         using var cancellation = new CancellationTokenSource();
         await cancellation.CancelAsync();
         var delivered = false;

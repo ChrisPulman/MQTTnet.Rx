@@ -2,12 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.Core;
-using IoT.Driver.OmronPlcRx;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Async;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.OmronPlc.Reactive;
+#else
 namespace MQTTnet.Rx.OmronPlc;
+#endif
 
 /// <summary>Provides asynchronous-observable MQTT helpers for typed Omron PLC tags.</summary>
 public static class ObservableAsyncCreateExtensions
@@ -31,9 +30,8 @@ public static class ObservableAsyncCreateExtensions
         {
             ArgumentNullException.ThrowIfNull(client);
 
-            return client.ToObservable()
-                .PublishOmronPlcTag(topic, tag, plc)
-                .ToSignal();
+            return ObservableSignalConversion.ToSignal(
+                client.ToObservable().PublishOmronPlcTag(topic, tag, plc));
         }
 
         /// <summary>Writes MQTT payloads to a typed Omron PLC tag.</summary>
@@ -78,9 +76,8 @@ public static class ObservableAsyncCreateExtensions
         {
             ArgumentNullException.ThrowIfNull(client);
 
-            return client.ToObservable()
-                .PublishOmronPlcTag(topic, tag, plc)
-                .ToSignal();
+            return ObservableSignalConversion.ToSignal(
+                client.ToObservable().PublishOmronPlcTag(topic, tag, plc));
         }
 
         /// <summary>Writes MQTT payloads to a typed Omron PLC tag.</summary>

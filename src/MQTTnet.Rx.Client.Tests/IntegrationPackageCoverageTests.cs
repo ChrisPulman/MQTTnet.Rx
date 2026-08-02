@@ -2,13 +2,37 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Client.Reactive;
+#else
 using MQTTnet.Rx.Client;
+#endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
+#if REACTIVE_SHIM
+using AbAsyncCreate = MQTTnet.Rx.ABPlc.Reactive.ObservableAsyncCreateExtensions;
+#else
 using AbAsyncCreate = MQTTnet.Rx.ABPlc.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using AbCreate = MQTTnet.Rx.ABPlc.Reactive.Create;
+#else
 using AbCreate = MQTTnet.Rx.ABPlc.Create;
+#endif
+#if REACTIVE_SHIM
+using SerialAsyncCreate = MQTTnet.Rx.SerialPort.Reactive.ObservableAsyncCreateExtensions;
+#else
 using SerialAsyncCreate = MQTTnet.Rx.SerialPort.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using SerialCreate = MQTTnet.Rx.SerialPort.Reactive.Create;
+#else
 using SerialCreate = MQTTnet.Rx.SerialPort.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

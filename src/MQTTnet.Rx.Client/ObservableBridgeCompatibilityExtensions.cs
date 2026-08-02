@@ -7,7 +7,11 @@ using ReactiveUI.Primitives.Async;
 using ReactiveUI.Primitives.Async.Disposables;
 using PrimitivesResult = ReactiveUI.Primitives.Result;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides System.Reactive bridges removed from the replacement asynchronous package.</summary>
 public static class ObservableBridgeCompatibilityExtensions

@@ -6,7 +6,11 @@ using System.Reflection;
 using MQTTnet.Rx.Client.Tests.Helpers;
 using NSubstitute;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -195,7 +199,7 @@ public sealed class FinalClientCreateCoverageClosureTests
     private static IObservable<T> InvokeRetryForever<T>(IObservable<T> source)
     {
         var factoryType = typeof(Create).Assembly.GetType(
-            "MQTTnet.Rx.Client.CreateObservable",
+            TestTypeNames.CreateObservable,
             throwOnError: true) ?? throw new InvalidOperationException("The observable factory type was not found.");
         var factoryMethod = factoryType.GetMethod(
                 "RetryForever",

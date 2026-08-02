@@ -2,7 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
+#else
 namespace MQTTnet.Rx.Client.ResilientClient.Internal;
+#endif
 
 /// <summary>Builds a resilient MQTT application message.</summary>
 /// <remarks>This builder enables the step-by-step construction of a resilient MQTT application message by

@@ -2,13 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Reactive;
-using ReactiveUI.Primitives.Reactive.Signals;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Server.Reactive;
+#else
 namespace MQTTnet.Rx.Server;
+#endif
 
 /// <summary>Creates observable projections for asynchronous events.</summary>
 internal static class CreateObservable
@@ -21,11 +19,11 @@ internal static class CreateObservable
     internal static IObservable<T> FromAsyncEvent<T>(
         Action<Func<T, Task>> addHandler,
         Action<Func<T, Task>> removeHandler) =>
-        Signal.Create<T>(observer =>
+        SignalFactory.Create<T>(observer =>
             {
                 Task Delegate(T args)
                 {
-                    observer.OnNext(args);
+                    new Action<T>(observer.OnNext)(args);
                     return Task.CompletedTask;
                 }
 

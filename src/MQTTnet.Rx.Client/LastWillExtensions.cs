@@ -6,7 +6,11 @@ using System.Text;
 using System.Text.Json;
 using MQTTnet.Protocol;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides extension methods for configuring MQTT Last Will and Testament (LWT) messages.</summary>
 /// <remarks>

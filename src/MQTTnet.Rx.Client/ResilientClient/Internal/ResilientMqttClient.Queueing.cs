@@ -6,7 +6,11 @@ using MQTTnet.Diagnostics.Logger;
 using MQTTnet.Exceptions;
 using MQTTnet.Protocol;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
+#else
 namespace MQTTnet.Rx.Client.ResilientClient.Internal;
+#endif
 
 /// <summary>Contains queued-message operations of the resilient MQTT client.</summary>
 internal sealed partial class ResilientMqttClient

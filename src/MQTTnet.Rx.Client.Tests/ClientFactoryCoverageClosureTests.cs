@@ -4,7 +4,11 @@
 
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Reactive.Signals;
+#if REACTIVE_SHIM
+using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
+#else
+using Signal = ReactiveUI.Primitives.Signals.Signal;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -80,10 +84,7 @@ public sealed class ClientFactoryCoverageClosureTests
         await Assert.That(asynchronousClient.IsConnected).IsTrue();
     }
 
-    /// <summary>
-    /// Verifies that resilient client option wrappers start an unstarted client for both observable
-    /// variants.
-    /// </summary>
+    /// <summary>Verifies that resilient client option wrappers start an unstarted client for both observable variants.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
     [Test]
     public async Task ResilientOptionWrappers_StartUnstartedClientsAsync()
@@ -130,8 +131,8 @@ public sealed class ClientFactoryCoverageClosureTests
     {
         var raw = Create.MqttClient();
         var resilient = Create.ResilientMqttClient();
-        IDisposable rawFirst = System.ObservableExtensions.Subscribe(raw, static _ => { });
-        IDisposable rawSecond = System.ObservableExtensions.Subscribe(raw, static _ => { });
+        IDisposable rawFirst = TestObservableExtensions.Subscribe(raw, static _ => { });
+        IDisposable rawSecond = TestObservableExtensions.Subscribe(raw, static _ => { });
         IDisposable resilientFirst = resilient.Subscribe(static _ => { });
         IDisposable resilientSecond = resilient.Subscribe(static _ => { });
 

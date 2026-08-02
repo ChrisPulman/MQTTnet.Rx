@@ -2,13 +2,11 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using IoT.Driver.Core;
-using IoT.Driver.S7PlcRx;
-using MQTTnet.Rx.Client;
-using ReactiveUI.Primitives.Advanced;
-using ReactiveUI.Primitives.Reactive;
-
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.S7Plc.Reactive;
+#else
 namespace MQTTnet.Rx.S7Plc;
+#endif
 
 /// <summary>Provides reactive MQTT bridges for typed S7 PLC tags.</summary>
 /// <remarks>
@@ -62,7 +60,7 @@ public static class S7PlcExtensions
             ArgumentNullException.ThrowIfNull(payloadFactory);
 
             return client.SubscribeToTopic(topic).Subscribe(
-                Witness.Create<MqttApplicationMessageReceivedEventArgs>(
+                ObserverFactory.Create<MqttApplicationMessageReceivedEventArgs>(
                     message => plc.Value(
                         tag.Name,
                         payloadFactory(message.ApplicationMessage.ConvertPayloadToString()))));
@@ -114,7 +112,7 @@ public static class S7PlcExtensions
             ArgumentNullException.ThrowIfNull(payloadFactory);
 
             return client.SubscribeToTopic(topic).Subscribe(
-                Witness.Create<MqttApplicationMessageReceivedEventArgs>(
+                ObserverFactory.Create<MqttApplicationMessageReceivedEventArgs>(
                     message => plc.Value(
                         tag.Name,
                         payloadFactory(message.ApplicationMessage.ConvertPayloadToString()))));

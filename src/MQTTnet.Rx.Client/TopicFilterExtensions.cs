@@ -2,11 +2,21 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive;
 using ReactiveUI.Primitives.Reactive.Signals;
 using RxLinq = System.Reactive.Linq;
+#else
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
+using RxLinq = MQTTnet.Rx.Client.Linq;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive;
+#else
 namespace MQTTnet.Rx.Client;
+#endif
 
 /// <summary>Provides MQTT topic-filtering extensions.</summary>
 public static class TopicFilterExtensions

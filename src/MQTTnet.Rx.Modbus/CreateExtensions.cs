@@ -4,7 +4,11 @@
 
 using System.Globalization;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Modbus.Reactive;
+#else
 namespace MQTTnet.Rx.Modbus;
+#endif
 
 /// <summary>Provides reactive MQTT extensions for Modbus reads and writes.</summary>
 public static partial class CreateExtensions

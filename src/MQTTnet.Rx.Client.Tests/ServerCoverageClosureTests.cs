@@ -4,9 +4,17 @@
 
 using System.Net;
 using System.Net.Sockets;
+#if REACTIVE_SHIM
+using MQTTnet.Rx.Server.Reactive;
+#else
 using MQTTnet.Rx.Server;
+#endif
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
+using ServerCreate = MQTTnet.Rx.Server.Reactive.Create;
+#else
 using ServerCreate = MQTTnet.Rx.Server.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

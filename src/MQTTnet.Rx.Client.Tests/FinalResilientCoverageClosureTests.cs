@@ -14,8 +14,7 @@ namespace MQTTnet.Rx.Client.Tests;
 public sealed class FinalResilientCoverageClosureTests
 {
     /// <summary>The internal resilient-client type name.</summary>
-    private const string ResilientClientTypeName =
-        "MQTTnet.Rx.Client.ResilientClient.Internal.ResilientMqttClient";
+    private const string ResilientClientTypeName = TestTypeNames.ResilientClient;
 
     /// <summary>The internal connection-maintenance method name.</summary>
     private const string MaintainConnectionMethodName = "MaintainConnectionAsync";

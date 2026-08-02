@@ -5,13 +5,29 @@
 using System.Net;
 using System.Text;
 using IoT.Driver.Core;
+#if REACTIVE_SHIM
+using IoT.Driver.OmronPlcRx.Reactive;
+#else
 using IoT.Driver.OmronPlcRx;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.OmronPlcRx.Reactive.Tags;
+#else
 using IoT.Driver.OmronPlcRx.Tags;
+#endif
 using MQTTnet.Protocol;
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
+using OmronAsyncCreate = MQTTnet.Rx.OmronPlc.Reactive.ObservableAsyncCreateExtensions;
+#else
 using OmronAsyncCreate = MQTTnet.Rx.OmronPlc.ObservableAsyncCreateExtensions;
+#endif
+#if REACTIVE_SHIM
+using OmronCreate = MQTTnet.Rx.OmronPlc.Reactive.OmronPlcCreateExtensions;
+#else
 using OmronCreate = MQTTnet.Rx.OmronPlc.OmronPlcCreateExtensions;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 
@@ -47,12 +63,14 @@ public sealed class OmronPlcLiveBridgeTests
         var writeTag = new PlcTag<int>("RawSyncWritten", "D101");
         var writeKey = new LogicalTagKey<int>(writeTag.TagName);
         simulator.Seed(writeTag, 0);
-        using var bridgeSubscription = OmronCreate.SubscribeOmronPlcTag(
-            broker.Bridge,
+        using var bridgeSubscription = await broker.SubscribeWhenReadyAsync(
             subscribeTopic,
-            writeKey,
-            simulator,
-            static payload => int.Parse(payload, System.Globalization.CultureInfo.InvariantCulture));
+            () => OmronCreate.SubscribeOmronPlcTag(
+                broker.Bridge,
+                subscribeTopic,
+                writeKey,
+                simulator,
+                static payload => int.Parse(payload, System.Globalization.CultureInfo.InvariantCulture)));
         var observedWrite = await WaitForSimulatorValueAsync(
             simulator,
             writeKey,
@@ -97,12 +115,14 @@ public sealed class OmronPlcLiveBridgeTests
         var writeTag = new PlcTag<int>("RawAsyncWritten", "D111");
         var writeKey = new LogicalTagKey<int>(writeTag.TagName);
         simulator.Seed(writeTag, 0);
-        using var bridgeSubscription = OmronAsyncCreate.SubscribeOmronPlcTag(
-            clients,
+        using var bridgeSubscription = await broker.SubscribeWhenReadyAsync(
             subscribeTopic,
-            writeKey,
-            simulator,
-            static payload => int.Parse(payload, System.Globalization.CultureInfo.InvariantCulture));
+            () => OmronAsyncCreate.SubscribeOmronPlcTag(
+                clients,
+                subscribeTopic,
+                writeKey,
+                simulator,
+                static payload => int.Parse(payload, System.Globalization.CultureInfo.InvariantCulture)));
         var observedWrite = await WaitForSimulatorValueAsync(
             simulator,
             writeKey,
@@ -154,12 +174,14 @@ public sealed class OmronPlcLiveBridgeTests
         var writeTag = new PlcTag<short>("ResilientSyncWritten", "D121");
         var writeKey = new LogicalTagKey<short>(writeTag.TagName);
         simulator.Seed(writeTag, (short)0);
-        using var bridgeSubscription = OmronCreate.SubscribeOmronPlcTag(
-            clients,
+        using var bridgeSubscription = await broker.SubscribeWhenReadyAsync(
             subscribeTopic,
-            writeKey,
-            simulator,
-            static payload => short.Parse(payload, System.Globalization.CultureInfo.InvariantCulture));
+            () => OmronCreate.SubscribeOmronPlcTag(
+                clients,
+                subscribeTopic,
+                writeKey,
+                simulator,
+                static payload => short.Parse(payload, System.Globalization.CultureInfo.InvariantCulture)));
         var observedWrite = await WaitForSimulatorValueAsync(
             simulator,
             writeKey,
@@ -211,12 +233,14 @@ public sealed class OmronPlcLiveBridgeTests
         var writeTag = new PlcTag<long>("ResilientAsyncWritten", "D131");
         var writeKey = new LogicalTagKey<long>(writeTag.TagName);
         simulator.Seed(writeTag, 0L);
-        using var bridgeSubscription = OmronAsyncCreate.SubscribeOmronPlcTag(
-            clients,
+        using var bridgeSubscription = await broker.SubscribeWhenReadyAsync(
             subscribeTopic,
-            writeKey,
-            simulator,
-            static payload => long.Parse(payload, System.Globalization.CultureInfo.InvariantCulture));
+            () => OmronAsyncCreate.SubscribeOmronPlcTag(
+                clients,
+                subscribeTopic,
+                writeKey,
+                simulator,
+                static payload => long.Parse(payload, System.Globalization.CultureInfo.InvariantCulture)));
         var observedWrite = await WaitForSimulatorValueAsync(
             simulator,
             writeKey,

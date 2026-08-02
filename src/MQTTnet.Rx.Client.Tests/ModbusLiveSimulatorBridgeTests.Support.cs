@@ -3,11 +3,23 @@
 // See the LICENSE file in the project root for full license information.
 
 using System.Net;
+#if REACTIVE_SHIM
+using IoT.Driver.ModbusRx.Reactive.Data;
+#else
 using IoT.Driver.ModbusRx.Data;
+#endif
+#if REACTIVE_SHIM
+using IoT.Driver.ModbusRx.Reactive.Device;
+#else
 using IoT.Driver.ModbusRx.Device;
+#endif
 using MQTTnet.Rx.Client.Tests.Helpers;
 using ReactiveUI.Primitives.Advanced;
+#if REACTIVE_SHIM
+using ClientCreate = MQTTnet.Rx.Client.Reactive.Create;
+#else
 using ClientCreate = MQTTnet.Rx.Client.Create;
+#endif
 
 namespace MQTTnet.Rx.Client.Tests;
 

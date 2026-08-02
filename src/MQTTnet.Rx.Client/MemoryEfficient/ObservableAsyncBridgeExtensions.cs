@@ -3,11 +3,18 @@
 // See the LICENSE file in the project root for full license information.
 
 using ReactiveUI.Primitives.Async;
+#if REACTIVE_SHIM
 using ReactiveUI.Primitives.Async.Reactive;
-using IScheduler = System.Reactive.Concurrency.IScheduler;
 using RxLinq = System.Reactive.Linq;
+#else
+using RxLinq = MQTTnet.Rx.Client.Linq;
+#endif
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive.MemoryEfficient;
+#else
 namespace MQTTnet.Rx.Client.MemoryEfficient;
+#endif
 
     /// <summary>Provides asynchronous observable counterparts for the low-allocation MQTT helpers.</summary>
 public static class ObservableAsyncBridgeExtensions

@@ -4,7 +4,11 @@
 
 #if TWINCAT_TESTS
 using System.Reflection;
+#if REACTIVE_SHIM
+using TwinCatCreateExtensions = MQTTnet.Rx.TwinCAT.Reactive.CreateExtensions;
+#else
 using TwinCatCreateExtensions = MQTTnet.Rx.TwinCAT.CreateExtensions;
+#endif
 namespace MQTTnet.Rx.Client.Tests;
 
 /// <summary>Closes conversion and null-guard coverage for the TwinCAT bridge.</summary>

@@ -4,7 +4,11 @@
 
 using MQTTnet.Internal;
 
+#if REACTIVE_SHIM
+namespace MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
+#else
 namespace MQTTnet.Rx.Client.ResilientClient.Internal;
+#endif
 
 /// <summary>Coordinates in-memory and persistent queued-message storage.</summary>
 /// <remarks>This class coordinates in-memory and persistent storage of outgoing MQTT messages to support reliable
