@@ -6,7 +6,7 @@
   <ItemGroup>
     <PackageVersion Include="ConsoleMenu-simple" Version="2.7.0" />
     <PackageVersion Include="CP.Nuke.BuildTools" Version="3.0.2" />
-    <PackageVersion Include="IoT-Driver.ABPlcRx" Version="1.0.1" />
+    <PackageVersion Include="IoT-Driver.ABPlcRx" Version="1.0.2" />
     <PackageVersion Include="IoT-Driver.ABPlcRx.Reactive" Version="1.0.1" />
     <PackageVersion Include="IoT-Driver.MitsubishiRx" Version="1.0.1" />
     <PackageVersion Include="IoT-Driver.MitsubishiRx.Reactive" Version="1.0.1" />
