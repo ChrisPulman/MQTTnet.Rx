@@ -29,7 +29,7 @@
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <PackageVersion Include="Nuke.Common" Version="10.1.0" />
     <PackageVersion Include="MinVer" Version="7.0.0" />
-    <PackageVersion Include="PerformanceSharp.Analyzers" Version="3.40.1" />
+    <PackageVersion Include="PerformanceSharp.Analyzers" Version="3.40.2" />
     <PackageVersion Include="ReactiveUI.Primitives" Version="7.1.0" />
     <PackageVersion Include="ReactiveUI.Primitives.Async" Version="7.1.0" />
     <PackageVersion Include="ReactiveUI.Primitives.Async.Reactive" Version="7.1.0" />
