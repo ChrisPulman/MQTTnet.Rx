@@ -41,8 +41,8 @@ public sealed class ClientFactoryCoverageClosureTests
         var disconnectedAsync = await client.ObserveDisconnected().SubscribeAsync(
             static (_, _) => ValueTask.CompletedTask,
             CancellationToken.None);
-        using var inspection = client.InspectPackage().Subscribe(static _ => { });
-        var inspectionAsync = await client.ObserveInspectPackage().SubscribeAsync(
+        using var inspection = client.InspectPacket().Subscribe(static _ => { });
+        var inspectionAsync = await client.ObserveInspectPacket().SubscribeAsync(
             static (_, _) => ValueTask.CompletedTask,
             CancellationToken.None);
 

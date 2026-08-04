@@ -98,6 +98,7 @@ public class ServerCoverageTests
     {
         using var server = CreateServer();
 
+        SubscribeAndDispose(server.ApplicationMessageEnqueuedOrDropped());
         SubscribeAndDispose(server.ApplicationMessageNotConsumed());
         SubscribeAndDispose(server.ClientAcknowledgedPublishPacket());
         SubscribeAndDispose(server.ClientConnected());
@@ -112,6 +113,7 @@ public class ServerCoverageTests
         SubscribeAndDispose(server.InterceptingUnsubscription());
         SubscribeAndDispose(server.LoadingRetainedMessage());
         SubscribeAndDispose(server.PreparingSession());
+        SubscribeAndDispose(server.QueuedApplicationMessageOverwritten());
         SubscribeAndDispose(server.RetainedMessageChanged());
         SubscribeAndDispose(server.RetainedMessagesCleared());
         SubscribeAndDispose(server.SessionDeleted());
@@ -129,6 +131,7 @@ public class ServerCoverageTests
     {
         using var server = CreateServer();
 
+        await SubscribeAndDisposeAsync(server.ObserveApplicationMessageEnqueuedOrDropped());
         await SubscribeAndDisposeAsync(server.ObserveApplicationMessageNotConsumed());
         await SubscribeAndDisposeAsync(server.ObserveClientAcknowledgedPublishPacket());
         await SubscribeAndDisposeAsync(server.ObserveClientConnected());
@@ -143,6 +146,7 @@ public class ServerCoverageTests
         await SubscribeAndDisposeAsync(server.ObserveInterceptingUnsubscription());
         await SubscribeAndDisposeAsync(server.ObserveLoadingRetainedMessage());
         await SubscribeAndDisposeAsync(server.ObservePreparingSession());
+        await SubscribeAndDisposeAsync(server.ObserveQueuedApplicationMessageOverwritten());
         await SubscribeAndDisposeAsync(server.ObserveRetainedMessageChanged());
         await SubscribeAndDisposeAsync(server.ObserveRetainedMessagesCleared());
         await SubscribeAndDisposeAsync(server.ObserveSessionDeleted());

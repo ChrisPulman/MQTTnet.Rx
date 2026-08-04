@@ -28,5 +28,6 @@
     <Using Include="ReactiveUI.Primitives.Reactive" />
     <Using Include="ReactiveUI.Primitives.Reactive.Signals" />
     <Using Include="ReactiveUI.Primitives.Reactive.Signals.Signal" Alias="SignalFactory" />
+    <Using Include="System.Reactive.Unit" Alias="RxVoid" />
   </ItemGroup>
 </Project>

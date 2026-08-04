@@ -19,5 +19,6 @@
     <Using Include="ReactiveUI.Primitives.Disposables" />
     <Using Include="ReactiveUI.Primitives.Signals" />
     <Using Include="ReactiveUI.Primitives.Signals.Signal" Alias="SignalFactory" />
+    <Using Include="ReactiveUI.Primitives.RxVoid" Alias="RxVoid" />
   </ItemGroup>
 </Project>

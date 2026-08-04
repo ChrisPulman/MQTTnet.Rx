@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MQTTnet.Rx.ABPlc\MQTTnet.Rx.ABPlc.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.AspNetCore\MQTTnet.Rx.AspNetCore.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Mitsubishi\MQTTnet.Rx.Mitsubishi.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Modbus\MQTTnet.Rx.Modbus.csproj" />
