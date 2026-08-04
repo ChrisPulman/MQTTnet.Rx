@@ -241,13 +241,15 @@ jobs:
         shell: bash
         env:
           EXPECTED_VERSION: ${{ steps.release-version.outputs.version }}
-          MINVER_SEMVER2: ${{ steps.minver.outputs.SemVer2 }}
-          MINVER_PACKAGE_VERSION: ${{ steps.minver.outputs.NuGetPackageVersion }}
+          # The MinVer action exports mixed-case MINVER_* names. Use a distinct
+          # prefix because Windows environment keys are case-insensitive while bash is not.
+          RELEASE_SEMVER2: ${{ steps.minver.outputs.SemVer2 }}
+          RELEASE_PACKAGE_VERSION: ${{ steps.minver.outputs.NuGetPackageVersion }}
         run: |
           set -euo pipefail
 
-          if [ "$MINVER_SEMVER2" != "$EXPECTED_VERSION" ] || [ "$MINVER_PACKAGE_VERSION" != "$EXPECTED_VERSION" ]; then
-            echo "::error::Release resolver selected ${EXPECTED_VERSION}, but MinVer returned SemVer2=${MINVER_SEMVER2} and NuGetPackageVersion=${MINVER_PACKAGE_VERSION}."
+          if [ "$RELEASE_SEMVER2" != "$EXPECTED_VERSION" ] || [ "$RELEASE_PACKAGE_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::Release resolver selected ${EXPECTED_VERSION}, but MinVer returned SemVer2=${RELEASE_SEMVER2} and NuGetPackageVersion=${RELEASE_PACKAGE_VERSION}."
             exit 1
           fi
 
