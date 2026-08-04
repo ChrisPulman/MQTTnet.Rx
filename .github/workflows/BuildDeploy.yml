@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: 'Release level'
+        description: 'SemVer level to increment from the latest RTM tag or MinVer floor'
         required: true
         type: choice
         options:
@@ -33,6 +33,10 @@ permissions:
   contents: write
   id-token: write
   packages: read
+
+concurrency:
+  group: builddeploy-release
+  cancel-in-progress: false
 
 env:
   configuration: Release
@@ -91,18 +95,29 @@ jobs:
               ;;
           esac
 
+          if ! [[ "$MINIMUM_MAJOR_MINOR" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::minMajorMinorVersion must use Major.Minor format (got '$MINIMUM_MAJOR_MINOR')."
+            exit 1
+          fi
+
           FLOOR="${MINIMUM_MAJOR_MINOR}.0"
           LAST="$(
-            git tag --list "${TAG_PREFIX}[0-9]*.[0-9]*.[0-9]*" \
-              | grep -Ev -- '-' \
+            git tag --merged HEAD --list "${TAG_PREFIX}*" \
+              | sed -nE "s/^${TAG_PREFIX}([0-9]+)\.([0-9]+)\.([0-9]+)$/\1.\2.\3/p" \
               | sort -V \
-              | tail -1 \
-              | sed "s/^${TAG_PREFIX}//" || true
+              | tail -1 || true
           )"
 
-          BASELINE="${LAST:-0.0.0}"
+          # MinVerMinimumMajorMinor is the initial version baseline, not a
+          # post-increment clamp. Apply it before the requested SemVer bump.
+          BASELINE="$FLOOR"
           if [ -z "$LAST" ]; then
-            echo "No RTM tag (${TAG_PREFIX}X.Y.Z) found; the next version will be clamped to the MinVer floor ${FLOOR}."
+            echo "No reachable RTM tag (${TAG_PREFIX}X.Y.Z) found; using the MinVer floor ${TAG_PREFIX}${FLOOR} as the release baseline."
+          else
+            BASELINE="$(printf '%s\n%s\n' "$FLOOR" "$LAST" | sort -V | tail -1)"
+            if [ "$BASELINE" != "$LAST" ]; then
+              echo "Latest reachable RTM tag ${TAG_PREFIX}${LAST} is below the MinVer floor; using ${TAG_PREFIX}${FLOOR} as the release baseline."
+            fi
           fi
 
           IFS=. read -r MAJOR MINOR PATCH <<< "$BASELINE"
@@ -111,8 +126,6 @@ jobs:
             minor) CORE="${MAJOR}.$((MINOR + 1)).0" ;;
             patch) CORE="${MAJOR}.${MINOR}.$((PATCH + 1))" ;;
           esac
-
-          CORE="$(printf '%s\n%s\n' "$FLOOR" "$CORE" | sort -V | tail -1)"
 
           if [ -n "$PRE_RELEASE_ID" ]; then
             MAXN=0
@@ -150,10 +163,15 @@ jobs:
             echo "prerelease=${PRERELEASE}"
           } >> "$GITHUB_OUTPUT"
 
-          {
-            echo "MINVERVERSIONOVERRIDE=${VERSION}"
-            echo "MinVerVersionOverride=${VERSION}"
-          } >> "$GITHUB_ENV"
+      - name: Stage local release tag for MinVer
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.release-version.outputs.tag }}
+          SOURCE_SHA: ${{ steps.sourcesha.outputs.sha }}
+        run: |
+          set -euo pipefail
+          git tag "$RELEASE_TAG" "$SOURCE_SHA"
+          echo "Staged local tag ${RELEASE_TAG} at ${SOURCE_SHA} for MinVer validation."
 
       - name: Resolve release tag
         id: tagname
@@ -167,12 +185,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
-            10.0.x
-            11.0.x
-          dotnet-quality: 'preview'
+          global-json-file: global.json
           cache: true
           cache-dependency-path: |
             **/Directory.Packages.props
@@ -188,15 +201,57 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nugetv3-
 
+      - name: Validate release tag with pinned MinVer
+        id: minver-validate
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ steps.release-version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          dotnet restore src/MQTTnet.Rx.Client/MQTTnet.Rx.Client.csproj
+          MINVER_VERSION="$(
+            dotnet msbuild src/MQTTnet.Rx.Client/MQTTnet.Rx.Client.csproj \
+              -target:MinVer \
+              -getProperty:MinVerVersion \
+              -verbosity:quiet \
+              | tr -d '\r' \
+              | tail -1
+          )"
+
+          if [ "$MINVER_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::Release resolver selected ${EXPECTED_VERSION}, but the repository-pinned MinVer package resolved ${MINVER_VERSION}."
+            exit 1
+          fi
+
+          echo "version=${MINVER_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Pinned MinVer validated local release tag v${MINVER_VERSION}."
+
       - name: Stamp version with MinVer
         id: minver
         uses: reactiveui/actions-common/.github/actions/minver@328a9bc8c0403e44969e5283389622094ceddd16
         with:
           tag-prefix: v
           minimum-major-minor: ${{ env.minMajorMinorVersion }}
-          auto-increment: minor
+          auto-increment: ${{ inputs.bump }}
           default-pre-release-identifiers: alpha.0
-          version-override: ${{ steps.release-version.outputs.version }}
+          version-override: ${{ steps.minver-validate.outputs.version }}
+
+      - name: Verify MinVer release version
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ steps.release-version.outputs.version }}
+          MINVER_SEMVER2: ${{ steps.minver.outputs.SemVer2 }}
+          MINVER_PACKAGE_VERSION: ${{ steps.minver.outputs.NuGetPackageVersion }}
+        run: |
+          set -euo pipefail
+
+          if [ "$MINVER_SEMVER2" != "$EXPECTED_VERSION" ] || [ "$MINVER_PACKAGE_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "::error::Release resolver selected ${EXPECTED_VERSION}, but MinVer returned SemVer2=${MINVER_SEMVER2} and NuGetPackageVersion=${MINVER_PACKAGE_VERSION}."
+            exit 1
+          fi
+
+          echo "Verified requested ${{ inputs.bump }} release version: ${EXPECTED_VERSION}"
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v3

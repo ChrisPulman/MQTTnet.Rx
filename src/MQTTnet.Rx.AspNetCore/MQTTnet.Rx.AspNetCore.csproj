@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>MQTTnet.Rx.AspNetCore</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="MQTTnet.AspNetCore" />
+    <PackageReference Include="ReactiveUI.Primitives" />
+    <PackageReference Include="ReactiveUI.Primitives.Async" />
+    <ProjectReference Include="..\MQTTnet.Rx.Server\MQTTnet.Rx.Server.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.AspNetCore.Builder" />
+    <Using Include="Microsoft.AspNetCore.Connections" />
+    <Using Include="Microsoft.AspNetCore.Routing" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="MQTTnet.AspNetCore" />
+    <Using Include="MQTTnet.Diagnostics.Logger" />
+    <Using Include="MQTTnet.Formatter" />
+    <Using Include="MQTTnet.Packets" />
+    <Using Include="MQTTnet.Rx.Server" />
+    <Using Include="MQTTnet.Server" />
+    <Using Include="ReactiveUI.Primitives" />
+    <Using Include="ReactiveUI.Primitives.Async" />
+    <Using Include="ReactiveUI.Primitives.RxVoid" Alias="RxVoid" />
+    <Using Include="ReactiveUI.Primitives.Signals" />
+    <Using Include="ReactiveUI.Primitives.Signals.Signal" Alias="SignalFactory" />
+    <Using Include="System.Net" />
+    <Using Include="System.Security.Cryptography.X509Certificates" />
+  </ItemGroup>
+</Project>

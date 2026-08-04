@@ -82,7 +82,7 @@ public sealed class FinalClientCreateCoverageClosureTests
             _ => disconnectedCount++,
             cancellation.Token);
         var inspected = await SubscribeDirectAsync(
-            client.ObserveInspectPackage(),
+            client.ObserveInspectPacket(),
             cancellationToken: cancellation.Token);
 
         await client.SimulateMessageReceivedAsync("coverage/create", "payload");

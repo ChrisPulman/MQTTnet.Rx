@@ -25,6 +25,7 @@
     <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0" />
     <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
     <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
+    <PackageVersion Include="MQTTnet.AspNetCore" Version="5.2.0.1603" />
     <PackageVersion Include="MQTTnet.Server" Version="5.2.0.1603" />
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <PackageVersion Include="Nuke.Common" Version="10.1.0" />

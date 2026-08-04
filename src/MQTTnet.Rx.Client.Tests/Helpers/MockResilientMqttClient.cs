@@ -296,6 +296,15 @@ public sealed class MockResilientMqttClient : IResilientMqttClient
         await InvokeHandlersAsync(_disconnectedHandlers, args).ConfigureAwait(false);
     }
 
+    /// <summary>Raises the subscriptions-changed event.</summary>
+    /// <returns>A task that completes when event handlers have run.</returns>
+    public async Task SimulateSubscriptionsChangedAsync()
+    {
+        var args = new SubscriptionsChangedEventArgs([], []);
+        SubscriptionsChangedEvent?.Invoke(this, args);
+        await InvokeHandlersAsync(_subscriptionsChangedHandlers, args).ConfigureAwait(false);
+    }
+
     /// <summary>Raises the application message processed event.</summary>
     /// <returns>A task that completes when event handlers have run.</returns>
     public async Task SimulateApplicationMessageProcessedAsync()

@@ -11,6 +11,40 @@ namespace MQTTnet.Rx.Server;
 /// <summary>Creates observable projections for asynchronous events.</summary>
 internal static class CreateObservable
 {
+    /// <summary>Wraps a cancellable task result as a cold observable operation.</summary>
+    /// <typeparam name="T">The operation result type.</typeparam>
+    /// <param name="operation">The task factory.</param>
+    /// <returns>A cold observable operation.</returns>
+    internal static IObservable<T> FromTask<T>(Func<CancellationToken, Task<T>> operation) =>
+        SignalFactory.FromAsync(operation);
+
+    /// <summary>Wraps a cancellable task as a cold observable operation.</summary>
+    /// <param name="operation">The task factory.</param>
+    /// <returns>A cold observable operation.</returns>
+    internal static IObservable<RxVoid> FromTask(Func<CancellationToken, Task> operation) =>
+        SignalFactory.FromAsync(async cancellationToken =>
+        {
+            await operation(cancellationToken).ConfigureAwait(false);
+            return RxVoid.Default;
+        });
+
+    /// <summary>Wraps a cancellable task result as a cold asynchronous observable operation.</summary>
+    /// <typeparam name="T">The operation result type.</typeparam>
+    /// <param name="operation">The task factory.</param>
+    /// <returns>A cold asynchronous observable operation.</returns>
+    internal static IObservableAsync<T> FromTaskSignal<T>(Func<CancellationToken, Task<T>> operation) =>
+        SignalAsync.FromAsync(cancellationToken => new ValueTask<T>(operation(cancellationToken)));
+
+    /// <summary>Wraps a cancellable task as a cold asynchronous observable operation.</summary>
+    /// <param name="operation">The task factory.</param>
+    /// <returns>A cold asynchronous observable operation.</returns>
+    internal static IObservableAsync<RxVoid> FromTaskSignal(Func<CancellationToken, Task> operation) =>
+        SignalAsync.FromAsync(async cancellationToken =>
+        {
+            await operation(cancellationToken).ConfigureAwait(false);
+            return RxVoid.Default;
+        });
+
     /// <summary>Creates a shared observable sequence from an asynchronous event.</summary>
     /// <typeparam name="T">The event argument type.</typeparam>
     /// <param name="addHandler">Adds an asynchronous event handler.</param>

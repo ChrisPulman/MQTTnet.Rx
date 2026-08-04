@@ -58,8 +58,7 @@ public static class Create
             async (observer, cancellationToken) =>
         {
             var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
-            await observer.OnNextAsync((session.Server, session), cancellationToken).ConfigureAwait(false);
-            return session;
+            return await NotifyObserverAsync(observer, session, cancellationToken).ConfigureAwait(false);
         }).Retry(MaximumServerRetries);
     }
 
@@ -118,8 +117,7 @@ public static class Create
             async (observer, cancellationToken) =>
         {
             var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
-            await observer.OnNextAsync((session.Server, session), cancellationToken).ConfigureAwait(false);
-            return session;
+            return await NotifyObserverAsync(observer, session, cancellationToken).ConfigureAwait(false);
         }).Retry(MaximumServerRetries);
     }
 
@@ -140,6 +138,28 @@ public static class Create
         {
             session.Dispose();
             throw;
+        }
+    }
+
+    /// <summary>Notifies an asynchronous observer and releases the session if the observer rejects it.</summary>
+    /// <param name="observer">The observer receiving the server session.</param>
+    /// <param name="session">The acquired server session.</param>
+    /// <param name="cancellationToken">Cancels the observer notification.</param>
+    /// <returns>The accepted server session.</returns>
+    private static async ValueTask<MqttServerSession> NotifyObserverAsync(
+        IObserverAsync<(MqttServer Server, MqttServerSession Disposable)> observer,
+        MqttServerSession session,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await observer.OnNextAsync((session.Server, session), cancellationToken).ConfigureAwait(false);
+            return session;
+        }
+        catch (Exception exception)
+        {
+            await session.DisposeAsync().ConfigureAwait(false);
+            return await ValueTask.FromException<MqttServerSession>(exception).ConfigureAwait(false);
         }
     }
 

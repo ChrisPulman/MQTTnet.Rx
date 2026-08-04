@@ -79,6 +79,9 @@ public sealed class LiveMqttBroker : IAsyncDisposable
     /// <summary>Gets the first exception observed during deterministic teardown, if any.</summary>
     public Exception? TeardownException { get; private set; }
 
+    /// <summary>Gets the hosted server for broker-surface integration tests.</summary>
+    internal MqttServer Server => _server;
+
     /// <summary>Starts a real MQTTnet server on an ephemeral loopback port.</summary>
     /// <returns>The started live MQTT broker fixture.</returns>
     public static Task<LiveMqttBroker> StartAsync() => StartAsync(CancellationToken.None);

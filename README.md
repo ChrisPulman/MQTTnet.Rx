@@ -4,6 +4,7 @@
 [![Build](https://github.com/ChrisPulman/MQTTnet.Rx/actions/workflows/BuildOnly.yml/badge.svg)](https://github.com/ChrisPulman/MQTTnet.Rx/actions/workflows/BuildOnly.yml)
 [![MQTTnet.Rx.Client](https://img.shields.io/nuget/v/MQTTnet.Rx.Client.svg?style=flat-square&label=client)](https://www.nuget.org/packages/MQTTnet.Rx.Client)
 [![MQTTnet.Rx.Server](https://img.shields.io/nuget/v/MQTTnet.Rx.Server.svg?style=flat-square&label=server)](https://www.nuget.org/packages/MQTTnet.Rx.Server)
+[![MQTTnet.Rx.AspNetCore](https://img.shields.io/nuget/v/MQTTnet.Rx.AspNetCore.svg?style=flat-square&label=aspnetcore)](https://www.nuget.org/packages/MQTTnet.Rx.AspNetCore)
 
 <p align="left">
   <a href="https://github.com/ChrisPulman/MQTTnet.Rx">
@@ -21,6 +22,7 @@ The package family provides:
 - topic filtering, named topic-value extraction, JSON conversion, and payload helpers;
 - low-allocation pooled-payload, batching, throttling, sampling, and back-pressure helpers;
 - TLS, WebSocket, Azure IoT Hub/Event Grid, session, connection, and Last Will helpers;
+- fluent ASP.NET Core dependency-injection, endpoint, connection, hosted-server, and reactive connection APIs;
 - MQTT bridges for Allen-Bradley, Mitsubishi, Modbus, Omron, Siemens S7, serial ports, and TwinCAT.
 
 MQTTnet 5 removed `ManagedClient`. Use the `IResilientMqttClient` implementation supplied by `MQTTnet.Rx.Client` when an application needs automatic reconnection and an outbound queue.
@@ -36,10 +38,12 @@ MQTTnet 5 removed `ManagedClient`. Use the `IResilientMqttClient` implementation
 - [Connection configuration and Last Will](#connection-configuration-and-last-will)
 - [Low-allocation APIs](#low-allocation-apis)
 - [MQTT server](#mqtt-server)
+- [ASP.NET Core hosting](#aspnet-core-hosting)
 - [Industrial bridges](#industrial-bridges)
 - [Complete public API](#complete-public-api)
   - [`MQTTnet.Rx.Client`](#mqttnetrxclient-api)
   - [`MQTTnet.Rx.Server`](#mqttnetrxserver-api)
+  - [`MQTTnet.Rx.AspNetCore`](#mqttnetrxaspnetcore-api)
   - [Industrial packages](#industrial-package-api)
 - [Building the repository](#building-the-repository)
 - [Contributing](#contributing)
@@ -55,6 +59,7 @@ Choose one column for an application. A `.Reactive` package compiles the same so
 | --- | --- | --- | --- | --- |
 | MQTT client, resilience, payloads, topics | `MQTTnet.Rx.Client` | `MQTTnet.Rx.Client.Reactive` | `MQTTnet.Rx.Client` | `MQTTnet.Rx.Client.Reactive` |
 | MQTT broker/server | `MQTTnet.Rx.Server` | `MQTTnet.Rx.Server.Reactive` | `MQTTnet.Rx.Server` | `MQTTnet.Rx.Server.Reactive` |
+| ASP.NET Core hosting | `MQTTnet.Rx.AspNetCore` | `MQTTnet.Rx.AspNetCore.Reactive` | `MQTTnet.Rx.AspNetCore` | `MQTTnet.Rx.AspNetCore.Reactive` |
 | Allen-Bradley | `MQTTnet.Rx.ABPlc` | `MQTTnet.Rx.ABPlc.Reactive` | `MQTTnet.Rx.ABPlc` | `MQTTnet.Rx.ABPlc.Reactive` |
 | Mitsubishi | `MQTTnet.Rx.Mitsubishi` | `MQTTnet.Rx.Mitsubishi.Reactive` | `MQTTnet.Rx.Mitsubishi` | `MQTTnet.Rx.Mitsubishi.Reactive` |
 | Modbus | `MQTTnet.Rx.Modbus` | `MQTTnet.Rx.Modbus.Reactive` | `MQTTnet.Rx.Modbus` | `MQTTnet.Rx.Modbus.Reactive` |
@@ -69,6 +74,8 @@ All packages target .NET 8, .NET 9, .NET 10, and .NET 11. TwinCAT targets the Wi
 
 Industrial packages bring in the matching `IoT-Driver.*` package and `MQTTnet.Rx.Client` transitively. Their `.Reactive` siblings bring in the matching `IoT-Driver.*.Reactive` and client `.Reactive` packages.
 
+The ASP.NET Core packages bring in the matching `MQTTnet.Rx.Server` family transitively. Import both the ASP.NET Core and Server namespace when configuring the base `MqttServer` supplied to `UseMqttServer` callbacks.
+
 ### Lean or `.Reactive`?
 
 Both families use BCL `System.IObservable<T>`. The differences are the implementation package and the types used for completion values and scheduling:
@@ -82,6 +89,8 @@ Both families use BCL `System.IObservable<T>`. The differences are the implement
 | Grouped sequence | `MQTTnet.Rx.Client.Linq.IGroupedObservable<TKey,T>` | `System.Reactive.Linq.IGroupedObservable<TKey,T>` |
 
 Use the lean package in a Primitives-first application. Use `.Reactive` in an application already based on System.Reactive. Most examples below use the lean family; for `.Reactive`, change the package and the `MQTTnet.Rx.*` namespace to its `.Reactive` counterpart, then import System.Reactive operators as usual.
+
+Industrial `.Reactive` packages also use the matching reactive driver namespace: `IoT.Driver.ABPlcRx.Reactive`, `IoT.Driver.MitsubishiRx.Reactive`, `IoT.Driver.ModbusRx.Reactive`, `IoT.Driver.OmronPlcRx.Reactive`, `IoT.Driver.S7PlcRx.Reactive`, `IoT.Driver.Serial.Reactive`, or `IoT.Driver.TwinCATRx.Reactive`. Keep `IoT.Driver.Core` imports unchanged.
 
 This is the System.Reactive counterpart of the basic connected-client pipeline:
 
@@ -122,6 +131,7 @@ Install the smallest top-level package that supplies the required feature. NuGet
 ```bash
 dotnet add package MQTTnet.Rx.Client
 dotnet add package MQTTnet.Rx.Server
+dotnet add package MQTTnet.Rx.AspNetCore
 
 dotnet add package MQTTnet.Rx.ABPlc
 dotnet add package MQTTnet.Rx.Mitsubishi
@@ -136,7 +146,9 @@ For a System.Reactive application, install the corresponding package from the `.
 
 ```bash
 dotnet add package MQTTnet.Rx.Client.Reactive
+dotnet add package MQTTnet.Rx.AspNetCore.Reactive
 dotnet add package MQTTnet.Rx.Modbus.Reactive
+dotnet add package MQTTnet.SerialPort.Reactive
 dotnet add package MQTTnet.TwinCATRx.Reactive
 ```
 
@@ -262,7 +274,7 @@ await using var subscription = await messages.SubscribeAsync(
 
 ### Single MQTT operations
 
-`ReactiveClientOperationsExtensions` supplies fluent operations on `IObservable<IMqttClient>` and `IObservableAsync<IMqttClient>`. `ReactiveClientOperations` exposes the same overloads as static forwarding methods when extension syntax is inconvenient.
+`ReactiveClientOperationsExtensions` supplies fluent operations on `IObservable<IMqttClient>` and `IObservableAsync<IMqttClient>`. `ReactiveClientOperations` exposes the same overloads as static forwarding methods when extension syntax is inconvenient. A directly owned `IMqttClient` also has paired ordinary/async-observable methods through `MqttClientOperationExtensions`: `Connect`/`ObserveConnect`, `Disconnect`/`ObserveDisconnect`, `Ping`/`ObservePing`, `Publish`/`ObservePublish`, `Reconnect`/`ObserveReconnect`, enhanced-authentication exchange, subscribe, try-disconnect, try-ping, and unsubscribe. Builder callbacks preserve fluent configuration without hiding the complete MQTTnet options objects.
 
 ```csharp
 using MQTTnet;
@@ -317,7 +329,49 @@ using var disconnect = clients
     .Subscribe();
 ```
 
-`Reconnect()` reconnects with the underlying client's previous options. `PublishMany` accepts an observable (or async-observable) of complete `MqttApplicationMessage` values and emits one publish result per message.
+`Reconnect()` reconnects with the underlying client's previous options. `PublishMany` accepts an observable (or async-observable) of complete `MqttApplicationMessage` values and emits one publish result per message. `Properties()`, `PropertySnapshots()`/`ObservePropertySnapshots()`, `IsConnectedValue()`/`ObserveIsConnected()`, and `OptionsSnapshot()`/`ObserveOptionsSnapshot()` expose every public raw-client property. `WithAutoReconnect` is available for async-observable client sequences with configurable delay and retry count.
+
+For a caller-owned `IMqttClient`, each direct operation is cold: constructing the observable does no network work, and subscribing performs exactly one MQTT operation. Complete MQTTnet options objects and fluent builder callbacks are both supported.
+
+| Operation family | Ordinary observable | Async-observable | Result |
+| --- | --- | --- | --- |
+| connect | `Connect(options/configure)` | `ObserveConnect(options/configure)` | `MqttClientConnectResult` |
+| disconnect | `Disconnect(options/configure)` | `ObserveDisconnect(options/configure)` | completion value |
+| ping / safe ping | `Ping()`, `TryPing()` | `ObservePing()`, `ObserveTryPing()` | completion value / `bool` |
+| publish | `Publish(message/configure)` | `ObservePublish(message/configure)` | `MqttClientPublishResult` |
+| binary / sequence / string publish | `PublishBinary`, `PublishSequence`, `PublishString` | corresponding `Observe...` method | `MqttClientPublishResult` |
+| reconnect | `Reconnect()` | `ObserveReconnect()` | completion value |
+| enhanced authentication | `SendEnhancedAuthenticationExchangeData` | `ObserveSendEnhancedAuthenticationExchangeData` | completion value |
+| subscribe / unsubscribe | `Subscribe`, `Unsubscribe` | `ObserveSubscribe`, `ObserveUnsubscribe` | MQTTnet result object |
+| safe disconnect | `TryDisconnect` | `ObserveTryDisconnect` | `bool` |
+
+```csharp
+using System.Buffers;
+using MQTTnet;
+using MQTTnet.Protocol;
+using MQTTnet.Rx.Client;
+using ReactiveUI.Primitives;
+
+var factory = new MqttClientFactory();
+using var client = factory.CreateMqttClient();
+
+IObservable<MqttClientConnectResult> connect = client.Connect(options => options
+    .WithTcpServer("localhost", 1883)
+    .WithClientId("direct-client"));
+
+IObservable<MqttClientPublishResult> publish = client.PublishSequence(
+    "telemetry/frame",
+    new ReadOnlySequence<byte>(new byte[] { 0x01, 0x02, 0x03 }),
+    MqttQualityOfServiceLevel.AtLeastOnce,
+    retain: false);
+
+using var state = client.PropertySnapshots().Subscribe(snapshot =>
+    Console.WriteLine($"Connected={snapshot.IsConnected}; options={snapshot.Options?.ClientId}"));
+
+// Subscribing starts the operation. Compose connect and publish with the
+// application's preferred reactive operators when strict ordering is required.
+using var connection = connect.Subscribe(result => Console.WriteLine(result.ResultCode));
+```
 
 ### Raw client event streams
 
@@ -329,7 +383,7 @@ An emitted `IMqttClient` exposes synchronous and asynchronous bridges for all cl
 | `Connected()` | `ObserveConnected()` | `MqttClientConnectedEventArgs` |
 | `Connecting()` | `ObserveConnecting()` | `MqttClientConnectingEventArgs` |
 | `Disconnected()` | `ObserveDisconnected()` | `MqttClientDisconnectedEventArgs` |
-| `InspectPackage()` | `ObserveInspectPackage()` | `InspectMqttPacketEventArgs` |
+| `InspectPacket()` | `ObserveInspectPacket()` | `InspectMqttPacketEventArgs` |
 
 ```csharp
 using MQTTnet.Rx.Client;
@@ -343,7 +397,7 @@ using var events = clients.Subscribe(client =>
     using var connected = client.Connected().Subscribe(_ => Console.WriteLine("Connected"));
     using var disconnected = client.Disconnected().Subscribe(
         value => Console.WriteLine(value.Reason));
-    using var packets = client.InspectPackage().Subscribe(
+    using var packets = client.InspectPacket().Subscribe(
         value => Console.WriteLine($"{value.Direction}: {value.Packet}"));
 
     Console.ReadLine(); // Keeps the nested subscriptions alive for this sample.
@@ -477,6 +531,38 @@ Coordinate file access if more than one process may use the same path. Productio
 - subscription synchronization: `SubscribeAsync(IEnumerable<MqttTopicFilter>)` and `UnsubscribeAsync(IEnumerable<string>)`;
 - ordinary .NET events, `IObservable<T>` properties, `IObservableAsync<T>` properties, and awaited handler registration methods.
 
+Every direct task operation also has a cold ordinary/async-observable pair: `Enqueue`/`ObserveEnqueue`, `Ping`/`ObservePing`, `Start`/`ObserveStart`, `Stop`/`ObserveStop`, `Subscribe`/`ObserveSubscribe`, and `Unsubscribe`/`ObserveUnsubscribe`. `Start` accepts either `ResilientMqttClientOptions` or an `Action<ResilientMqttClientOptionsBuilder>`; `Stop` accepts an optional clean-disconnect flag. `Properties()` snapshots `InternalClient`, `IsConnected`, `IsStarted`, `Options`, and `PendingApplicationMessagesCount`, while `Property`/`ObserveProperty` select arbitrary state.
+
+```csharp
+using MQTTnet;
+using MQTTnet.Protocol;
+using MQTTnet.Rx.Client;
+using ReactiveUI.Primitives;
+
+var factory = new MqttClientFactory();
+using var client = ResilientMqttClientFactory.Create(
+    factory.CreateMqttClient(),
+    factory.DefaultLogger);
+
+using var state = client.PropertySnapshots().Subscribe(snapshot =>
+    Console.WriteLine($"Started={snapshot.IsStarted}; queued={snapshot.PendingApplicationMessagesCount}"));
+
+var start = client.Start(options => options.WithClientOptions(mqtt => mqtt
+    .WithTcpServer("localhost", 1883)
+    .WithClientId("direct-resilient")));
+
+var enqueue = client.Enqueue(new MqttApplicationMessageBuilder()
+    .WithTopic("telemetry/device-01")
+    .WithPayload("42")
+    .WithQualityOfServiceLevel(MqttQualityOfServiceLevel.AtLeastOnce)
+    .Build());
+
+using var lifetime = start.Subscribe(_ => Console.WriteLine("Resilient client started"));
+// Subscribe to enqueue after the start operation completes, or compose both
+// operations in the application's pipeline. ObserveStart/ObserveEnqueue provide
+// cancellation-aware async-observable equivalents.
+```
+
 | Event category | .NET event | `IObservable<T>` | `IObservableAsync<T>` / helper |
 | --- | --- | --- | --- |
 | message processed | `ApplicationMessageProcessedEvent` | `ApplicationMessageProcessed` | `ApplicationMessageProcessedAsyncObservable` / `ObserveApplicationMessageProcessed()` |
@@ -487,7 +573,7 @@ Coordinate file access if more than one process may use the same path. Productio
 | state changed | `ConnectionStateChangedEvent` | `ConnectionStateChanged` | `ConnectionStateChangedAsyncObservable` / `ObserveConnectionStateChanged()` |
 | disconnected | `DisconnectedEvent` | `Disconnected` | `DisconnectedAsyncObservable` / `ObserveDisconnected()` |
 | synchronization failed | `SynchronizingSubscriptionsFailedEvent` | `SynchronizingSubscriptionsFailed` | `SynchronizingSubscriptionsFailedAsyncObservable` / `ObserveSynchronizingSubscriptionsFailed()` |
-| subscriptions changed | `SubscriptionsChangedEvent` | — | `ObserveSubscriptionsChanged()` |
+| subscriptions changed | `SubscriptionsChangedEvent` | `SubscriptionsChanged()` | `ObserveSubscriptionsChanged()` |
 
 Each `Register...Handler` method accepts `Func<TEventArgs, CancellationToken, ValueTask>` and returns an `IDisposable` registration.
 
@@ -703,6 +789,26 @@ using var lifetime = clients.Subscribe(
     error => Console.Error.WriteLine($"Reconnect limit reached: {error}"));
 ```
 
+The same policy is available for `IObservableAsync<IMqttClient>` and preserves cancellation through reconnect delays and attempts:
+
+```csharp
+using MQTTnet.Rx.Client;
+using ReactiveUI.Primitives.Async;
+
+using var cancellation = new CancellationTokenSource();
+var clients = Create.MqttClientSignal()
+    .WithClientOptions(options => options.WithTcpServer("localhost", 1883))
+    .WithAutoReconnect(TimeSpan.FromSeconds(5), maxReconnectAttempts: 10);
+
+await using var lifetime = await clients.SubscribeAsync(
+    (client, _) =>
+    {
+        Console.WriteLine($"Connected={client.IsConnected}");
+        return ValueTask.CompletedTask;
+    },
+    cancellation.Token);
+```
+
 This helper does not add an outbound queue. Use the resilient client when queued delivery or subscription synchronization is required.
 
 ## Low-allocation APIs
@@ -852,19 +958,73 @@ using var broker = servers.Subscribe(session =>
 
 `IMqttRetainedMessageModel` and `MqttRetainedMessageModel` round-trip MQTT retained messages. Their public contract includes `Topic`, `Payload`, `QualityOfServiceLevel`, `ContentType`, `ResponseTopic`, `CorrelationData`, `PayloadFormatIndicator`, and `UserProperties`, plus `Create(MqttApplicationMessage)` and `ToApplicationMessage()`.
 
+### Fluent server operations, properties, and configuration
+
+Every task-returning `MqttServer` operation has an ordinary observable and an async-observable form. This includes start/stop, client disconnect and broker-side subscribe/unsubscribe, retained-message query/update/delete, client/session queries, and injected application messages. The injection pair is named `InjectApplicationMessageOperation`/`ObserveInjectApplicationMessage` because MQTTnet already owns the instance name `InjectApplicationMessage`.
+
+For MQTTnet methods that do not accept a cancellation token, cancelling an async-observable subscription stops waiting for and emitting the result; it cannot cancel broker work already running inside MQTTnet. Injected-message and enhanced-authentication operations pass cancellation into MQTTnet directly.
+
+`Create.MqttServer(...)` emits an already-started, reference-count-owned server. Do not call the direct `Start` or `Stop` wrappers on that emitted instance; dispose the factory subscription/session and let it own the lifecycle. Use `Start`/`ObserveStart` and `Stop`/`ObserveStop` only with an independently created `MqttServer`.
+
+`Properties()` captures `AcceptNewConnections`, `IsStarted`, and a safe copy of `ServerSessionItems`. Generic `Property`/`ObserveProperty`, snapshot streams, `AcceptNewConnectionsValue`/`ObserveAcceptNewConnections`, session-item snapshots, and distinct lifecycle streams expose all public server state. `WithAcceptNewConnections`, server-session item methods, and `ConfigureServer` preserve the receiver for fluent composition; the same configuration method is available on ordinary and async-observable server sequences. `ConfigureOptions` on MQTTnet's server, stop, and client-disconnect builders provides receiver-preserving access to the complete options objects.
+
+Values returned by `GetClients` and `GetSessions` remain reactive. The query result types are `IList<MqttClientStatus>`, `MqttApplicationMessage`, `IList<MqttApplicationMessage>`, `MqttSessionStatus`, and `IList<MqttSessionStatus>`. `MqttClientStatus` exposes complete property snapshots plus disconnect/`ObserveDisconnect`, `ResetStatisticsOperation`/`ObserveResetStatistics`, and `WithSession`. `MqttSessionStatus` exposes complete snapshots, fluent session-item changes, and paired queue-clear, delete, deliver, and enqueue operations. `TryEnqueueApplicationMessage` returns `MqttSessionEnqueueResult`, retaining both the queue decision and optional `InjectMqttApplicationMessageResult`. Connection validation exposes `ExchangeEnhancedAuthentication`/`ObserveExchangeEnhancedAuthentication` and returns `ExchangeEnhancedAuthenticationResult`.
+
+| Configuration/operation | Supported forms |
+| --- | --- |
+| disconnect client | `DisconnectClient` / `ObserveDisconnectClient` with options or builder callback |
+| stop independently owned server | parameterless, `MqttServerStopOptions`, or builder callback |
+| broker-side subscribe | topic-filter collection or `MqttTopicFilterBuilder` callback |
+| broker-side unsubscribe | client ID plus topic-name collection |
+| options mutation | `ConfigureOptions` on server, stop, and client-disconnect builders |
+| server sequence configuration | `ConfigureServer` on `IObservable<MqttServer>` and `IObservableAsync<MqttServer>` |
+
+```csharp
+using MQTTnet;
+using MQTTnet.Rx.Server;
+using ReactiveUI.Primitives;
+
+using var broker = Create.MqttServer(builder => builder.Build()).Subscribe(session =>
+{
+    session.Server
+        .WithAcceptNewConnections(true)
+        .WithServerSessionItem("environment", "production");
+
+    session.Disposable.Add(session.Server.IsStartedChanges().Subscribe(Console.WriteLine));
+    session.Disposable.Add(session.Server.GetClients().Subscribe(clients =>
+    {
+        foreach (var client in clients)
+        {
+            var clientState = client.Properties();
+            var sessionState = client.Session.Properties();
+            Console.WriteLine($"{clientState.Id}: {clientState.BytesReceived} bytes; " +
+                              $"queued={sessionState.PendingApplicationMessagesCount}");
+        }
+    }));
+    session.Disposable.Add(session.Server
+        .UpdateRetainedMessage(new MqttApplicationMessageBuilder()
+            .WithTopic("status/broker")
+            .WithPayload("online")
+            .WithRetainFlag()
+            .Build())
+        .Subscribe());
+});
+```
+
 ### Complete server event list
 
-Every event below has an ordinary observable method and an `Observe...` async-observable method, except `InterceptingClientEnqueue`, which is synchronous only.
+Every event below has an ordinary observable method and an `Observe...` async-observable method.
 
 | Ordinary method | Async-observable method |
 | --- | --- |
+| `ApplicationMessageEnqueuedOrDropped` | `ObserveApplicationMessageEnqueuedOrDropped` |
 | `ApplicationMessageNotConsumed` | `ObserveApplicationMessageNotConsumed` |
 | `ClientAcknowledgedPublishPacket` | `ObserveClientAcknowledgedPublishPacket` |
 | `ClientConnected` | `ObserveClientConnected` |
 | `ClientDisconnected` | `ObserveClientDisconnected` |
 | `ClientSubscribedTopic` | `ObserveClientSubscribedTopic` |
 | `ClientUnsubscribedTopic` | `ObserveClientUnsubscribedTopic` |
-| `InterceptingClientEnqueue` | — |
+| `InterceptingClientEnqueue` | `ObserveInterceptingClientEnqueue` |
 | `InterceptingInboundPacket` | `ObserveInterceptingInboundPacket` |
 | `InterceptingOutboundPacket` | `ObserveInterceptingOutboundPacket` |
 | `InterceptingPublish` | `ObserveInterceptingPublish` |
@@ -872,6 +1032,7 @@ Every event below has an ordinary observable method and an `Observe...` async-ob
 | `InterceptingUnsubscription` | `ObserveInterceptingUnsubscription` |
 | `LoadingRetainedMessage` | `ObserveLoadingRetainedMessage` |
 | `PreparingSession` | `ObservePreparingSession` |
+| `QueuedApplicationMessageOverwritten` | `ObserveQueuedApplicationMessageOverwritten` |
 | `RetainedMessageChanged` | `ObserveRetainedMessageChanged` |
 | `RetainedMessagesCleared` | `ObserveRetainedMessagesCleared` |
 | `SessionDeleted` | `ObserveSessionDeleted` |
@@ -879,11 +1040,88 @@ Every event below has an ordinary observable method and an `Observe...` async-ob
 | `Stopped` | `ObserveStopped` |
 | `ValidatingConnection` | `ObserveValidatingConnection` |
 
+## ASP.NET Core hosting
+
+`MQTTnet.Rx.AspNetCore` wraps every non-obsolete `MQTTnet.AspNetCore` registration and hosting entry point with receiver-preserving fluent methods. It also projects hosted-server state and connection operations into ordinary and cancellation-aware asynchronous observables. The matching `MQTTnet.Rx.Server` package is transitive, so hosted brokers also receive the complete server event, operation, property, and configuration surface.
+
+```csharp
+using MQTTnet.Rx.AspNetCore;
+using MQTTnet.Rx.Server;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services
+    .WithMqttConnections()
+    .WithMqttServer(options => options
+        .WithoutDefaultEndpoint());
+
+var app = builder.Build();
+app.MapMqttEndpoint("/mqtt");
+
+app.ConfigureMqttServer(server => server
+    .WithAcceptNewConnections(true)
+    .WithServerSessionItem("environment", app.Environment.EnvironmentName));
+
+await app.RunAsync();
+```
+
+The fluent service surface includes hosted-server overloads for prebuilt options, options-builder callbacks, and service-aware `AspNetMqttServerOptionsBuilder` callbacks, plus MQTT logging, connection-handler, connection infrastructure, TCP adapter, and WebSocket adapter registration. Endpoint and pipeline methods cover `MapMqtt`, `UseMqtt`, and `UseMqttServer`. MQTTnet's obsolete `UseMqttEndpoint` is intentionally not wrapped; use `MapMqttEndpoint` with endpoint routing.
+
+`MqttHostedServer` exposes `WithAcceptNewConnections`, server-session item configuration, `IsStartedChanges()`, and `ObserveIsStarted()`. `MqttConnectionContext` exposes a complete `MqttConnectionProperties` snapshot, statistics reset, and reactive connect, disconnect, send, and receive operations. Low-level MQTTnet buffer, pipe, and socket implementation types remain available from `MQTTnet.AspNetCore` but are not hosting configuration. The transport adapters' `ClientHandler` delegates are also intentionally not replaceable: MQTTnet owns them while the broker is running, and overriding them would bypass broker session processing.
+
+The `.Reactive` package compiles the same source in `MQTTnet.Rx.AspNetCore.Reactive`; import `MQTTnet.Rx.Server.Reactive` for base-server extensions and use the corresponding System.Reactive operators and `Unit` values.
+
 ## Industrial bridges
 
 The industrial packages bridge device values to MQTT and MQTT payloads back to devices. The application remains responsible for creating and configuring the driver object; the examples use `GetConfigured...` placeholders for that application-specific work.
 
 All bridges provide ordinary raw-client and resilient-client forms. Async-observable forms use `IObservableAsync<IMqttClient>` or `IObservableAsync<IResilientMqttClient>` and return `IObservableAsync<T>` for publications. Static `Create` methods are compatibility forwarders; extension methods are normally clearer and, for S7/TwinCAT subscriptions, preserve the returned lifetime handle.
+
+The client model changes the publication result but not the bridge's device arguments:
+
+| MQTT client sequence | Publication result |
+| --- | --- |
+| `IObservable<IMqttClient>` | `IObservable<MqttClientPublishResult>` |
+| `IObservable<IResilientMqttClient>` | `IObservable<ApplicationMessageProcessedEventArgs>` |
+| `IObservableAsync<IMqttClient>` | `IObservableAsync<MqttClientPublishResult>` |
+| `IObservableAsync<IResilientMqttClient>` | `IObservableAsync<ApplicationMessageProcessedEventArgs>` |
+
+For example, the same Modbus master can feed resilient and async-observable clients. The other industrial packages follow the same receiver/result pattern with their device-specific arguments:
+
+```csharp
+using IoT.Driver.ModbusRx.Device;
+using MQTTnet.Rx.Client;
+using MQTTnet.Rx.Modbus;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Async;
+
+ModbusIpMaster master = GetConfiguredModbusMaster();
+var modbus = MQTTnet.Rx.Modbus.Create.FromMaster(master);
+
+var resilientClients = MQTTnet.Rx.Client.Create.ResilientMqttClient()
+    .WithResilientClientOptions(options => options.WithClientOptions(mqtt => mqtt
+        .WithTcpServer("localhost", 1883)));
+
+using var resilientPublishing = resilientClients
+    .PublishInputRegisters(modbus, "plant/input", 0, 8)
+    .Subscribe(result => Console.WriteLine(result.Exception));
+
+var asyncClients = MQTTnet.Rx.Client.Create.MqttClientSignal()
+    .WithClientOptions(options => options.WithTcpServer("localhost", 1883));
+var asyncModbus = MQTTnet.Rx.Modbus.ObservableAsyncCreateExtensions.FromMasterAsync(master);
+var asyncPublishing = asyncClients.PublishInputRegisters(asyncModbus, "plant/input-async", 0, 8);
+
+await using var asyncLifetime = await asyncPublishing.SubscribeAsync(
+    (result, _) =>
+    {
+        Console.WriteLine(result.ReasonCode);
+        return ValueTask.CompletedTask;
+    });
+
+static ModbusIpMaster GetConfiguredModbusMaster() => throw new NotImplementedException();
+```
+
+Keep the returned `IDisposable` or `IAsyncDisposable` for as long as the device-to-MQTT bridge should run. An async resilient bridge uses `ResilientMqttClientSignal()` with the same call and emits `ApplicationMessageProcessedEventArgs`.
 
 ### Allen-Bradley
 
@@ -916,7 +1154,7 @@ static IABPlcRx GetConfiguredAllenBradleyClient() => throw new NotImplementedExc
 
 ### Mitsubishi
 
-Mitsubishi bridges use a typed `LogicalTagKey<T>` and `MitsubishiLogicalTagClient`. Publication accepts a `Func<T,string>` formatter. Subscription accepts a `Func<string,T>` parser, optional error callback, and cancellation token; writes are serialized and disposal cancels pending work.
+Mitsubishi bridges use a typed `LogicalTagKey<T>` and `MitsubishiLogicalTagClient`. Publication accepts a `Func<T,string>` formatter. Subscription accepts a `Func<string,T>` parser, a required-but-nullable error callback (pass `null` to omit it), and a cancellation token; writes are serialized and disposal cancels pending work.
 
 ```csharp
 using IoT.Driver.Core;
@@ -954,7 +1192,7 @@ static LogicalTagKey<int> GetMitsubishiSpeedTag() => throw new NotImplementedExc
 
 ### Omron
 
-`PublishOmronPlcTag<T>` and `SubscribeOmronPlcTag<T>` use `IOmronPlcRx` and `LogicalTagKey<T>`. Write failures are reported through tracing by the driver bridge.
+`PublishOmronPlcTag<T>` and `SubscribeOmronPlcTag<T>` use `IOmronPlcRx` and `LogicalTagKey<T>`. Source-sequence failures are sent to the supplied trace callback. Exceptions thrown while parsing an MQTT payload or performing the synchronous PLC write propagate from the notification; handle them in the surrounding pipeline or in the parser/writer implementation.
 
 ```csharp
 using IoT.Driver.Core;
@@ -1020,7 +1258,7 @@ static LogicalTagKey<double> GetS7PressureTag() => throw new NotImplementedExcep
 
 ### Serial port
 
-`PublishSerialPort` buffers data between observable start and end delimiters and publishes complete frames. `SubscribeSerialPortWriteLine` appends the driver's line ending. `SubscribeSerialPortWrite` writes either a transformed string or byte array.
+`PublishSerialPort` buffers data between observable start and end delimiters and publishes complete frames. `SubscribeSerialPortWriteLine` appends the driver's line ending. `SubscribeSerialPortWrite` writes either a transformed string or byte array. The `timeOut` argument is expressed in milliseconds.
 
 ```csharp
 using IoT.Driver.Serial;
@@ -1062,12 +1300,14 @@ static ISerialPortRx GetConfiguredSerialPort() => throw new NotImplementedExcept
 TwinCAT packages are Windows-only. Publication supports both `IRxTcAdsClient` and `IHashTableRx`. MQTT-to-tag extension methods return `IDisposable`. The static compatibility `Create.SubscribeTcTag` methods return `void`, so prefer extension syntax for lifecycle ownership.
 
 ```csharp
+using CP.Collections;
 using IoT.Driver.TwinCATRx;
 using MQTTnet.Rx.Client;
 using MQTTnet.Rx.TwinCAT;
 using ReactiveUI.Primitives;
 
 IRxTcAdsClient ads = GetConfiguredAdsClient();
+IHashTableRx symbols = GetConfiguredSymbolTable();
 var clients = MQTTnet.Rx.Client.Create.MqttClient()
     .WithClientOptions(options => options.WithTcpServer("localhost", 1883))
     .Publish()
@@ -1075,6 +1315,10 @@ var clients = MQTTnet.Rx.Client.Create.MqttClient()
 
 using var publish = clients
     .PublishTcPlcTag<double>("plc/twincat/temperature", "MAIN.Temperature", ads)
+    .Subscribe();
+
+using var publishFromTable = clients
+    .PublishTcPlcTag<double>("plc/twincat/pressure", "MAIN.Pressure", symbols)
     .Subscribe();
 
 using var write = clients.SubscribeTcTag(
@@ -1086,6 +1330,7 @@ using var write = clients.SubscribeTcTag(
         System.Globalization.CultureInfo.InvariantCulture));
 
 static IRxTcAdsClient GetConfiguredAdsClient() => throw new NotImplementedException();
+static IHashTableRx GetConfiguredSymbolTable() => throw new NotImplementedException();
 ```
 
 The `IHashTableRx` overload family is available for publication in synchronous and asynchronous extension APIs. See the complete API for the precise current overload set.
@@ -1106,6 +1351,9 @@ using ReactiveUI.Primitives;
 
 ModbusIpMaster master = GetConfiguredModbusMaster();
 var modbus = MQTTnet.Rx.Modbus.Create.FromMaster(master);
+var scopedModbus = MQTTnet.Rx.Modbus.Create.FromFactory(GetConfiguredModbusMaster);
+var asyncScopedModbus = MQTTnet.Rx.Modbus.ObservableAsyncCreateExtensions
+    .FromFactoryAsync(GetConfiguredModbusMaster);
 var clients = MQTTnet.Rx.Client.Create.MqttClient()
     .WithClientOptions(options => options.WithTcpServer("localhost", 1883))
     .Publish()
@@ -1121,7 +1369,7 @@ using var inputRegisters = clients.PublishInputRegisters(
     retain: false).Subscribe();
 
 using var holdingRegisters = clients.PublishHoldingRegisters(
-    modbus,
+    scopedModbus,
     "modbus/holding-registers",
     startAddress: 0,
     numberOfPoints: 8,
@@ -1216,11 +1464,11 @@ using var customWrite = clients.SubscribeWrite(
 
 ## Complete public API
 
-The reference below is generated from every public source declaration in the nine lean projects. It includes all public types, enum values, constructors, properties, events, methods, extension receivers, overloads, default values, and generic constraints. Static compatibility forwarders are included even when an equivalent extension form exists.
+The reference below is synchronized with every public source declaration in the ten lean projects. It includes all public types, enum values, constructors, properties, events, methods, extension receivers, overloads, default values, and generic constraints. Static compatibility forwarders are included even when an equivalent extension form exists.
 
 The collapsed blocks use compact signature notation rather than complete compilation units. In particular, C# 14 extension blocks are shown as `extension(receiver) { member; }`, and implementation bodies are omitted. Use the feature examples above for copy/paste programs.
 
-The nine `.Reactive` projects compile these same files with `REACTIVE_SHIM`; therefore every listed API is also present in the matching `.Reactive` namespace. Apply these substitutions when reading a signature:
+The ten `.Reactive` projects compile these same files with `REACTIVE_SHIM`; therefore every listed API is also present in the matching `.Reactive` namespace. Apply these substitutions when reading a signature:
 
 - namespace `MQTTnet.Rx.<component>` becomes `MQTTnet.Rx.<component>.Reactive`;
 - `RxVoid`/`RxUnit` completion values become `System.Reactive.Unit`;
@@ -1230,10 +1478,11 @@ The nine `.Reactive` projects compile these same files with `REACTIVE_SHIM`; the
 <!-- PUBLIC_API_START -->
 
 <details>
-<summary>Type index (61 exported types)</summary>
+<summary>Type index (86 exported types)</summary>
 
-- **MQTTnet.Rx.Client:** [`ApplicationMessageProcessedEventArgs`](#api-mqttnet-rx-client-applicationmessageprocessedeventargs), [`ApplicationMessageSkippedEventArgs`](#api-mqttnet-rx-client-applicationmessageskippedeventargs), [`ClientOptionsExtensions`](#api-mqttnet-rx-client-clientoptionsextensions), [`ConnectingFailedEventArgs`](#api-mqttnet-rx-client-connectingfailedeventargs), [`ConnectionExtensions`](#api-mqttnet-rx-client-connectionextensions), [`Create`](#api-mqttnet-rx-client-create), [`CreateExtensions`](#api-mqttnet-rx-client-createextensions), [`IResilientMqttClient`](#api-mqttnet-rx-client-iresilientmqttclient), [`IResilientMqttClientStorage`](#api-mqttnet-rx-client-iresilientmqttclientstorage), [`InterceptingPublishMessageEventArgs`](#api-mqttnet-rx-client-interceptingpublishmessageeventargs), [`LastWillExtensions`](#api-mqttnet-rx-client-lastwillextensions), [`Linq.IGroupedObservable`](#api-mqttnet-rx-client-linq-igroupedobservable), [`MemoryEfficient.BufferPool`](#api-mqttnet-rx-client-memoryefficient-bufferpool), [`MemoryEfficient.BufferScope`](#api-mqttnet-rx-client-memoryefficient-bufferscope), [`MemoryEfficient.LowAllocExtensions`](#api-mqttnet-rx-client-memoryefficient-lowallocextensions), [`MemoryEfficient.ObservableAsyncBridgeExtensions`](#api-mqttnet-rx-client-memoryefficient-observableasyncbridgeextensions), [`MqttClientExtensions`](#api-mqttnet-rx-client-mqttclientextensions), [`MqttPendingMessagesOverflowStrategy`](#api-mqttnet-rx-client-mqttpendingmessagesoverflowstrategy), [`MqttdPublishExtensions`](#api-mqttnet-rx-client-mqttdpublishextensions), [`MqttdSubscribeExtensions`](#api-mqttnet-rx-client-mqttdsubscribeextensions), [`ObservableAsyncBridgeExtensions`](#api-mqttnet-rx-client-observableasyncbridgeextensions), [`ObservableBridgeCompatibilityExtensions`](#api-mqttnet-rx-client-observablebridgecompatibilityextensions), [`PayloadExtensions`](#api-mqttnet-rx-client-payloadextensions), [`ReactiveClientOperations`](#api-mqttnet-rx-client-reactiveclientoperations), [`ReactiveClientOperationsExtensions`](#api-mqttnet-rx-client-reactiveclientoperationsextensions), [`ReconnectionResult`](#api-mqttnet-rx-client-reconnectionresult), [`ResilientMqttApplicationMessage`](#api-mqttnet-rx-client-resilientmqttapplicationmessage), [`ResilientMqttClientFactory`](#api-mqttnet-rx-client-resilientmqttclientfactory), [`ResilientMqttClientOptions`](#api-mqttnet-rx-client-resilientmqttclientoptions), [`ResilientMqttClientOptionsBuilder`](#api-mqttnet-rx-client-resilientmqttclientoptionsbuilder), [`ResilientProcessFailedEventArgs`](#api-mqttnet-rx-client-resilientprocessfailedeventargs), [`SubscriptionsChangedEventArgs`](#api-mqttnet-rx-client-subscriptionschangedeventargs), [`TopicFilterExtensions`](#api-mqttnet-rx-client-topicfilterextensions), [`MemoryEfficient.SpanParser`](#api-mqttnet-rx-client-memoryefficient-spanparser)
-- **MQTTnet.Rx.Server:** [`Create`](#api-mqttnet-rx-server-create), [`IMqttRetainedMessageModel`](#api-mqttnet-rx-server-imqttretainedmessagemodel), [`MqttRetainedMessageModel`](#api-mqttnet-rx-server-mqttretainedmessagemodel), [`MqttServerExtensions`](#api-mqttnet-rx-server-mqttserverextensions), [`MqttServerSession`](#api-mqttnet-rx-server-mqttserversession)
+- **MQTTnet.Rx.Client:** [`ApplicationMessageProcessedEventArgs`](#api-mqttnet-rx-client-applicationmessageprocessedeventargs), [`ApplicationMessageSkippedEventArgs`](#api-mqttnet-rx-client-applicationmessageskippedeventargs), [`ClientOptionsExtensions`](#api-mqttnet-rx-client-clientoptionsextensions), [`ConnectingFailedEventArgs`](#api-mqttnet-rx-client-connectingfailedeventargs), [`ConnectionExtensions`](#api-mqttnet-rx-client-connectionextensions), [`Create`](#api-mqttnet-rx-client-create), [`CreateExtensions`](#api-mqttnet-rx-client-createextensions), [`IResilientMqttClient`](#api-mqttnet-rx-client-iresilientmqttclient), [`IResilientMqttClientStorage`](#api-mqttnet-rx-client-iresilientmqttclientstorage), [`InterceptingPublishMessageEventArgs`](#api-mqttnet-rx-client-interceptingpublishmessageeventargs), [`LastWillExtensions`](#api-mqttnet-rx-client-lastwillextensions), [`Linq.IGroupedObservable`](#api-mqttnet-rx-client-linq-igroupedobservable), [`MemoryEfficient.BufferPool`](#api-mqttnet-rx-client-memoryefficient-bufferpool), [`MemoryEfficient.BufferScope`](#api-mqttnet-rx-client-memoryefficient-bufferscope), [`MemoryEfficient.LowAllocExtensions`](#api-mqttnet-rx-client-memoryefficient-lowallocextensions), [`MemoryEfficient.ObservableAsyncBridgeExtensions`](#api-mqttnet-rx-client-memoryefficient-observableasyncbridgeextensions), [`MqttClientAsyncAutoReconnectExtensions`](#api-mqttnet-rx-client-mqttclientasyncautoreconnectextensions), [`MqttClientExtensions`](#api-mqttnet-rx-client-mqttclientextensions), [`MqttClientOperationExtensions`](#api-mqttnet-rx-client-mqttclientoperationextensions), [`MqttClientProperties`](#api-mqttnet-rx-client-mqttclientproperties), [`MqttClientPropertyExtensions`](#api-mqttnet-rx-client-mqttclientpropertyextensions), [`MqttClientSequenceOperationExtensions`](#api-mqttnet-rx-client-mqttclientsequenceoperationextensions), [`MqttPendingMessagesOverflowStrategy`](#api-mqttnet-rx-client-mqttpendingmessagesoverflowstrategy), [`MqttdPublishExtensions`](#api-mqttnet-rx-client-mqttdpublishextensions), [`MqttdSubscribeExtensions`](#api-mqttnet-rx-client-mqttdsubscribeextensions), [`ObservableAsyncBridgeExtensions`](#api-mqttnet-rx-client-observableasyncbridgeextensions), [`ObservableBridgeCompatibilityExtensions`](#api-mqttnet-rx-client-observablebridgecompatibilityextensions), [`PayloadExtensions`](#api-mqttnet-rx-client-payloadextensions), [`ReactiveClientOperations`](#api-mqttnet-rx-client-reactiveclientoperations), [`ReactiveClientOperationsExtensions`](#api-mqttnet-rx-client-reactiveclientoperationsextensions), [`ReconnectionResult`](#api-mqttnet-rx-client-reconnectionresult), [`ResilientMqttApplicationMessage`](#api-mqttnet-rx-client-resilientmqttapplicationmessage), [`ResilientMqttClientFactory`](#api-mqttnet-rx-client-resilientmqttclientfactory), [`ResilientMqttClientOperationExtensions`](#api-mqttnet-rx-client-resilientmqttclientoperationextensions), [`ResilientMqttClientOptions`](#api-mqttnet-rx-client-resilientmqttclientoptions), [`ResilientMqttClientOptionsBuilder`](#api-mqttnet-rx-client-resilientmqttclientoptionsbuilder), [`ResilientMqttClientProperties`](#api-mqttnet-rx-client-resilientmqttclientproperties), [`ResilientMqttClientPropertyExtensions`](#api-mqttnet-rx-client-resilientmqttclientpropertyextensions), [`ResilientProcessFailedEventArgs`](#api-mqttnet-rx-client-resilientprocessfailedeventargs), [`SubscriptionsChangedEventArgs`](#api-mqttnet-rx-client-subscriptionschangedeventargs), [`TopicFilterExtensions`](#api-mqttnet-rx-client-topicfilterextensions), [`MemoryEfficient.SpanParser`](#api-mqttnet-rx-client-memoryefficient-spanparser)
+- **MQTTnet.Rx.Server:** [`Create`](#api-mqttnet-rx-server-create), [`IMqttRetainedMessageModel`](#api-mqttnet-rx-server-imqttretainedmessagemodel), [`MqttClientStatusExtensions`](#api-mqttnet-rx-server-mqttclientstatusextensions), [`MqttClientStatusProperties`](#api-mqttnet-rx-server-mqttclientstatusproperties), [`MqttRetainedMessageModel`](#api-mqttnet-rx-server-mqttretainedmessagemodel), [`MqttServerConfigurationExtensions`](#api-mqttnet-rx-server-mqttserverconfigurationextensions), [`MqttServerExtensions`](#api-mqttnet-rx-server-mqttserverextensions), [`MqttServerOperationExtensions`](#api-mqttnet-rx-server-mqttserveroperationextensions), [`MqttServerOptionsConfigurationExtensions`](#api-mqttnet-rx-server-mqttserveroptionsconfigurationextensions), [`MqttServerProperties`](#api-mqttnet-rx-server-mqttserverproperties), [`MqttServerPropertyExtensions`](#api-mqttnet-rx-server-mqttserverpropertyextensions), [`MqttServerSequenceConfigurationExtensions`](#api-mqttnet-rx-server-mqttserversequenceconfigurationextensions), [`MqttServerSession`](#api-mqttnet-rx-server-mqttserversession), [`MqttSessionEnqueueResult`](#api-mqttnet-rx-server-mqttsessionenqueueresult), [`MqttSessionStatusExtensions`](#api-mqttnet-rx-server-mqttsessionstatusextensions), [`MqttSessionStatusProperties`](#api-mqttnet-rx-server-mqttsessionstatusproperties), [`ValidatingConnectionOperationExtensions`](#api-mqttnet-rx-server-validatingconnectionoperationextensions)
+- **MQTTnet.Rx.AspNetCore:** [`MqttAspNetCoreHostingExtensions`](#api-mqttnet-rx-aspnetcore-mqttaspnetcorehostingextensions), [`MqttAspNetCoreServiceCollectionExtensions`](#api-mqttnet-rx-aspnetcore-mqttaspnetcoreservicecollectionextensions), [`MqttConnectionContextExtensions`](#api-mqttnet-rx-aspnetcore-mqttconnectioncontextextensions), [`MqttConnectionProperties`](#api-mqttnet-rx-aspnetcore-mqttconnectionproperties), [`MqttHostedServerExtensions`](#api-mqttnet-rx-aspnetcore-mqtthostedserverextensions)
 - **MQTTnet.Rx.ABPlc:** [`Create`](#api-mqttnet-rx-abplc-create), [`CreateExtensions`](#api-mqttnet-rx-abplc-createextensions), [`ObservableAsyncCreateExtensionMixins`](#api-mqttnet-rx-abplc-observableasynccreateextensionmixins), [`ObservableAsyncCreateExtensions`](#api-mqttnet-rx-abplc-observableasynccreateextensions)
 - **MQTTnet.Rx.Mitsubishi:** [`MitsubishiMqttExtensions`](#api-mqttnet-rx-mitsubishi-mitsubishimqttextensions), [`ObservableAsyncCreateExtensions`](#api-mqttnet-rx-mitsubishi-observableasynccreateextensions)
 - **MQTTnet.Rx.Modbus:** [`Create`](#api-mqttnet-rx-modbus-create), [`CreateExtensions`](#api-mqttnet-rx-modbus-createextensions), [`ObservableAsyncCreateExtensionMixins`](#api-mqttnet-rx-modbus-observableasynccreateextensionmixins), [`ObservableAsyncCreateExtensions`](#api-mqttnet-rx-modbus-observableasynccreateextensions), [`SerializationExtensions`](#api-mqttnet-rx-modbus-serializationextensions)
@@ -1334,7 +1583,7 @@ extension(IResilientMqttClient client) { public IObservableAsync<SubscriptionsCh
 
 ```text
 public static class Create
-public static MqttClientFactory MqttFactory { get; private set; } = new();
+public static MqttClientFactory MqttFactory { get; }
 public static void NewMqttFactory(MqttClientFactory mqttFactory)
 public static IObservable<IMqttClient> MqttClient()
 public static IObservableAsync<IMqttClient> MqttClientSignal()
@@ -1588,6 +1837,18 @@ extension(IObservableAsync<MqttApplicationMessageReceivedEventArgs> source) { pu
 ```
 </details>
 
+<a id="api-mqttnet-rx-client-mqttclientasyncautoreconnectextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Client.MqttClientAsyncAutoReconnectExtensions</code></summary>
+
+```text
+public static class MqttClientAsyncAutoReconnectExtensions
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<IMqttClient> WithAutoReconnect(); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<IMqttClient> WithAutoReconnect(TimeSpan? reconnectDelay); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<IMqttClient> WithAutoReconnect(TimeSpan? reconnectDelay, int maxReconnectAttempts); }
+```
+</details>
+
 <a id="api-mqttnet-rx-client-mqttclientextensions"></a>
 <details>
 <summary><code>MQTTnet.Rx.Client.MqttClientExtensions</code></summary>
@@ -1602,8 +1863,113 @@ extension(IMqttClient client) { public IObservable<MqttClientConnectingEventArgs
 extension(IMqttClient client) { public IObservableAsync<MqttClientConnectingEventArgs> ObserveConnecting(); }
 extension(IMqttClient client) { public IObservable<MqttClientDisconnectedEventArgs> Disconnected(); }
 extension(IMqttClient client) { public IObservableAsync<MqttClientDisconnectedEventArgs> ObserveDisconnected(); }
-extension(IMqttClient client) { public IObservable<InspectMqttPacketEventArgs> InspectPackage(); }
-extension(IMqttClient client) { public IObservableAsync<InspectMqttPacketEventArgs> ObserveInspectPackage(); }
+extension(IMqttClient client) { public IObservable<InspectMqttPacketEventArgs> InspectPacket(); }
+extension(IMqttClient client) { public IObservableAsync<InspectMqttPacketEventArgs> ObserveInspectPacket(); }
+```
+</details>
+
+<a id="api-mqttnet-rx-client-mqttclientoperationextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Client.MqttClientOperationExtensions</code></summary>
+
+```text
+public static class MqttClientOperationExtensions
+extension(IMqttClient client) { public IObservable<MqttClientConnectResult> Connect(MqttClientOptions options); }
+extension(IMqttClient client) { public IObservable<MqttClientConnectResult> Connect(Action<MqttClientOptionsBuilder> configure); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientConnectResult> ObserveConnect(MqttClientOptions options); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientConnectResult> ObserveConnect(Action<MqttClientOptionsBuilder> configure); }
+extension(IMqttClient client) { public IObservable<RxUnit> Disconnect(MqttClientDisconnectOptions options); }
+extension(IMqttClient client) { public IObservable<RxUnit> Disconnect(Action<MqttClientDisconnectOptionsBuilder> configure); }
+extension(IMqttClient client) { public IObservableAsync<RxUnit> ObserveDisconnect(MqttClientDisconnectOptions options); }
+extension(IMqttClient client) { public IObservableAsync<RxUnit> ObserveDisconnect(Action<MqttClientDisconnectOptionsBuilder> configure); }
+extension(IMqttClient client) { public IObservable<RxUnit> Ping(); }
+extension(IMqttClient client) { public IObservableAsync<RxUnit> ObservePing(); }
+extension(IMqttClient client) { public IObservable<MqttClientPublishResult> Publish(MqttApplicationMessage message); }
+extension(IMqttClient client) { public IObservable<MqttClientPublishResult> Publish(Action<MqttApplicationMessageBuilder> configure); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientPublishResult> ObservePublish(MqttApplicationMessage message); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientPublishResult> ObservePublish(Action<MqttApplicationMessageBuilder> configure); }
+extension(IMqttClient client) { public IObservable<MqttClientPublishResult> PublishBinary(string topic, IEnumerable<byte>? payload, MqttQualityOfServiceLevel qualityOfServiceLevel, bool retain); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientPublishResult> ObservePublishBinary(string topic, IEnumerable<byte>? payload, MqttQualityOfServiceLevel qualityOfServiceLevel, bool retain); }
+extension(IMqttClient client) { public IObservable<MqttClientPublishResult> PublishSequence(string topic, ReadOnlySequence<byte> payload, MqttQualityOfServiceLevel qualityOfServiceLevel, bool retain); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientPublishResult> ObservePublishSequence(string topic, ReadOnlySequence<byte> payload, MqttQualityOfServiceLevel qualityOfServiceLevel, bool retain); }
+extension(IMqttClient client) { public IObservable<MqttClientPublishResult> PublishString(string topic, string? payload, MqttQualityOfServiceLevel qualityOfServiceLevel, bool retain); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientPublishResult> ObservePublishString(string topic, string? payload, MqttQualityOfServiceLevel qualityOfServiceLevel, bool retain); }
+extension(IMqttClient client) { public IObservable<RxUnit> Reconnect(); }
+extension(IMqttClient client) { public IObservableAsync<RxUnit> ObserveReconnect(); }
+extension(IMqttClient client) { public IObservable<RxUnit> SendEnhancedAuthenticationExchangeData(MqttEnhancedAuthenticationExchangeData data); }
+extension(IMqttClient client) { public IObservableAsync<RxUnit> ObserveSendEnhancedAuthenticationExchangeData(MqttEnhancedAuthenticationExchangeData data); }
+extension(IMqttClient client) { public IObservable<MqttClientSubscribeResult> Subscribe(MqttClientSubscribeOptions options); }
+extension(IMqttClient client) { public IObservable<MqttClientSubscribeResult> Subscribe(Action<MqttClientSubscribeOptionsBuilder> configure); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientSubscribeResult> ObserveSubscribe(MqttClientSubscribeOptions options); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientSubscribeResult> ObserveSubscribe(Action<MqttClientSubscribeOptionsBuilder> configure); }
+extension(IMqttClient client) { public IObservable<bool> TryDisconnect(); }
+extension(IMqttClient client) { public IObservable<bool> TryDisconnect(MqttClientDisconnectOptionsReason reason, string? reasonString); }
+extension(IMqttClient client) { public IObservableAsync<bool> ObserveTryDisconnect(); }
+extension(IMqttClient client) { public IObservableAsync<bool> ObserveTryDisconnect(MqttClientDisconnectOptionsReason reason, string? reasonString); }
+extension(IMqttClient client) { public IObservable<bool> TryPing(); }
+extension(IMqttClient client) { public IObservableAsync<bool> ObserveTryPing(); }
+extension(IMqttClient client) { public IObservable<MqttClientUnsubscribeResult> Unsubscribe(MqttClientUnsubscribeOptions options); }
+extension(IMqttClient client) { public IObservable<MqttClientUnsubscribeResult> Unsubscribe(Action<MqttClientUnsubscribeOptionsBuilder> configure); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientUnsubscribeResult> ObserveUnsubscribe(MqttClientUnsubscribeOptions options); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientUnsubscribeResult> ObserveUnsubscribe(Action<MqttClientUnsubscribeOptionsBuilder> configure); }
+```
+</details>
+
+<a id="api-mqttnet-rx-client-mqttclientproperties"></a>
+<details>
+<summary><code>MQTTnet.Rx.Client.MqttClientProperties</code></summary>
+
+```text
+public sealed record MqttClientProperties(bool IsConnected, MqttClientOptions? Options)
+public bool IsConnected { get; init; }
+public MqttClientOptions? Options { get; init; }
+```
+</details>
+
+<a id="api-mqttnet-rx-client-mqttclientpropertyextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Client.MqttClientPropertyExtensions</code></summary>
+
+```text
+public static class MqttClientPropertyExtensions
+extension(IMqttClient client) { public MqttClientProperties Properties(); }
+extension(IMqttClient client) { public IObservable<T> Property<T>(Func<IMqttClient, T> selector); }
+extension(IMqttClient client) { public IObservableAsync<T> ObserveProperty<T>(Func<IMqttClient, T> selector); }
+extension(IMqttClient client) { public IObservable<MqttClientProperties> PropertySnapshots(); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientProperties> ObservePropertySnapshots(); }
+extension(IMqttClient client) { public IObservable<bool> IsConnectedValue(); }
+extension(IMqttClient client) { public IObservableAsync<bool> ObserveIsConnected(); }
+extension(IMqttClient client) { public IObservable<MqttClientOptions?> OptionsSnapshot(); }
+extension(IMqttClient client) { public IObservableAsync<MqttClientOptions?> ObserveOptionsSnapshot(); }
+```
+</details>
+
+<a id="api-mqttnet-rx-client-mqttclientsequenceoperationextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Client.MqttClientSequenceOperationExtensions</code></summary>
+
+```text
+public static class MqttClientSequenceOperationExtensions
+extension(IObservable<IMqttClient> clients) { public IObservable<MqttClientConnectResult> Connect(MqttClientOptions options); }
+extension(IObservable<IMqttClient> clients) { public IObservable<MqttClientConnectResult> Connect(Action<MqttClientOptionsBuilder> configure); }
+extension(IObservable<IMqttClient> clients) { public IObservable<RxUnit> Disconnect(MqttClientDisconnectOptions options); }
+extension(IObservable<IMqttClient> clients) { public IObservable<RxUnit> Disconnect(Action<MqttClientDisconnectOptionsBuilder> configure); }
+extension(IObservable<IMqttClient> clients) { public IObservable<MqttClientPublishResult> Publish(MqttApplicationMessage message); }
+extension(IObservable<IMqttClient> clients) { public IObservable<RxUnit> SendEnhancedAuthenticationExchangeData(MqttEnhancedAuthenticationExchangeData data); }
+extension(IObservable<IMqttClient> clients) { public IObservable<MqttClientSubscribeResult> Subscribe(MqttClientSubscribeOptions options); }
+extension(IObservable<IMqttClient> clients) { public IObservable<MqttClientSubscribeResult> Subscribe(Action<MqttClientSubscribeOptionsBuilder> configure); }
+extension(IObservable<IMqttClient> clients) { public IObservable<MqttClientUnsubscribeResult> Unsubscribe(MqttClientUnsubscribeOptions options); }
+extension(IObservable<IMqttClient> clients) { public IObservable<MqttClientUnsubscribeResult> Unsubscribe(Action<MqttClientUnsubscribeOptionsBuilder> configure); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<MqttClientConnectResult> Connect(MqttClientOptions options); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<MqttClientConnectResult> Connect(Action<MqttClientOptionsBuilder> configure); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<RxUnit> Disconnect(MqttClientDisconnectOptions options); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<RxUnit> Disconnect(Action<MqttClientDisconnectOptionsBuilder> configure); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<MqttClientPublishResult> Publish(MqttApplicationMessage message); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<RxUnit> SendEnhancedAuthenticationExchangeData(MqttEnhancedAuthenticationExchangeData data); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<MqttClientSubscribeResult> Subscribe(MqttClientSubscribeOptions options); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<MqttClientSubscribeResult> Subscribe(Action<MqttClientSubscribeOptionsBuilder> configure); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<MqttClientUnsubscribeResult> Unsubscribe(MqttClientUnsubscribeOptions options); }
+extension(IObservableAsync<IMqttClient> clients) { public IObservableAsync<MqttClientUnsubscribeResult> Unsubscribe(Action<MqttClientUnsubscribeOptionsBuilder> configure); }
 ```
 </details>
 
@@ -1902,6 +2268,33 @@ public static IResilientMqttClient Create(IMqttClient mqttClient, IMqttNetLogger
 ```
 </details>
 
+<a id="api-mqttnet-rx-client-resilientmqttclientoperationextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Client.ResilientMqttClientOperationExtensions</code></summary>
+
+```text
+public static class ResilientMqttClientOperationExtensions
+extension(IResilientMqttClient client) { public IObservable<RxUnit> Enqueue(MqttApplicationMessage message); }
+extension(IResilientMqttClient client) { public IObservable<RxUnit> Enqueue(ResilientMqttApplicationMessage message); }
+extension(IResilientMqttClient client) { public IObservableAsync<RxUnit> ObserveEnqueue(MqttApplicationMessage message); }
+extension(IResilientMqttClient client) { public IObservableAsync<RxUnit> ObserveEnqueue(ResilientMqttApplicationMessage message); }
+extension(IResilientMqttClient client) { public IObservable<RxUnit> Ping(); }
+extension(IResilientMqttClient client) { public IObservableAsync<RxUnit> ObservePing(); }
+extension(IResilientMqttClient client) { public IObservable<RxUnit> Start(ResilientMqttClientOptions options); }
+extension(IResilientMqttClient client) { public IObservable<RxUnit> Start(Action<ResilientMqttClientOptionsBuilder> configure); }
+extension(IResilientMqttClient client) { public IObservableAsync<RxUnit> ObserveStart(ResilientMqttClientOptions options); }
+extension(IResilientMqttClient client) { public IObservableAsync<RxUnit> ObserveStart(Action<ResilientMqttClientOptionsBuilder> configure); }
+extension(IResilientMqttClient client) { public IObservable<RxUnit> Stop(); }
+extension(IResilientMqttClient client) { public IObservable<RxUnit> Stop(bool cleanDisconnect); }
+extension(IResilientMqttClient client) { public IObservableAsync<RxUnit> ObserveStop(); }
+extension(IResilientMqttClient client) { public IObservableAsync<RxUnit> ObserveStop(bool cleanDisconnect); }
+extension(IResilientMqttClient client) { public IObservable<RxUnit> Subscribe(IEnumerable<MqttTopicFilter> topicFilters); }
+extension(IResilientMqttClient client) { public IObservableAsync<RxUnit> ObserveSubscribe(IEnumerable<MqttTopicFilter> topicFilters); }
+extension(IResilientMqttClient client) { public IObservable<RxUnit> Unsubscribe(IEnumerable<string> topics); }
+extension(IResilientMqttClient client) { public IObservableAsync<RxUnit> ObserveUnsubscribe(IEnumerable<string> topics); }
+```
+</details>
+
 <a id="api-mqttnet-rx-client-resilientmqttclientoptions"></a>
 <details>
 <summary><code>MQTTnet.Rx.Client.ResilientMqttClientOptions</code></summary>
@@ -1933,6 +2326,35 @@ public ResilientMqttClientOptionsBuilder WithClientOptions(MqttClientOptionsBuil
 public ResilientMqttClientOptionsBuilder WithClientOptions( Action<MqttClientOptionsBuilder> options)
 public ResilientMqttClientOptionsBuilder WithMaxTopicFiltersInSubscribeUnsubscribePackets( int value)
 public ResilientMqttClientOptions Build()
+```
+</details>
+
+<a id="api-mqttnet-rx-client-resilientmqttclientproperties"></a>
+<details>
+<summary><code>MQTTnet.Rx.Client.ResilientMqttClientProperties</code></summary>
+
+```text
+public sealed record ResilientMqttClientProperties(IMqttClient InternalClient, bool IsConnected, bool IsStarted, ResilientMqttClientOptions? Options, int PendingApplicationMessagesCount)
+public IMqttClient InternalClient { get; init; }
+public bool IsConnected { get; init; }
+public bool IsStarted { get; init; }
+public ResilientMqttClientOptions? Options { get; init; }
+public int PendingApplicationMessagesCount { get; init; }
+```
+</details>
+
+<a id="api-mqttnet-rx-client-resilientmqttclientpropertyextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Client.ResilientMqttClientPropertyExtensions</code></summary>
+
+```text
+public static class ResilientMqttClientPropertyExtensions
+extension(IResilientMqttClient client) { public ResilientMqttClientProperties Properties(); }
+extension(IResilientMqttClient client) { public IObservable<T> Property<T>(Func<IResilientMqttClient, T> selector); }
+extension(IResilientMqttClient client) { public IObservableAsync<T> ObserveProperty<T>(Func<IResilientMqttClient, T> selector); }
+extension(IResilientMqttClient client) { public IObservable<ResilientMqttClientProperties> PropertySnapshots(); }
+extension(IResilientMqttClient client) { public IObservableAsync<ResilientMqttClientProperties> ObservePropertySnapshots(); }
+extension(IResilientMqttClient client) { public IObservable<SubscriptionsChangedEventArgs> SubscriptionsChanged(); }
 ```
 </details>
 
@@ -2024,6 +2446,36 @@ MqttApplicationMessage ToApplicationMessage();
 ```
 </details>
 
+<a id="api-mqttnet-rx-server-mqttclientstatusextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttClientStatusExtensions</code></summary>
+
+```text
+public static class MqttClientStatusExtensions
+extension(MqttClientStatus client) { public MqttClientStatusProperties Properties(); }
+extension(MqttClientStatus client) { public IObservable<T> Property<T>(Func<MqttClientStatus, T> selector); }
+extension(MqttClientStatus client) { public IObservableAsync<T> ObserveProperty<T>(Func<MqttClientStatus, T> selector); }
+extension(MqttClientStatus client) { public IObservable<MqttClientStatusProperties> PropertySnapshots(); }
+extension(MqttClientStatus client) { public IObservableAsync<MqttClientStatusProperties> ObservePropertySnapshots(); }
+extension(MqttClientStatus client) { public IObservable<RxVoid> Disconnect(MqttServerClientDisconnectOptions options); }
+extension(MqttClientStatus client) { public IObservable<RxVoid> Disconnect(Action<MqttServerClientDisconnectOptionsBuilder> configure); }
+extension(MqttClientStatus client) { public IObservableAsync<RxVoid> ObserveDisconnect(MqttServerClientDisconnectOptions options); }
+extension(MqttClientStatus client) { public IObservableAsync<RxVoid> ObserveDisconnect(Action<MqttServerClientDisconnectOptionsBuilder> configure); }
+extension(MqttClientStatus client) { public IObservable<RxVoid> ResetStatisticsOperation(); }
+extension(MqttClientStatus client) { public IObservableAsync<RxVoid> ObserveResetStatistics(); }
+extension(MqttClientStatus client) { public MqttClientStatus WithSession(MqttSessionStatus session); }
+```
+</details>
+
+<a id="api-mqttnet-rx-server-mqttclientstatusproperties"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttClientStatusProperties</code></summary>
+
+```text
+public sealed record MqttClientStatusProperties(long BytesReceived, long BytesSent, DateTimeOffset ConnectedTimestamp, EndPoint? RemoteEndPoint, string? Endpoint, string Id, DateTimeOffset LastNonKeepAlivePacketReceivedTimestamp, DateTimeOffset LastPacketReceivedTimestamp, DateTimeOffset LastPacketSentTimestamp, MqttProtocolVersion ProtocolVersion, long ReceivedApplicationMessagesCount, long ReceivedPacketsCount, long SentApplicationMessagesCount, long SentPacketsCount, MqttSessionStatus Session)
+```
+</details>
+
 <a id="api-mqttnet-rx-server-mqttretainedmessagemodel"></a>
 <details>
 <summary><code>MQTTnet.Rx.Server.MqttRetainedMessageModel</code></summary>
@@ -2043,12 +2495,28 @@ public MqttApplicationMessage ToApplicationMessage()
 ```
 </details>
 
+<a id="api-mqttnet-rx-server-mqttserverconfigurationextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttServerConfigurationExtensions</code></summary>
+
+```text
+public static class MqttServerConfigurationExtensions
+extension(MqttServer server) { public MqttServer WithAcceptNewConnections(bool value); }
+extension(MqttServer server) { public MqttServer WithServerSessionItem(object key, object value); }
+extension(MqttServer server) { public MqttServer WithoutServerSessionItem(object key); }
+extension(MqttServer server) { public MqttServer ClearServerSessionItems(); }
+extension(MqttServer server) { public MqttServer ConfigureServer(Action<MqttServer> configure); }
+```
+</details>
+
 <a id="api-mqttnet-rx-server-mqttserverextensions"></a>
 <details>
 <summary><code>MQTTnet.Rx.Server.MqttServerExtensions</code></summary>
 
 ```text
 public static class MqttServerExtensions
+extension(MqttServer server) { public IObservable<ApplicationMessageEnqueuedEventArgs> ApplicationMessageEnqueuedOrDropped(); }
+extension(MqttServer server) { public IObservableAsync<ApplicationMessageEnqueuedEventArgs> ObserveApplicationMessageEnqueuedOrDropped(); }
 extension(MqttServer server) { public IObservable<ApplicationMessageNotConsumedEventArgs> ApplicationMessageNotConsumed(); }
 extension(MqttServer server) { public IObservableAsync<ApplicationMessageNotConsumedEventArgs> ObserveApplicationMessageNotConsumed(); }
 extension(MqttServer server) { public IObservable<ClientAcknowledgedPublishPacketEventArgs> ClientAcknowledgedPublishPacket(); }
@@ -2077,6 +2545,8 @@ extension(MqttServer server) { public IObservable<LoadingRetainedMessagesEventAr
 extension(MqttServer server) { public IObservableAsync<LoadingRetainedMessagesEventArgs> ObserveLoadingRetainedMessage(); }
 extension(MqttServer server) { public IObservable<EventArgs> PreparingSession(); }
 extension(MqttServer server) { public IObservableAsync<EventArgs> ObservePreparingSession(); }
+extension(MqttServer server) { public IObservable<QueueMessageOverwrittenEventArgs> QueuedApplicationMessageOverwritten(); }
+extension(MqttServer server) { public IObservableAsync<QueueMessageOverwrittenEventArgs> ObserveQueuedApplicationMessageOverwritten(); }
 extension(MqttServer server) { public IObservable<RetainedMessageChangedEventArgs> RetainedMessageChanged(); }
 extension(MqttServer server) { public IObservableAsync<RetainedMessageChangedEventArgs> ObserveRetainedMessageChanged(); }
 extension(MqttServer server) { public IObservable<EventArgs> RetainedMessagesCleared(); }
@@ -2092,6 +2562,101 @@ extension(MqttServer server) { public IObservableAsync<ValidatingConnectionEvent
 ```
 </details>
 
+<a id="api-mqttnet-rx-server-mqttserveroperationextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttServerOperationExtensions</code></summary>
+
+```text
+public static class MqttServerOperationExtensions
+extension(MqttServer server) { public IObservable<RxVoid> DeleteRetainedMessages(); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveDeleteRetainedMessages(); }
+extension(MqttServer server) { public IObservable<RxVoid> DisconnectClient(string clientId, MqttServerClientDisconnectOptions options); }
+extension(MqttServer server) { public IObservable<RxVoid> DisconnectClient(string clientId, Action<MqttServerClientDisconnectOptionsBuilder> configure); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveDisconnectClient(string clientId, MqttServerClientDisconnectOptions options); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveDisconnectClient(string clientId, Action<MqttServerClientDisconnectOptionsBuilder> configure); }
+extension(MqttServer server) { public IObservable<IList<MqttClientStatus>> GetClients(); }
+extension(MqttServer server) { public IObservableAsync<IList<MqttClientStatus>> ObserveClients(); }
+extension(MqttServer server) { public IObservable<MqttApplicationMessage> GetRetainedMessage(string topic); }
+extension(MqttServer server) { public IObservableAsync<MqttApplicationMessage> ObserveRetainedMessage(string topic); }
+extension(MqttServer server) { public IObservable<IList<MqttApplicationMessage>> GetRetainedMessages(); }
+extension(MqttServer server) { public IObservableAsync<IList<MqttApplicationMessage>> ObserveRetainedMessages(); }
+extension(MqttServer server) { public IObservable<MqttSessionStatus> GetSession(string clientId); }
+extension(MqttServer server) { public IObservableAsync<MqttSessionStatus> ObserveSession(string clientId); }
+extension(MqttServer server) { public IObservable<IList<MqttSessionStatus>> GetSessions(); }
+extension(MqttServer server) { public IObservableAsync<IList<MqttSessionStatus>> ObserveSessions(); }
+extension(MqttServer server) { public IObservable<RxVoid> InjectApplicationMessageOperation(InjectedMqttApplicationMessage message); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveInjectApplicationMessage(InjectedMqttApplicationMessage message); }
+extension(MqttServer server) { public IObservable<RxVoid> Start(); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveStart(); }
+extension(MqttServer server) { public IObservable<RxVoid> Stop(); }
+extension(MqttServer server) { public IObservable<RxVoid> Stop(MqttServerStopOptions options); }
+extension(MqttServer server) { public IObservable<RxVoid> Stop(Action<MqttServerStopOptionsBuilder> configure); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveStop(); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveStop(MqttServerStopOptions options); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveStop(Action<MqttServerStopOptionsBuilder> configure); }
+extension(MqttServer server) { public IObservable<RxVoid> SubscribeClient(string clientId, ICollection<MqttTopicFilter> topicFilters); }
+extension(MqttServer server) { public IObservable<RxVoid> SubscribeClient(string clientId, Action<MqttTopicFilterBuilder> configure); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveSubscribeClient(string clientId, ICollection<MqttTopicFilter> topicFilters); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveSubscribeClient(string clientId, Action<MqttTopicFilterBuilder> configure); }
+extension(MqttServer server) { public IObservable<RxVoid> UnsubscribeClient(string clientId, ICollection<string> topicFilters); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveUnsubscribeClient(string clientId, ICollection<string> topicFilters); }
+extension(MqttServer server) { public IObservable<RxVoid> UpdateRetainedMessage(MqttApplicationMessage message); }
+extension(MqttServer server) { public IObservableAsync<RxVoid> ObserveUpdateRetainedMessage(MqttApplicationMessage message); }
+```
+</details>
+
+<a id="api-mqttnet-rx-server-mqttserveroptionsconfigurationextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttServerOptionsConfigurationExtensions</code></summary>
+
+```text
+public static class MqttServerOptionsConfigurationExtensions
+extension(MqttServerClientDisconnectOptionsBuilder builder) { public MqttServerClientDisconnectOptionsBuilder ConfigureOptions(Action<MqttServerClientDisconnectOptions> configure); }
+extension(MqttServerOptionsBuilder builder) { public MqttServerOptionsBuilder ConfigureOptions(Action<MqttServerOptions> configure); }
+extension(MqttServerStopOptionsBuilder builder) { public MqttServerStopOptionsBuilder ConfigureOptions(Action<MqttServerStopOptions> configure); }
+```
+</details>
+
+<a id="api-mqttnet-rx-server-mqttserverproperties"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttServerProperties</code></summary>
+
+```text
+public sealed record MqttServerProperties(bool AcceptNewConnections, bool IsStarted, IReadOnlyDictionary<object, object?> ServerSessionItems)
+```
+</details>
+
+<a id="api-mqttnet-rx-server-mqttserverpropertyextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttServerPropertyExtensions</code></summary>
+
+```text
+public static class MqttServerPropertyExtensions
+extension(MqttServer server) { public MqttServerProperties Properties(); }
+extension(MqttServer server) { public IObservable<T> Property<T>(Func<MqttServer, T> selector); }
+extension(MqttServer server) { public IObservableAsync<T> ObserveProperty<T>(Func<MqttServer, T> selector); }
+extension(MqttServer server) { public IObservable<MqttServerProperties> PropertySnapshots(); }
+extension(MqttServer server) { public IObservableAsync<MqttServerProperties> ObservePropertySnapshots(); }
+extension(MqttServer server) { public IObservable<bool> AcceptNewConnectionsValue(); }
+extension(MqttServer server) { public IObservableAsync<bool> ObserveAcceptNewConnections(); }
+extension(MqttServer server) { public IObservable<IReadOnlyDictionary<object, object?>> ServerSessionItemsSnapshot(); }
+extension(MqttServer server) { public IObservableAsync<IReadOnlyDictionary<object, object?>> ObserveServerSessionItemsSnapshot(); }
+extension(MqttServer server) { public IObservable<bool> IsStartedChanges(); }
+extension(MqttServer server) { public IObservableAsync<bool> ObserveIsStartedChanges(); }
+```
+</details>
+
+<a id="api-mqttnet-rx-server-mqttserversequenceconfigurationextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttServerSequenceConfigurationExtensions</code></summary>
+
+```text
+public static class MqttServerSequenceConfigurationExtensions
+extension(IObservable<MqttServer> servers) { public IObservable<MqttServer> ConfigureServer(Action<MqttServer> configure); }
+extension(IObservableAsync<MqttServer> servers) { public IObservableAsync<MqttServer> ConfigureServer(Action<MqttServer> configure); }
+```
+</details>
+
 <a id="api-mqttnet-rx-server-mqttserversession"></a>
 <details>
 <summary><code>MQTTnet.Rx.Server.MqttServerSession</code></summary>
@@ -2103,6 +2668,144 @@ public MqttServer Server { get; }
 public void Add(IDisposable resource)
 public void Dispose()
 public async ValueTask DisposeAsync()
+```
+</details>
+
+<a id="api-mqttnet-rx-server-mqttsessionenqueueresult"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttSessionEnqueueResult</code></summary>
+
+```text
+public sealed record MqttSessionEnqueueResult(bool IsEnqueued, InjectMqttApplicationMessageResult? InjectResult)
+```
+</details>
+
+<a id="api-mqttnet-rx-server-mqttsessionstatusextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttSessionStatusExtensions</code></summary>
+
+```text
+public static class MqttSessionStatusExtensions
+extension(MqttSessionStatus session) { public MqttSessionStatusProperties Properties(); }
+extension(MqttSessionStatus session) { public IObservable<T> Property<T>(Func<MqttSessionStatus, T> selector); }
+extension(MqttSessionStatus session) { public IObservableAsync<T> ObserveProperty<T>(Func<MqttSessionStatus, T> selector); }
+extension(MqttSessionStatus session) { public IObservable<MqttSessionStatusProperties> PropertySnapshots(); }
+extension(MqttSessionStatus session) { public IObservableAsync<MqttSessionStatusProperties> ObservePropertySnapshots(); }
+extension(MqttSessionStatus session) { public MqttSessionStatus WithSessionItem(object key, object value); }
+extension(MqttSessionStatus session) { public MqttSessionStatus WithoutSessionItem(object key); }
+extension(MqttSessionStatus session) { public MqttSessionStatus ClearSessionItems(); }
+extension(MqttSessionStatus session) { public IObservable<RxVoid> ClearApplicationMessagesQueue(); }
+extension(MqttSessionStatus session) { public IObservableAsync<RxVoid> ObserveClearApplicationMessagesQueue(); }
+extension(MqttSessionStatus session) { public IObservable<RxVoid> Delete(); }
+extension(MqttSessionStatus session) { public IObservableAsync<RxVoid> ObserveDelete(); }
+extension(MqttSessionStatus session) { public IObservable<InjectMqttApplicationMessageResult> DeliverApplicationMessage(MqttApplicationMessage message); }
+extension(MqttSessionStatus session) { public IObservableAsync<InjectMqttApplicationMessageResult> ObserveDeliverApplicationMessage(MqttApplicationMessage message); }
+extension(MqttSessionStatus session) { public IObservable<MqttSessionEnqueueResult> TryEnqueueApplicationMessage(MqttApplicationMessage message); }
+extension(MqttSessionStatus session) { public IObservableAsync<MqttSessionEnqueueResult> ObserveTryEnqueueApplicationMessage(MqttApplicationMessage message); }
+```
+</details>
+
+<a id="api-mqttnet-rx-server-mqttsessionstatusproperties"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.MqttSessionStatusProperties</code></summary>
+
+```text
+public sealed record MqttSessionStatusProperties(DateTimeOffset CreatedTimestamp, DateTimeOffset? DisconnectedTimestamp, uint ExpiryInterval, string Id, IReadOnlyDictionary<object, object?> Items, long PendingApplicationMessagesCount)
+```
+</details>
+
+<a id="api-mqttnet-rx-server-validatingconnectionoperationextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.Server.ValidatingConnectionOperationExtensions</code></summary>
+
+```text
+public static class ValidatingConnectionOperationExtensions
+extension(ValidatingConnectionEventArgs eventArgs) { public IObservable<ExchangeEnhancedAuthenticationResult> ExchangeEnhancedAuthentication(ExchangeEnhancedAuthenticationOptions options); }
+extension(ValidatingConnectionEventArgs eventArgs) { public IObservableAsync<ExchangeEnhancedAuthenticationResult> ObserveExchangeEnhancedAuthentication(ExchangeEnhancedAuthenticationOptions options); }
+```
+</details>
+
+<a id="mqttnetrxaspnetcore-api"></a>
+### `MQTTnet.Rx.AspNetCore`
+
+<a id="api-mqttnet-rx-aspnetcore-mqttaspnetcorehostingextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.AspNetCore.MqttAspNetCoreHostingExtensions</code></summary>
+
+```text
+public static class MqttAspNetCoreHostingExtensions
+extension(IApplicationBuilder app) { public IApplicationBuilder ConfigureMqttServer(Action<MqttServer> configure); }
+extension(IConnectionBuilder builder) { public IConnectionBuilder UseMqttConnectionHandler(); }
+extension(IEndpointRouteBuilder endpoints) { public IEndpointRouteBuilder MapMqttEndpoint(string pattern); }
+```
+</details>
+
+<a id="api-mqttnet-rx-aspnetcore-mqttaspnetcoreservicecollectionextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.AspNetCore.MqttAspNetCoreServiceCollectionExtensions</code></summary>
+
+```text
+public static class MqttAspNetCoreServiceCollectionExtensions
+extension(IServiceCollection services) { public IServiceCollection WithHostedMqttServer(); }
+extension(IServiceCollection services) { public IServiceCollection WithHostedMqttServer(MqttServerOptions options); }
+extension(IServiceCollection services) { public IServiceCollection WithHostedMqttServer(Action<MqttServerOptionsBuilder>? configure); }
+extension(IServiceCollection services) { public IServiceCollection WithHostedMqttServerServices(Action<AspNetMqttServerOptionsBuilder> configure); }
+extension(IServiceCollection services) { public IServiceCollection WithMqttConnectionHandler(); }
+extension(IServiceCollection services) { public IServiceCollection WithMqttConnections(); }
+extension(IServiceCollection services) { public IServiceCollection WithMqttLogger(IMqttNetLogger logger); }
+extension(IServiceCollection services) { public IServiceCollection WithMqttServer(); }
+extension(IServiceCollection services) { public IServiceCollection WithMqttServer(Action<MqttServerOptionsBuilder>? configure); }
+extension(IServiceCollection services) { public IServiceCollection WithMqttTcpServerAdapter(); }
+extension(IServiceCollection services) { public IServiceCollection WithMqttWebSocketServerAdapter(); }
+```
+</details>
+
+<a id="api-mqttnet-rx-aspnetcore-mqttconnectioncontextextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.AspNetCore.MqttConnectionContextExtensions</code></summary>
+
+```text
+public static class MqttConnectionContextExtensions
+extension(MqttConnectionContext connection) { public MqttConnectionProperties Properties(); }
+extension(MqttConnectionContext connection) { public MqttConnectionContext ResetConnectionStatistics(); }
+extension(MqttConnectionContext connection) { public IObservable<RxVoid> Connect(); }
+extension(MqttConnectionContext connection) { public IObservableAsync<RxVoid> ConnectSignal(); }
+extension(MqttConnectionContext connection) { public IObservable<RxVoid> Disconnect(); }
+extension(MqttConnectionContext connection) { public IObservableAsync<RxVoid> DisconnectSignal(); }
+extension(MqttConnectionContext connection) { public IObservable<MqttPacket> ReceivePacket(); }
+extension(MqttConnectionContext connection) { public IObservableAsync<MqttPacket> ReceivePacketSignal(); }
+extension(MqttConnectionContext connection) { public IObservable<RxVoid> SendPacket(MqttPacket packet); }
+extension(MqttConnectionContext connection) { public IObservableAsync<RxVoid> SendPacketSignal(MqttPacket packet); }
+```
+</details>
+
+<a id="api-mqttnet-rx-aspnetcore-mqttconnectionproperties"></a>
+<details>
+<summary><code>MQTTnet.Rx.AspNetCore.MqttConnectionProperties</code></summary>
+
+```text
+public sealed record MqttConnectionProperties( long BytesReceived, long BytesSent, X509Certificate2? ClientCertificate, bool IsSecureConnection, EndPoint? LocalEndPoint, EndPoint? RemoteEndPoint, MqttPacketFormatterAdapter PacketFormatterAdapter)
+public long BytesReceived { get; init; }
+public long BytesSent { get; init; }
+public X509Certificate2? ClientCertificate { get; init; }
+public bool IsSecureConnection { get; init; }
+public EndPoint? LocalEndPoint { get; init; }
+public EndPoint? RemoteEndPoint { get; init; }
+public MqttPacketFormatterAdapter PacketFormatterAdapter { get; init; }
+```
+</details>
+
+<a id="api-mqttnet-rx-aspnetcore-mqtthostedserverextensions"></a>
+<details>
+<summary><code>MQTTnet.Rx.AspNetCore.MqttHostedServerExtensions</code></summary>
+
+```text
+public static class MqttHostedServerExtensions
+extension(MqttHostedServer server) { public MqttHostedServer WithAcceptNewConnections(bool acceptNewConnections); }
+extension(MqttHostedServer server) { public MqttHostedServer WithServerSessionItem(object key, object value); }
+extension(MqttHostedServer server) { public MqttHostedServer ConfigureHostedServer(Action<MqttHostedServer> configure); }
+extension(MqttHostedServer server) { public IObservable<bool> IsStartedChanges(); }
+extension(MqttHostedServer server) { public IObservableAsync<bool> ObserveIsStarted(); }
 ```
 </details>
 
@@ -2252,56 +2955,56 @@ public static T? DeSerialize<T>(string value, params T[] typeWitness)
 
 ```text
 public static partial class CreateExtensions
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputs( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputs( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputs( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputs( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>( IObservable<ModbusReaderState> reader, string topic, Func<object, TPayload> payloadFactory) where TPayload : notnull; }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>( IObservable<ModbusReaderState> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos) where TPayload : notnull; }
-extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>( IObservable<ModbusReaderState> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos, bool retain) where TPayload : notnull; }
-extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWrite<T>( IObservable<ModbusMasterState> modbus, string topic, Func<string, T> parse, Action<ModbusIpMaster, T> writer); }
-extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWrite<T>( IObservable<ModbusMasterState> modbus, string topic, Func<string, T> parse, Func<ModbusIpMaster, T, Task> writerAsync); }
-extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWriteSingleRegister( IObservable<ModbusMasterState> modbus, string topic, ushort address, Action<ModbusIpMaster, ushort, ushort> writer); }
-extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWriteMultipleRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, Action<ModbusIpMaster, ushort, ushort[]> writer); }
-extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWriteSingleCoil( IObservable<ModbusMasterState> modbus, string topic, ushort address, Action<ModbusIpMaster, ushort, bool> writer); }
-extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWriteMultipleCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, Action<ModbusIpMaster, ushort, bool[]> writer); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishHoldingRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishHoldingRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishHoldingRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishHoldingRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputs( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputs( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputs( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputs( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishModbus<TPayload>( IObservable<ModbusReaderState> reader, string topic, Func<object, TPayload> payloadFactory) where TPayload : notnull; }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishModbus<TPayload>( IObservable<ModbusReaderState> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos) where TPayload : notnull; }
-extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishModbus<TPayload>( IObservable<ModbusReaderState> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos, bool retain) where TPayload : notnull; }
-extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWrite<T>( IObservable<ModbusMasterState> modbus, string topic, Func<string, T> parse, Action<ModbusIpMaster, T> writer); }
-extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWrite<T>( IObservable<ModbusMasterState> modbus, string topic, Func<string, T> parse, Func<ModbusIpMaster, T, Task> writerAsync); }
-extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWriteSingleRegister( IObservable<ModbusMasterState> modbus, string topic, ushort address, Action<ModbusIpMaster, ushort, ushort> writer); }
-extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWriteMultipleRegisters( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, Action<ModbusIpMaster, ushort, ushort[]> writer); }
-extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWriteSingleCoil( IObservable<ModbusMasterState> modbus, string topic, ushort address, Action<ModbusIpMaster, ushort, bool> writer); }
-extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWriteMultipleCoils( IObservable<ModbusMasterState> modbus, string topic, ushort startAddress, Action<ModbusIpMaster, ushort, bool[]> writer); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputs( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputs( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputs( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishInputs( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>( IObservable<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory) where TPayload : notnull; }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>( IObservable<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos) where TPayload : notnull; }
+extension(IObservable<IResilientMqttClient> client) { public IObservable<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>( IObservable<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos, bool retain) where TPayload : notnull; }
+extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWrite<T>( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, Func<string, T> parse, Action<ModbusIpMaster, T> writer); }
+extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWrite<T>( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, Func<string, T> parse, Func<ModbusIpMaster, T, Task> writerAsync); }
+extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWriteSingleRegister( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort address, Action<ModbusIpMaster, ushort, ushort> writer); }
+extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWriteMultipleRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, Action<ModbusIpMaster, ushort, ushort[]> writer); }
+extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWriteSingleCoil( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort address, Action<ModbusIpMaster, ushort, bool> writer); }
+extension(IObservable<IResilientMqttClient> client) { public IDisposable SubscribeWriteMultipleCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, Action<ModbusIpMaster, ushort, bool[]> writer); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishHoldingRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishHoldingRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishHoldingRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishHoldingRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputs( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputs( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputs( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishInputs( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishModbus<TPayload>( IObservable<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory) where TPayload : notnull; }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishModbus<TPayload>( IObservable<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos) where TPayload : notnull; }
+extension(IObservable<IMqttClient> client) { public IObservable<MqttClientPublishResult> PublishModbus<TPayload>( IObservable<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos, bool retain) where TPayload : notnull; }
+extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWrite<T>( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, Func<string, T> parse, Action<ModbusIpMaster, T> writer); }
+extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWrite<T>( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, Func<string, T> parse, Func<ModbusIpMaster, T, Task> writerAsync); }
+extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWriteSingleRegister( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort address, Action<ModbusIpMaster, ushort, ushort> writer); }
+extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWriteMultipleRegisters( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, Action<ModbusIpMaster, ushort, ushort[]> writer); }
+extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWriteSingleCoil( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort address, Action<ModbusIpMaster, ushort, bool> writer); }
+extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWriteMultipleCoils( IObservable<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, Action<ModbusIpMaster, ushort, bool[]> writer); }
 ```
 </details>
 
@@ -2311,44 +3014,44 @@ extension(IObservable<IMqttClient> client) { public IDisposable SubscribeWriteMu
 
 ```text
 public static partial class ObservableAsyncCreateExtensionMixins
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishInputRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishInputRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishInputRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishInputRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishHoldingRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishHoldingRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishHoldingRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishHoldingRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishInputs( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishInputs( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishInputs( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishInputs( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishCoils( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishCoils( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishCoils( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishCoils( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishModbus<TPayload>( ModbusReaderSignal reader, string topic, Func<object, TPayload> payloadFactory) where TPayload : notnull; }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishModbus<TPayload>( ModbusReaderSignal reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos) where TPayload : notnull; }
-extension(IObservableAsync<IMqttClient> client) { public PublishResult PublishModbus<TPayload>( ModbusReaderSignal reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos, bool retain) where TPayload : notnull; }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishInputRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishInputRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishInputRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishInputRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishHoldingRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishHoldingRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishHoldingRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishHoldingRegisters( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishInputs( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishInputs( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishInputs( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishInputs( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishCoils( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishCoils( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishCoils( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishCoils( ModbusMasterSignal modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishModbus<TPayload>( ModbusReaderSignal reader, string topic, Func<object, TPayload> payloadFactory) where TPayload : notnull; }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishModbus<TPayload>( ModbusReaderSignal reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos) where TPayload : notnull; }
-extension(IObservableAsync<IResilientMqttClient> client) { public ResilientResult PublishModbus<TPayload>( ModbusReaderSignal reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos, bool retain) where TPayload : notnull; }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishInputRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishInputRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishInputRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishInputRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishHoldingRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishHoldingRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishHoldingRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishHoldingRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishInputs( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishInputs( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishInputs( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishInputs( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishCoils( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishCoils( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishCoils( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishCoils( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishModbus<TPayload>( IObservableAsync<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory) where TPayload : notnull; }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishModbus<TPayload>( IObservableAsync<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos) where TPayload : notnull; }
+extension(IObservableAsync<IMqttClient> client) { public IObservableAsync<MqttClientPublishResult> PublishModbus<TPayload>( IObservableAsync<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos, bool retain) where TPayload : notnull; }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishHoldingRegisters( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputs( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputs( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputs( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishInputs( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishCoils( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishCoils( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishCoils( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishCoils( IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)> modbus, string topic, ushort startAddress, ushort numberOfPoints, double interval, MqttQualityOfServiceLevel qos, bool retain); }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>( IObservableAsync<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory) where TPayload : notnull; }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>( IObservableAsync<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos) where TPayload : notnull; }
+extension(IObservableAsync<IResilientMqttClient> client) { public IObservableAsync<ApplicationMessageProcessedEventArgs> PublishModbus<TPayload>( IObservableAsync<(bool Connected, Exception? Error, object? Data)> reader, string topic, Func<object, TPayload> payloadFactory, MqttQualityOfServiceLevel qos, bool retain) where TPayload : notnull; }
 ```
 </details>
 

@@ -31,6 +31,7 @@ public class Wave2ServerCoverageTests
     {
         using var server = CreateServer();
 
+        await SubscribeAndDisposeAsync(server.ObserveApplicationMessageEnqueuedOrDropped());
         await SubscribeAndDisposeAsync(server.ObserveApplicationMessageNotConsumed());
         await SubscribeAndDisposeAsync(server.ObserveClientAcknowledgedPublishPacket());
         await SubscribeAndDisposeAsync(server.ObserveClientConnected());
@@ -45,6 +46,7 @@ public class Wave2ServerCoverageTests
         await SubscribeAndDisposeAsync(server.ObserveInterceptingUnsubscription());
         await SubscribeAndDisposeAsync(server.ObserveLoadingRetainedMessage());
         await SubscribeAndDisposeAsync(server.ObservePreparingSession());
+        await SubscribeAndDisposeAsync(server.ObserveQueuedApplicationMessageOverwritten());
         await SubscribeAndDisposeAsync(server.ObserveRetainedMessageChanged());
         await SubscribeAndDisposeAsync(server.ObserveRetainedMessagesCleared());
         await SubscribeAndDisposeAsync(server.ObserveSessionDeleted());

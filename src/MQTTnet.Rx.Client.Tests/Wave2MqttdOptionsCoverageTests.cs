@@ -156,7 +156,7 @@ public sealed class Wave2MqttdOptionsCoverageTests
         using var connected = client.Connected().Subscribe(static _ => { });
         using var connecting = client.Connecting().Subscribe(static _ => { });
         await using var connectingAsync = await SubscribeAsync(client.ObserveConnecting());
-        using var inspected = client.InspectPackage().Subscribe(static _ => { });
+        using var inspected = client.InspectPacket().Subscribe(static _ => { });
 
         // Assert
         await Assert.That(received).IsNotNull();

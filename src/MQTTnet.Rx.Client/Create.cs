@@ -8,8 +8,6 @@ using MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
 using MQTTnet.Rx.Client.ResilientClient.Internal;
 #endif
 using ReactiveUI.Primitives.Async;
-using ReactiveUI.Primitives.Async.Disposables;
-using ReactiveUI.Primitives.Disposables;
 #if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Signals;
 #else
@@ -29,18 +27,25 @@ namespace MQTTnet.Rx.Client;
 /// designed for use in multi-threaded environments.</remarks>
 public static class Create
 {
+    /// <summary>Stores the current MQTT client factory.</summary>
+    private static MqttClientFactory _mqttFactory = new();
+
     /// <summary>Gets the default factory instance for creating MQTT clients.</summary>
     /// <remarks>Use this property to obtain a shared instance of the MQTT client factory when creating new
     /// MQTT client connections. The returned factory is thread-safe and intended for reuse throughout the
     /// application.</remarks>
-    public static MqttClientFactory MqttFactory { get; private set; } = new();
+    public static MqttClientFactory MqttFactory => Volatile.Read(ref _mqttFactory);
 
     /// <summary>Sets the global MQTT client factory instance to use for creating MQTT clients.</summary>
     /// <remarks>Use this method to replace the default MQTT client factory with a custom implementation. This
     /// affects all future MQTT client creation operations that rely on the global factory instance.</remarks>
     /// <param name="mqttFactory">The MQTT client factory to be used for subsequent client creation. Cannot be
     /// null.</param>
-    public static void NewMqttFactory(MqttClientFactory mqttFactory) => MqttFactory = mqttFactory;
+    public static void NewMqttFactory(MqttClientFactory mqttFactory)
+    {
+        ArgumentNullException.ThrowIfNull(mqttFactory);
+        _ = Interlocked.Exchange(ref _mqttFactory, mqttFactory);
+    }
 
     /// <summary>Creates an observable sequence that provides a shared instance of an MQTT client.</summary>
     /// <remarks>The returned observable shares a single underlying MQTT client instance among all
@@ -51,24 +56,12 @@ public static class Create
     /// client is disposed when all subscriptions are disposed.</returns>
     public static IObservable<IMqttClient> MqttClient()
     {
-        var mqttClient = MqttFactory.CreateMqttClient();
-        var clientCount = new int[1];
+        var lifetime = new SharedClientLifetime<IMqttClient>(static () => MqttFactory.CreateMqttClient());
         return CreateObservable.RetryForever(
             Signal.Create<IMqttClient>(observer =>
             {
-                observer.OnNext(mqttClient);
-                _ = Interlocked.Increment(ref clientCount[0]);
-                return Scope.Create(
-                    (mqttClient, clientCount),
-                    static state =>
-                    {
-                        if (Interlocked.Decrement(ref state.clientCount[0]) != 0)
-                        {
-                            return;
-                        }
-
-                        state.mqttClient.Dispose();
-                    });
+                var lease = lifetime.Acquire();
+                return NotifyObserver(observer, lease);
             }));
     }
 
@@ -76,27 +69,13 @@ public static class Create
     /// <returns>An asynchronous observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
     public static IObservableAsync<IMqttClient> MqttClientSignal()
     {
-        var mqttClient = MqttFactory.CreateMqttClient();
-        var clientCount = new int[1];
+        var lifetime = new SharedClientLifetime<IMqttClient>(static () => MqttFactory.CreateMqttClient());
         return SignalAsync
             .Create<IMqttClient>(
                 async (observer, cancellationToken) =>
                 {
-                    await observer.OnNextAsync(mqttClient, cancellationToken).ConfigureAwait(false);
-                    _ = Interlocked.Increment(ref clientCount[0]);
-
-                    return DisposableAsync.Create(
-                        (mqttClient, clientCount),
-                        static state =>
-                        {
-                            if (Interlocked.Decrement(ref state.clientCount[0]) != 0)
-                            {
-                                return default;
-                            }
-
-                            state.mqttClient.Dispose();
-                            return default;
-                        });
+                    var lease = lifetime.Acquire();
+                    return await NotifyObserverAsync(observer, lease, cancellationToken).ConfigureAwait(false);
                 })
             .Retry();
     }
@@ -112,24 +91,13 @@ public static class Create
     /// disposed when all subscriptions are disposed.</returns>
     public static IObservable<IResilientMqttClient> ResilientMqttClient()
     {
-        var mqttClient = CreateResilientMqttClient(MqttFactory);
-        var clientCount = new int[1];
+        var lifetime = new SharedClientLifetime<IResilientMqttClient>(
+            static () => CreateResilientMqttClient(MqttFactory));
         return CreateObservable.RetryForever(
             Signal.Create<IResilientMqttClient>(observer =>
             {
-                observer.OnNext(mqttClient);
-                _ = Interlocked.Increment(ref clientCount[0]);
-                return Scope.Create(
-                    (mqttClient, clientCount),
-                    static state =>
-                    {
-                        if (Interlocked.Decrement(ref state.clientCount[0]) != 0)
-                        {
-                            return;
-                        }
-
-                        state.mqttClient.Dispose();
-                    });
+                var lease = lifetime.Acquire();
+                return NotifyObserver(observer, lease);
             }));
     }
 
@@ -138,27 +106,14 @@ public static class Create
     /// instance.</returns>
     public static IObservableAsync<IResilientMqttClient> ResilientMqttClientSignal()
     {
-        var mqttClient = CreateResilientMqttClient(MqttFactory);
-        var clientCount = new int[1];
+        var lifetime = new SharedClientLifetime<IResilientMqttClient>(
+            static () => CreateResilientMqttClient(MqttFactory));
         return SignalAsync
             .Create<IResilientMqttClient>(
                 async (observer, cancellationToken) =>
                 {
-                    await observer.OnNextAsync(mqttClient, cancellationToken).ConfigureAwait(false);
-                    _ = Interlocked.Increment(ref clientCount[0]);
-
-                    return DisposableAsync.Create(
-                        (mqttClient, clientCount),
-                        static state =>
-                        {
-                            if (Interlocked.Decrement(ref state.clientCount[0]) != 0)
-                            {
-                                return default;
-                            }
-
-                            state.mqttClient.Dispose();
-                            return default;
-                        });
+                    var lease = lifetime.Acquire();
+                    return await NotifyObserverAsync(observer, lease, cancellationToken).ConfigureAwait(false);
                 })
             .Retry();
     }
@@ -218,5 +173,128 @@ public static class Create
     {
         ArgumentNullException.ThrowIfNull(factory);
         return new(factory.CreateMqttClient(), factory.DefaultLogger);
+    }
+
+    /// <summary>Notifies a synchronous observer and releases a rejected client lease.</summary>
+    /// <typeparam name="T">The client type.</typeparam>
+    /// <param name="observer">The receiving observer.</param>
+    /// <param name="lease">The acquired client lease.</param>
+    /// <returns>The accepted lease.</returns>
+    private static SharedClientLifetime<T>.ClientLease NotifyObserver<T>(
+        IObserver<T> observer,
+        SharedClientLifetime<T>.ClientLease lease)
+        where T : class, IDisposable
+    {
+        try
+        {
+            observer.OnNext(lease.Client);
+            return lease;
+        }
+        catch
+        {
+            lease.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Notifies an asynchronous observer and releases a rejected client lease.</summary>
+    /// <typeparam name="T">The client type.</typeparam>
+    /// <param name="observer">The receiving observer.</param>
+    /// <param name="lease">The acquired client lease.</param>
+    /// <param name="cancellationToken">Cancels notification.</param>
+    /// <returns>The accepted lease.</returns>
+    private static async ValueTask<SharedClientLifetime<T>.ClientLease> NotifyObserverAsync<T>(
+        IObserverAsync<T> observer,
+        SharedClientLifetime<T>.ClientLease lease,
+        CancellationToken cancellationToken)
+        where T : class, IDisposable
+    {
+        try
+        {
+            await observer.OnNextAsync(lease.Client, cancellationToken).ConfigureAwait(false);
+            return lease;
+        }
+        catch
+        {
+            lease.Dispose();
+            throw;
+        }
+    }
+
+    /// <summary>Owns one shared client per active subscription wave.</summary>
+    /// <typeparam name="T">The disposable client type.</typeparam>
+    /// <param name="factory">Creates a client for a new subscription wave.</param>
+    internal sealed class SharedClientLifetime<T>(Func<T> factory)
+        where T : class, IDisposable
+    {
+        /// <summary>Serializes acquisition and release.</summary>
+#if NET9_0_OR_GREATER
+        private readonly Lock _gate = new();
+#else
+        private readonly object _gate = new();
+#endif
+
+        /// <summary>Stores the active shared client.</summary>
+        private T? _client;
+
+        /// <summary>Tracks active leases.</summary>
+        private int _leaseCount;
+
+        /// <summary>Acquires a client lease.</summary>
+        /// <returns>A lease over the current shared client.</returns>
+        internal ClientLease Acquire()
+        {
+            lock (_gate)
+            {
+                _client ??= factory();
+                _leaseCount++;
+                return new(this, _client);
+            }
+        }
+
+        /// <summary>Releases one lease and disposes the client after the final release.</summary>
+        private void Release()
+        {
+            T? client = null;
+            lock (_gate)
+            {
+                _leaseCount--;
+                if (_leaseCount == 0)
+                {
+                    client = _client;
+                    _client = null;
+                }
+            }
+
+            client?.Dispose();
+        }
+
+        /// <summary>Owns one subscription's share of the client lifetime.</summary>
+        /// <param name="owner">The shared lifetime owner.</param>
+        /// <param name="client">The leased client.</param>
+        internal sealed class ClientLease(SharedClientLifetime<T> owner, T client) : IDisposable, IAsyncDisposable
+        {
+            /// <summary>Tracks whether this lease was released.</summary>
+            private int _disposed;
+
+            /// <summary>Gets the leased client.</summary>
+            internal T Client { get; } = client;
+
+            /// <inheritdoc/>
+            public void Dispose()
+            {
+                if (Interlocked.Exchange(ref _disposed, 1) == 0)
+                {
+                    owner.Release();
+                }
+            }
+
+            /// <inheritdoc/>
+            public ValueTask DisposeAsync()
+            {
+                Dispose();
+                return ValueTask.CompletedTask;
+            }
+        }
     }
 }

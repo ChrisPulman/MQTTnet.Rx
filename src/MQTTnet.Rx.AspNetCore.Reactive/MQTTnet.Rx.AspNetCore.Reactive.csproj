@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <DefineConstants>$(DefineConstants);REACTIVE_SHIM</DefineConstants>
+    <PackageId>MQTTnet.Rx.AspNetCore.Reactive</PackageId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="MQTTnet.AspNetCore" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+    <ProjectReference Include="..\MQTTnet.Rx.Server.Reactive\MQTTnet.Rx.Server.Reactive.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.AspNetCore\**\*.cs"
+             Exclude="..\MQTTnet.Rx.AspNetCore\bin\**;..\MQTTnet.Rx.AspNetCore\obj\**"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.AspNetCore.Builder" />
+    <Using Include="Microsoft.AspNetCore.Connections" />
+    <Using Include="Microsoft.AspNetCore.Routing" />
+    <Using Include="Microsoft.Extensions.DependencyInjection" />
+    <Using Include="MQTTnet.AspNetCore" />
+    <Using Include="MQTTnet.Diagnostics.Logger" />
+    <Using Include="MQTTnet.Formatter" />
+    <Using Include="MQTTnet.Packets" />
+    <Using Include="MQTTnet.Rx.Server.Reactive" />
+    <Using Include="MQTTnet.Server" />
+    <Using Include="ReactiveUI.Primitives.Async" />
+    <Using Include="ReactiveUI.Primitives.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Reactive.Signals" />
+    <Using Include="ReactiveUI.Primitives.Reactive.Signals.Signal" Alias="SignalFactory" />
+    <Using Include="System.Reactive.Unit" Alias="RxVoid" />
+    <Using Include="System.Net" />
+    <Using Include="System.Security.Cryptography.X509Certificates" />
+  </ItemGroup>
+</Project>

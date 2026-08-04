@@ -12,6 +12,7 @@
   </Folder>
   <Folder Name="/Reactive/">
     <Project Path="MQTTnet.Rx.ABPlc.Reactive/MQTTnet.Rx.ABPlc.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.AspNetCore.Reactive/MQTTnet.Rx.AspNetCore.Reactive.csproj" />
     <Project Path="MQTTnet.Rx.Client.Reactive/MQTTnet.Rx.Client.Reactive.csproj" />
     <Project Path="MQTTnet.Rx.Mitsubishi.Reactive/MQTTnet.Rx.Mitsubishi.Reactive.csproj" />
     <Project Path="MQTTnet.Rx.Modbus.Reactive/MQTTnet.Rx.Modbus.Reactive.csproj" />
@@ -31,6 +32,7 @@
     <Build Project="false" />
   </Project>
   <Project Path="MQTTnet.Rx.ABPlc/MQTTnet.Rx.ABPlc.csproj" />
+  <Project Path="MQTTnet.Rx.AspNetCore/MQTTnet.Rx.AspNetCore.csproj" />
   <Project Path="MQTTnet.Rx.Client/MQTTnet.Rx.Client.csproj" />
   <Project Path="MQTTnet.Rx.Mitsubishi/MQTTnet.Rx.Mitsubishi.csproj" />
   <Project Path="MQTTnet.Rx.Modbus/MQTTnet.Rx.Modbus.csproj" />

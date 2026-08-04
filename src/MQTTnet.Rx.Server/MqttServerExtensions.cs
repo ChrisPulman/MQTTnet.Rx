@@ -17,6 +17,20 @@ public static class MqttServerExtensions
     /// <param name="server">The MQTT server whose events are observed.</param>
     extension(MqttServer server)
     {
+        /// <summary>Observes application messages that were enqueued or dropped for a client.</summary>
+        /// <returns>An observable event sequence.</returns>
+        public IObservable<ApplicationMessageEnqueuedEventArgs> ApplicationMessageEnqueuedOrDropped() =>
+            CreateObservable.FromAsyncEvent<ApplicationMessageEnqueuedEventArgs>(
+                handler => server.ApplicationMessageEnqueuedOrDroppedAsync += handler,
+                handler => server.ApplicationMessageEnqueuedOrDroppedAsync -= handler);
+
+        /// <summary>Observes application messages that were enqueued or dropped for a client asynchronously.</summary>
+        /// <returns>An asynchronous observable event sequence.</returns>
+        public IObservableAsync<ApplicationMessageEnqueuedEventArgs> ObserveApplicationMessageEnqueuedOrDropped() =>
+            CreateObservable.FromAsyncEventSignal<ApplicationMessageEnqueuedEventArgs>(
+                handler => server.ApplicationMessageEnqueuedOrDroppedAsync += handler,
+                handler => server.ApplicationMessageEnqueuedOrDroppedAsync -= handler);
+
         /// <summary>Observes the associated MQTT server event.</summary>
         /// <returns>An observable event sequence.</returns>
         public IObservable<ApplicationMessageNotConsumedEventArgs> ApplicationMessageNotConsumed() =>
@@ -213,6 +227,20 @@ public static class MqttServerExtensions
             CreateObservable.FromAsyncEventSignal<EventArgs>(
                 handler => server.PreparingSessionAsync += handler,
                 handler => server.PreparingSessionAsync -= handler);
+
+        /// <summary>Observes queued application messages that were overwritten.</summary>
+        /// <returns>An observable event sequence.</returns>
+        public IObservable<QueueMessageOverwrittenEventArgs> QueuedApplicationMessageOverwritten() =>
+            CreateObservable.FromAsyncEvent<QueueMessageOverwrittenEventArgs>(
+                handler => server.QueuedApplicationMessageOverwrittenAsync += handler,
+                handler => server.QueuedApplicationMessageOverwrittenAsync -= handler);
+
+        /// <summary>Observes queued application messages that were overwritten asynchronously.</summary>
+        /// <returns>An asynchronous observable event sequence.</returns>
+        public IObservableAsync<QueueMessageOverwrittenEventArgs> ObserveQueuedApplicationMessageOverwritten() =>
+            CreateObservable.FromAsyncEventSignal<QueueMessageOverwrittenEventArgs>(
+                handler => server.QueuedApplicationMessageOverwrittenAsync += handler,
+                handler => server.QueuedApplicationMessageOverwrittenAsync -= handler);
 
         /// <summary>Observes the associated MQTT server event.</summary>
         /// <returns>An observable event sequence.</returns>

@@ -153,8 +153,8 @@ public sealed class ClientConfigurationCoverageTests
         await using var disconnectedAsyncSubscription = await client.ObserveDisconnected().SubscribeAsync(
             static (_, _) => ValueTask.CompletedTask,
             CancellationToken.None);
-        using var inspectionSubscription = client.InspectPackage().Subscribe(static _ => { });
-        await using var inspectionAsyncSubscription = await client.ObserveInspectPackage().SubscribeAsync(
+        using var inspectionSubscription = client.InspectPacket().Subscribe(static _ => { });
+        await using var inspectionAsyncSubscription = await client.ObserveInspectPacket().SubscribeAsync(
             static (_, _) => ValueTask.CompletedTask,
             CancellationToken.None);
 

@@ -76,16 +76,17 @@ public static class MqttClientExtensions
 
         /// <summary>Observes MQTT packet inspection events.</summary>
         /// <returns>An observable sequence of MQTT packet inspection events.</returns>
-        public IObservable<InspectMqttPacketEventArgs> InspectPackage() =>
+        public IObservable<InspectMqttPacketEventArgs> InspectPacket() =>
             CreateObservable.FromAsyncEvent<InspectMqttPacketEventArgs>(
                 handler => client.InspectPacketAsync += handler,
                 handler => client.InspectPacketAsync -= handler);
 
         /// <summary>Observes MQTT packet inspection events asynchronously.</summary>
         /// <returns>An asynchronous observable sequence of MQTT packet inspection events.</returns>
-        public IObservableAsync<InspectMqttPacketEventArgs> ObserveInspectPackage() =>
+        public IObservableAsync<InspectMqttPacketEventArgs> ObserveInspectPacket() =>
             CreateObservable.FromAsyncEventSignal<InspectMqttPacketEventArgs>(
                 handler => client.InspectPacketAsync += handler,
                 handler => client.InspectPacketAsync -= handler);
+
     }
 }

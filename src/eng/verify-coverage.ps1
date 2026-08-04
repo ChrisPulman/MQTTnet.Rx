@@ -8,6 +8,8 @@ $ErrorActionPreference = 'Stop'
 $expectedModules = @(
     'MQTTnet.Rx.ABPlc',
     'MQTTnet.Rx.ABPlc.Reactive',
+    'MQTTnet.Rx.AspNetCore',
+    'MQTTnet.Rx.AspNetCore.Reactive',
     'MQTTnet.Rx.Client',
     'MQTTnet.Rx.Client.Reactive',
     'MQTTnet.Rx.Mitsubishi',

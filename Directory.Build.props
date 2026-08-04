@@ -42,6 +42,8 @@
   </PropertyGroup>
 
   <PropertyGroup>
+    <!-- Non-release builds use minor auto-increment. BuildDeploy passes the selected
+         Major/Minor/Patch increment and an asserted MinVerVersionOverride. -->
     <MinVerAutoIncrement>minor</MinVerAutoIncrement>
     <MinVerDefaultPreReleaseIdentifiers>alpha.0</MinVerDefaultPreReleaseIdentifiers>
     <MinVerTagPrefix>v</MinVerTagPrefix>
