@@ -36,7 +36,7 @@
     <PackageVersion Include="ReactiveUI.Primitives.Async.Reactive" Version="7.1.0" />
     <PackageVersion Include="ReactiveUI.Primitives.Reactive" Version="7.1.0" />
     <PackageVersion Include="SecuritySharp.Analyzers" Version="3.41.1" />
-    <PackageVersion Include="StyleSharp.Analyzers" Version="3.40.1" />
+    <PackageVersion Include="StyleSharp.Analyzers" Version="3.41.1" />
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
     <PackageVersion Include="TUnit" Version="1.63.0" />
     <PackageVersion Include="Verify.TUnit" Version="31.28.0" />
