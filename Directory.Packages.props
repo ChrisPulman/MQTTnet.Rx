@@ -9,7 +9,7 @@
     <PackageVersion Include="IoT-Driver.ABPlcRx" Version="1.0.2" />
     <PackageVersion Include="IoT-Driver.ABPlcRx.Reactive" Version="1.0.2" />
     <PackageVersion Include="IoT-Driver.MitsubishiRx" Version="1.0.2" />
-    <PackageVersion Include="IoT-Driver.MitsubishiRx.Reactive" Version="1.0.2" />
+    <PackageVersion Include="IoT-Driver.MitsubishiRx.Reactive" Version="1.0.3" />
     <PackageVersion Include="IoT-Driver.ModbusRx" Version="1.0.2" />
     <PackageVersion Include="IoT-Driver.ModbusRx.Reactive" Version="1.0.2" />
     <PackageVersion Include="IoT-Driver.OmronPlcRx" Version="1.0.2" />
