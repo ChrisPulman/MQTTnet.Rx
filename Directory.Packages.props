@@ -16,7 +16,7 @@
     <PackageVersion Include="IoT-Driver.OmronPlcRx.Reactive" Version="1.0.2" />
     <PackageVersion Include="IoT-Driver.S7PlcRx" Version="1.0.3" />
     <PackageVersion Include="IoT-Driver.S7PlcRx.Reactive" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.SerialPortRx" Version="1.0.2" />
+    <PackageVersion Include="IoT-Driver.SerialPortRx" Version="1.0.3" />
     <PackageVersion Include="IoT-Driver.SerialPortRx.Reactive" Version="1.0.3" />
     <PackageVersion Include="IoT-Driver.TwinCATRx" Version="1.0.3" />
     <PackageVersion Include="IoT-Driver.TwinCATRx.Reactive" Version="1.0.2" />
