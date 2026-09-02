@@ -31,7 +31,7 @@
     <PackageVersion Include="Nuke.Common" Version="10.1.0" />
     <PackageVersion Include="MinVer" Version="7.0.0" />
     <PackageVersion Include="PerformanceSharp.Analyzers" Version="3.41.14" />
-    <PackageVersion Include="ReactiveUI.Primitives" Version="7.1.0" />
+    <PackageVersion Include="ReactiveUI.Primitives" Version="7.3.0" />
     <PackageVersion Include="ReactiveUI.Primitives.Async" Version="7.1.0" />
     <PackageVersion Include="ReactiveUI.Primitives.Async.Reactive" Version="7.1.0" />
     <PackageVersion Include="ReactiveUI.Primitives.Reactive" Version="7.1.0" />
