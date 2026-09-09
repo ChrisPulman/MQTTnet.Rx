@@ -182,15 +182,13 @@ jobs:
             echo "prerelease=${{ steps.release-version.outputs.prerelease }}"
           } >> "$GITHUB_OUTPUT"
 
-      - name: Setup .NET
+      - name: Setup supported .NET SDKs
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: |
             8.0.x
             9.0.x
             10.0.x
-            11.0.100-rc.1
-          dotnet-quality: preview
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
@@ -198,6 +196,12 @@ jobs:
             **/*.csproj
             **/global.json
             **/nuget.config
+
+      - name: Setup .NET 11 release candidate
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
 
       - name: Cache NuGet HTTP v3 feed responses
         uses: actions/cache@v6
