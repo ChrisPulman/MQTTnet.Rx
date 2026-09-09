@@ -17,6 +17,7 @@ using ReactiveUI.Primitives.Reactive;
 using ReactiveUI.Primitives;
 #endif
 using ReactiveUI.Primitives.Async;
+using ReactiveUI.Primitives.Async.Disposables;
 using ReactiveUI.Primitives.Disposables;
 #if REACTIVE_SHIM
 using Signal = ReactiveUI.Primitives.Reactive.Signals.Signal;
@@ -58,7 +59,10 @@ public class Wave2BridgeMemoryCoverageTests
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(2);
 
     /// <summary>The non-zero interval used by scheduler-based operators.</summary>
-    private static readonly TimeSpan OperatorInterval = TimeSpan.FromMilliseconds(1);
+    private static readonly TimeSpan OperatorInterval = TimeSpan.FromMilliseconds(10);
+
+    /// <summary>The period the asynchronous test source remains active after its final message.</summary>
+    private static readonly TimeSpan SourceCompletionDelay = TimeSpan.FromMilliseconds(30);
 
     /// <summary>Exercises synchronous convenience overloads and both scheduler-selection branches.</summary>
     /// <returns>A task that represents the asynchronous test.</returns>
@@ -126,8 +130,7 @@ public class Wave2BridgeMemoryCoverageTests
     {
         var empty = CreateMessage("empty", ReadOnlySequence<byte>.Empty);
         var multi = CreateMessage("devices/multi", CreateSequence("mul"u8.ToArray(), "ti"u8.ToArray()));
-        IObservableAsync<MqttApplicationMessageReceivedEventArgs> source =
-            TestObservableBridge.ToSignal(Signal.FromEnumerable([empty, multi]));
+        var source = CreateAsyncMessageSource(empty, multi);
 
         await VerifyAsyncPayloadTransformsAsync(source);
         await VerifyAsyncFlowOperatorsAsync(source);
@@ -417,6 +420,23 @@ public class Wave2BridgeMemoryCoverageTests
         MqttPublishPacket packet = new() { Topic = topic, Payload = payload };
         return new("wave-two-bridge-memory", message, packet, null);
     }
+
+    /// <summary>Creates a cold asynchronous message source that permits temporal operators to produce a value.</summary>
+    /// <param name="messages">The messages to deliver in source order.</param>
+    /// <returns>An asynchronous observable that completes after the configured temporal window.</returns>
+    private static IObservableAsync<MqttApplicationMessageReceivedEventArgs> CreateAsyncMessageSource(
+        params MqttApplicationMessageReceivedEventArgs[] messages) =>
+        SignalAsync.Create<MqttApplicationMessageReceivedEventArgs>(async (observer, cancellationToken) =>
+        {
+            foreach (var message in messages)
+            {
+                await observer.OnNextAsync(message, cancellationToken).ConfigureAwait(false);
+            }
+
+            await Task.Delay(SourceCompletionDelay, cancellationToken).ConfigureAwait(false);
+            await observer.OnCompletedAsync(TestResult.Success).ConfigureAwait(false);
+            return DisposableAsync.Empty;
+        });
 
     /// <summary>Creates a two-segment read-only sequence.</summary>
     /// <param name="first">The first segment.</param>
