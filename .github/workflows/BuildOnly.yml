@@ -28,6 +28,12 @@ jobs:
             11.0.100-rc.1.26425.128
           dotnet-quality: 'preview'
           global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            **/Directory.Packages.props
+            **/*.csproj
+            **/global.json
+            **/nuget.config
 
       - name: Add MSBuild to PATH
         uses: microsoft/setup-msbuild@v3
