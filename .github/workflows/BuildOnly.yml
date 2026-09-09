@@ -45,21 +45,10 @@ jobs:
           NUKE_TELEMETRY_OPTOUT: 'true'
 
       - name: Tests + Coverage (MTP)
-        shell: bash
-        working-directory: 'src'
-        run: |
-          dotnet test --solution MQTTnet.Rx.slnx \
-            --configuration Release \
-            --no-build \
-            --max-parallel-test-modules 1 \
-            --coverage \
-            --coverage-output-format cobertura \
-            --results-directory ./TestResults
-
-      - name: Verify 100% production coverage
         shell: pwsh
         working-directory: 'src'
-        run: ./eng/verify-coverage.ps1 -ResultsDirectory ./TestResults
+        run: |
+          ./eng/test-coverage.ps1 -Configuration Release -ResultsDirectory ./TestResults
 
       - name: Upload coverage
         uses: actions/upload-artifact@v7

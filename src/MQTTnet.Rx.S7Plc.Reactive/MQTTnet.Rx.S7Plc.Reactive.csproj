@@ -18,6 +18,8 @@
   <ItemGroup>
     <Using Include="IoT.Driver.Core" />
     <Using Include="IoT.Driver.S7PlcRx.Reactive" />
+    <Using Include="IoT.Driver.S7PlcRx.Reactive.Advanced" />
+    <Using Include="IoT.Driver.S7PlcRx.Reactive.LogicalTags" />
     <Using Include="MQTTnet.Rx.Client.Reactive" />
     <Using Include="ReactiveUI.Primitives.Async" />
     <Using Include="ReactiveUI.Primitives.Reactive" />

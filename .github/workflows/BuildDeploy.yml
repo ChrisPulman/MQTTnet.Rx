@@ -266,23 +266,12 @@ jobs:
         run: ./build.cmd Compile --configuration ${{ env.configuration }}
 
       - name: Tests + Coverage (MTP)
-        shell: bash
+        shell: pwsh
         working-directory: ${{ env.solutionFolder }}
         env:
           MinVerVersionOverride: ${{ steps.minver.outputs.SemVer2 }}
         run: |
-          dotnet test --solution "${{ env.solutionFile }}" \
-            --configuration "${{ env.configuration }}" \
-            --no-build \
-            --max-parallel-test-modules 1 \
-            --coverage \
-            --coverage-output-format cobertura \
-            --results-directory ./TestResults
-
-      - name: Verify 100% production coverage
-        shell: pwsh
-        working-directory: ${{ env.solutionFolder }}
-        run: ./eng/verify-coverage.ps1 -ResultsDirectory ./TestResults
+          ./eng/test-coverage.ps1 -Configuration '${{ env.configuration }}' -ResultsDirectory ./TestResults
 
       - name: Pack unsigned NuGet packages
         shell: bash
@@ -294,6 +283,23 @@ jobs:
       - name: Verify package identities and generator isolation
         shell: bash
         run: python3 src/eng/verify-package-layout.py packages
+
+      - name: Publish Windows Toolkit
+        shell: pwsh
+        env:
+          MinVerVersionOverride: ${{ steps.minver.outputs.SemVer2 }}
+        run: >-
+          dotnet publish src/MQTTnet.Rx.Toolkit/MQTTnet.Rx.Toolkit.csproj
+          --configuration ${{ env.configuration }} --runtime win-x64 --self-contained true
+          -p:EnableTwinCat=true -p:PublishSingleFile=false -p:PublishTrimmed=false
+          --output artifacts/toolkit/win-x64
+
+      - name: Upload unsigned Toolkit
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-toolkit-win-x64
+          path: artifacts/toolkit/win-x64/
+          if-no-files-found: error
 
       - name: Upload unsigned packages
         uses: actions/upload-artifact@v7
@@ -323,6 +329,12 @@ jobs:
         with:
           name: unsigned-nuget
           path: signed
+
+      - name: Download unsigned Toolkit
+        uses: actions/download-artifact@v8
+        with:
+          name: unsigned-toolkit-win-x64
+          path: toolkit/win-x64
 
       - name: Resolve prebuilt SimplySign paths
         shell: bash
@@ -418,7 +430,7 @@ jobs:
 
           timeout 60 pkcs11-tool --module "$SS_PKCS11" -L
 
-      - name: Sign packages with jsign
+      - name: Sign packages and Toolkit with jsign
         shell: bash
         run: |
           set -euo pipefail
@@ -461,6 +473,25 @@ jobs:
             echo "::endgroup::"
           done
 
+          # Sign our apphost and assemblies; preserve vendor/runtime signatures.
+          for required in MQTTnet.Rx.Toolkit.exe MQTTnet.Rx.Toolkit.dll MQTTnet.Rx.Client.dll MQTTnet.Rx.Server.dll MQTTnet.Rx.TwinCAT.dll; do
+            [ -s "toolkit/win-x64/$required" ] || { echo "::error::missing Toolkit binary: $required"; exit 1; }
+          done
+          binaries=( toolkit/win-x64/MQTTnet.Rx*.exe toolkit/win-x64/MQTTnet.Rx*.dll )
+          for binary in "${binaries[@]}"; do
+            echo "::group::sign $binary"
+            java -jar "$JAR" --storetype PKCS11 --keystore "$CONF" --storepass "" \
+              --alg SHA-256 --tsmode RFC3161 --tsaurl "http://time.certum.pl" --replace "$binary"
+            echo "::endgroup::"
+          done
+
+      - name: Upload Toolkit for Windows signature verification
+        uses: actions/upload-artifact@v7
+        with:
+          name: toolkit-win-x64-verification-input
+          path: toolkit/win-x64/
+          if-no-files-found: error
+
       - name: Upload signed packages
         uses: actions/upload-artifact@v7
         with:
@@ -470,8 +501,61 @@ jobs:
             signed/*.snupkg
           if-no-files-found: error
 
-  publish-nuget:
+  toolkit-artifact:
     needs: [release, sign]
+    runs-on: windows-latest
+    environment:
+      name: release
+    permissions:
+      contents: read
+    steps:
+      - name: Download signed Toolkit
+        uses: actions/download-artifact@v8
+        with:
+          name: toolkit-win-x64-verification-input
+          path: toolkit/win-x64
+
+      - name: Verify Toolkit Authenticode signatures
+        shell: pwsh
+        env:
+          CERTUM_CERT_FINGERPRINT: ${{ secrets.CERTUM_CERT_FINGERPRINT }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $expectedFingerprint = $env:CERTUM_CERT_FINGERPRINT -replace '[\s:]', ''
+          if ($expectedFingerprint -notmatch '^[0-9a-fA-F]{64}$') {
+            throw 'CERTUM_CERT_FINGERPRINT must be the signer certificate SHA256 fingerprint.'
+          }
+          foreach ($required in @('MQTTnet.Rx.Toolkit.exe', 'MQTTnet.Rx.Toolkit.dll', 'MQTTnet.Rx.Client.dll', 'MQTTnet.Rx.Server.dll', 'MQTTnet.Rx.TwinCAT.dll')) {
+            if (-not (Test-Path -LiteralPath "toolkit/win-x64/$required" -PathType Leaf)) {
+              throw "Missing Toolkit binary: $required"
+            }
+          }
+          $binaries = Get-ChildItem -LiteralPath toolkit/win-x64 -File |
+            Where-Object { $_.Name -like 'MQTTnet.Rx*' -and $_.Extension -in '.exe', '.dll' }
+          foreach ($binary in $binaries) {
+            $signature = Get-AuthenticodeSignature -LiteralPath $binary.FullName
+            if ($signature.Status -ne 'Valid') {
+              throw "Invalid signature on $($binary.Name): $($signature.StatusMessage)"
+            }
+            $fingerprint = $signature.SignerCertificate.GetCertHashString([System.Security.Cryptography.HashAlgorithmName]::SHA256)
+            if ($fingerprint -ne $expectedFingerprint) {
+              throw "Unexpected signer on $($binary.Name)."
+            }
+            if ($null -eq $signature.TimeStamperCertificate) {
+              throw "Missing signature timestamp on $($binary.Name)."
+            }
+            Write-Host "Verified signature and timestamp: $($binary.Name)"
+          }
+
+      - name: Upload signed Toolkit
+        uses: actions/upload-artifact@v7
+        with:
+          name: MQTTnet.Rx.Toolkit-${{ needs.release.outputs.semver2 }}-win-x64
+          path: toolkit/win-x64/
+          if-no-files-found: error
+
+  publish-nuget:
+    needs: [release, sign, toolkit-artifact]
     runs-on: ubuntu-latest
     environment:
       name: release

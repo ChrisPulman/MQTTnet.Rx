@@ -37,7 +37,7 @@ public static class S7PlcExtensions
 
             return client.PublishMessage(
                 plc.Observe(tag).Select(
-                    payload => (topic, Payload: payload?.ToString() ?? string.Empty)));
+                    payload => (topic, Payload: FormatTagPayload(payload))));
         }
 
         /// <summary>Writes converted MQTT payloads to an S7 tag.</summary>
@@ -89,7 +89,7 @@ public static class S7PlcExtensions
 
             return client.PublishMessage(
                 plc.Observe(tag).Select(
-                    payload => (topic, Payload: payload?.ToString() ?? string.Empty)));
+                    payload => (topic, Payload: FormatTagPayload(payload))));
         }
 
         /// <summary>Writes converted MQTT payloads to an S7 tag.</summary>
@@ -118,4 +118,11 @@ public static class S7PlcExtensions
                         payloadFactory(message.ApplicationMessage.ConvertPayloadToString()))));
         }
     }
+
+    /// <summary>Formats an observed S7 tag value for MQTT publishing.</summary>
+    /// <typeparam name="T">The S7 tag value type.</typeparam>
+    /// <param name="payload">The observed payload.</param>
+    /// <returns>The payload string, or an empty string for null observed values.</returns>
+    private static string FormatTagPayload<T>(T? payload) =>
+        string.Concat(payload);
 }

@@ -1,0 +1,833 @@
+<Window xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:cc="clr-namespace:CrissCross.Avalonia.UI.Controls;assembly=CrissCross.Avalonia.UI" xmlns:vm="clr-namespace:MQTTnet.Rx.Toolkit.ViewModels" xmlns:models="clr-namespace:MQTTnet.Rx.Toolkit.Models" x:Class="MQTTnet.Rx.Toolkit.Views.MainWindow" x:DataType="vm:MainWindowViewModel" Width="1500" Height="960" WindowStartupLocation="CenterScreen" MinWidth="1100" MinHeight="720" Title="MQTTnet.Rx Toolkit" xmlns:controls="clr-namespace:MQTTnet.Rx.Toolkit.Controls">
+  <Window.DataTemplates></Window.DataTemplates>
+  <Window.Styles>
+    <Style Selector="Border.panel">
+      <Setter Property="Background" Value="#20242B" />
+      <Setter Property="BorderBrush" Value="#343B46" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="12" />
+    </Style>
+    <Style Selector="TextBlock.caption">
+      <Setter Property="Foreground" Value="#AAB3BF" />
+      <Setter Property="FontSize" Value="12" />
+    </Style>
+    <Style Selector="TextBox, ComboBox, NumericUpDown">
+      <Setter Property="MinHeight" Value="32" />
+    </Style>
+  </Window.Styles>
+  <Grid RowDefinitions="Auto,*" Background="#15191F">
+    <Border Grid.Row="0" Background="#1F252D" BorderBrush="#343B46" BorderThickness="0,0,0,1" Padding="14,10">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+        <TextBlock Grid.Column="0" Text="MQTTnet.Rx Toolkit" FontSize="18" FontWeight="SemiBold" />
+        <TextBlock Grid.Column="1" Foreground="#AAB3BF" VerticalAlignment="Center" x:Name="StatusTextBlock" />
+        <TextBlock Grid.Column="2" Text="{Binding IsConnected, StringFormat=Connected: {0}}" VerticalAlignment="Center" />
+        <cc:Button Grid.Column="3" Content="Connect" x:Name="ConnectCommandButton" />
+        <cc:Button Grid.Column="4" Content="Disconnect" x:Name="DisconnectCommandButton" />
+      </Grid>
+    </Border>
+    <Grid Grid.Row="1" ColumnDefinitions="380,*" RowDefinitions="*" ColumnSpacing="12" Margin="12">
+      <ScrollViewer Grid.Column="0">
+        <StackPanel Spacing="12">
+          <Border Classes="panel">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Connection" FontSize="16" FontWeight="SemiBold" />
+              <TextBlock Classes="caption" Text="Broker" />
+              <Grid ColumnDefinitions="*,130" ColumnSpacing="8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Host" Classes="caption" />
+                  <TextBox PlaceholderText="Host" x:Name="ConnectionHostTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3" Grid.Column="1">
+                  <TextBlock Text="Port" Classes="caption" />
+                  <NumericUpDown Value="{Binding Connection.Port}" Minimum="1" Maximum="65535" />
+                </StackPanel>
+              </Grid>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Transport Modes" Classes="caption" />
+                  <ComboBox x:Name="ConnectionTransportModesComboBox">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+                <StackPanel Spacing="3" Grid.Column="1">
+                  <TextBlock Text="Protocol Versions" Classes="caption" />
+                  <ComboBox x:Name="ConnectionProtocolVersionsComboBox">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+              </Grid>
+              <StackPanel Spacing="3">
+                <TextBlock Text="Connection URI" Classes="caption" />
+                <TextBox PlaceholderText="Connection URI" x:Name="ConnectionConnectionUriTextBox" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="WebSocket URI" Classes="caption" />
+                <TextBox PlaceholderText="WebSocket URI" x:Name="ConnectionWebSocketUriTextBox" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="Client ID" Classes="caption" />
+                <TextBox PlaceholderText="Client ID" x:Name="ConnectionClientIdTextBox" />
+              </StackPanel>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Username" Classes="caption" />
+                  <TextBox PlaceholderText="Username" x:Name="ConnectionUsernameTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3" Grid.Column="1">
+                  <TextBlock Text="Password" Classes="caption" />
+                  <TextBox PasswordChar="*" PlaceholderText="Password" x:Name="ConnectionPasswordTextBox" />
+                </StackPanel>
+              </Grid>
+              <Expander Header="Advanced credentials" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="6">
+                  <TextBlock Text="MQTT password encoding" Classes="caption" />
+                  <ComboBox x:Name="PasswordFormatSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <CheckBox x:Name="UseEmptyCredentialsToggle" Content="Send credentials even when empty" />
+                </StackPanel>
+              </Expander>
+              <CheckBox Content="Start embedded MQTTnet.Rx.Server" x:Name="ConnectionStartEmbeddedServerCheckBox" />
+              <StackPanel Spacing="3">
+                <TextBlock Text="Embedded Server Port" Classes="caption" />
+                <NumericUpDown Value="{Binding Connection.EmbeddedServerPort}" Minimum="1" Maximum="65535" />
+              </StackPanel>
+              <Expander Header="MQTT 5 user properties" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="8">
+                  <cc:Button Content="Add property" Command="{Binding AddConnectionUserPropertyCommand}" />
+                  <ItemsControl ItemsSource="{Binding Connection.UserProperties}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="5" Margin="0,0,0,5">
+                          <TextBox Text="{Binding Name}" PlaceholderText="Name" />
+                          <TextBox Grid.Column="1" Text="{Binding Value}" PlaceholderText="Value" />
+                          <cc:Button Grid.Column="2" Content="Remove" Command="{Binding $parent[Window].DataContext.RemoveConnectionUserPropertyCommand}" CommandParameter="{Binding}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Expander>
+            </StackPanel>
+          </Border>
+          <Border Classes="panel">
+            <Expander Header="Advanced Client Options" HorizontalAlignment="Stretch">
+              <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <CheckBox Content="Clean start" x:Name="ConnectionCleanStartCheckBox" />
+                  <CheckBox Grid.Column="1" Content="Try private" x:Name="ConnectionTryPrivateCheckBox" />
+                </Grid>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Session expiry" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.SessionExpirySeconds}" Minimum="0" Maximum="4294967295" PlaceholderText="Session expiry" />
+                  </StackPanel>
+                  <StackPanel Spacing="3" Grid.Column="1">
+                    <TextBlock Text="Keep alive" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.KeepAliveSeconds}" Minimum="0" Maximum="65535" PlaceholderText="Keep alive" />
+                  </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Timeout" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.TimeoutSeconds}" Minimum="1" Maximum="300" PlaceholderText="Timeout" />
+                  </StackPanel>
+                  <StackPanel Spacing="3" Grid.Column="1">
+                    <TextBlock Text="Max packet" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.MaximumPacketSize}" Minimum="1" Maximum="4294967295" PlaceholderText="Max packet" />
+                  </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Receive max" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.ReceiveMaximum}" Minimum="1" Maximum="65535" PlaceholderText="Receive max" />
+                  </StackPanel>
+                  <StackPanel Spacing="3" Grid.Column="1">
+                    <TextBlock Text="Topic aliases" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.TopicAliasMaximum}" Minimum="0" Maximum="65535" PlaceholderText="Topic aliases" />
+                  </StackPanel>
+                </Grid>
+                <CheckBox Content="Request problem information" x:Name="ConnectionRequestProblemInformationCheckBox" />
+                <CheckBox Content="Request response information" x:Name="ConnectionRequestResponseInformationCheckBox" />
+                <CheckBox Content="Validate MQTT features" x:Name="ConnectionValidateFeaturesCheckBox" />
+                <CheckBox Content="Disable packet fragmentation" x:Name="ConnectionDisablePacketFragmentationCheckBox" />
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Writer buffer" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.WriterBufferSize}" Minimum="1" Maximum="2147483647" PlaceholderText="Writer buffer" />
+                  </StackPanel>
+                  <StackPanel Spacing="3" Grid.Column="1">
+                    <TextBlock Text="Writer buffer max" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.WriterBufferSizeMax}" Minimum="1" Maximum="2147483647" PlaceholderText="Writer buffer max" />
+                  </StackPanel>
+                </Grid>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Enhanced auth method" Classes="caption" />
+                  <TextBox PlaceholderText="Enhanced auth method" x:Name="ConnectionEnhancedAuthenticationMethodTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Enhanced auth data" Classes="caption" />
+                  <TextBox PlaceholderText="Enhanced auth data" x:Name="ConnectionEnhancedAuthenticationDataTextBox" />
+                  <TextBlock Text="Authentication data encoding" Classes="caption" />
+                  <ComboBox x:Name="AuthenticationDataFormatSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+              </StackPanel>
+            </Expander>
+          </Border>
+          <Border Classes="panel">
+            <Expander Header="TCP and WebSocket" HorizontalAlignment="Stretch">
+              <StackPanel Spacing="8">
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Address Families" Classes="caption" />
+                    <ComboBox x:Name="ConnectionAddressFamiliesComboBox">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </StackPanel>
+                  <StackPanel Spacing="3" Grid.Column="1">
+                    <TextBlock Text="Protocol Types" Classes="caption" />
+                    <ComboBox x:Name="ConnectionProtocolTypesComboBox">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </StackPanel>
+                </Grid>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <CheckBox Content="TCP no delay" x:Name="ConnectionTcpNoDelayCheckBox" />
+                  <CheckBox Grid.Column="1" Content="TCP dual mode" x:Name="ConnectionTcpDualModeCheckBox" />
+                </Grid>
+                <Grid ColumnDefinitions="*,130" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Local bind address" Classes="caption" />
+                    <TextBox PlaceholderText="Local bind address" x:Name="ConnectionTcpLocalAddressTextBox" />
+                  </StackPanel>
+                  <StackPanel Spacing="3" Grid.Column="1">
+                    <TextBlock Text="Tcp Local Port" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.TcpLocalPort}" Minimum="0" Maximum="65535" />
+                  </StackPanel>
+                </Grid>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="TCP buffer size" Classes="caption" />
+                  <NumericUpDown Value="{Binding Connection.TcpBufferSize}" Minimum="1" Maximum="2147483647" PlaceholderText="TCP buffer size" />
+                  <CheckBox x:Name="TcpUseLingerToggle" Content="Configure socket linger" />
+                  <CheckBox x:Name="TcpLingerEnabledToggle" Content="Enable linger" />
+                  <TextBlock Text="Linger timeout (seconds)" Classes="caption" />
+                  <NumericUpDown Value="{Binding Connection.TcpLingerTimeSeconds}" Minimum="0" Maximum="65535" />
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="WS keep alive" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.WebSocketKeepAliveSeconds}" Minimum="0" Maximum="3600" PlaceholderText="WS keep alive" />
+                  </StackPanel>
+                  <CheckBox Grid.Column="1" Content="WS default credentials" x:Name="ConnectionWebSocketUseDefaultCredentialsCheckBox" />
+                </Grid>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="WS subprotocols" Classes="caption" />
+                  <TextBox PlaceholderText="WS subprotocols" x:Name="ConnectionWebSocketSubProtocolsTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Header: value" Classes="caption" />
+                  <TextBox AcceptsReturn="True" MinHeight="68" PlaceholderText="Header: value" x:Name="ConnectionWebSocketHeadersTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Proxy address" Classes="caption" />
+                  <TextBox PlaceholderText="Proxy address" x:Name="ConnectionWebSocketProxyAddressTextBox" />
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Proxy username" Classes="caption" />
+                    <TextBox PlaceholderText="Proxy username" x:Name="ConnectionWebSocketProxyUsernameTextBox" />
+                  </StackPanel>
+                  <StackPanel Spacing="3" Grid.Column="1">
+                    <TextBlock Text="Proxy password" Classes="caption" />
+                    <TextBox PasswordChar="*" PlaceholderText="Proxy password" x:Name="ConnectionWebSocketProxyPasswordTextBox" />
+                  </StackPanel>
+                </Grid>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Proxy domain" Classes="caption" />
+                  <TextBox PlaceholderText="Proxy domain" x:Name="ConnectionWebSocketProxyDomainTextBox" />
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <CheckBox Content="Proxy bypass local" x:Name="ConnectionWebSocketProxyBypassOnLocalCheckBox" />
+                  <CheckBox Grid.Column="1" Content="Proxy default credentials" x:Name="ConnectionWebSocketProxyUseDefaultCredentialsCheckBox" />
+                </Grid>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Proxy bypass list" Classes="caption" />
+                  <TextBox PlaceholderText="Proxy bypass list" x:Name="ConnectionWebSocketProxyBypassListTextBox" />
+                  <TextBlock Text="WebSocket cookies (name=value; separated by semicolons)" Classes="caption" TextWrapping="Wrap" />
+                  <TextBox x:Name="WebSocketCookiesEditor" />
+                  <TextBlock Text="WebSocket credential username" Classes="caption" />
+                  <TextBox x:Name="WebSocketCredentialUsernameEditor" />
+                  <TextBlock Text="WebSocket credential password" Classes="caption" />
+                  <TextBox x:Name="WebSocketCredentialPasswordEditor" PasswordChar="*" />
+                  <TextBlock Text="WebSocket credential domain" Classes="caption" />
+                  <TextBox x:Name="WebSocketCredentialDomainEditor" />
+                  <CheckBox x:Name="WebSocketDeflateToggle" Content="Enable WebSocket compression" />
+                  <TextBlock Text="Compression client window bits" Classes="caption" />
+                  <NumericUpDown Value="{Binding Connection.WebSocketDeflateClientMaxWindowBits}" Minimum="9" Maximum="15" />
+                  <TextBlock Text="Compression server window bits" Classes="caption" />
+                  <NumericUpDown Value="{Binding Connection.WebSocketDeflateServerMaxWindowBits}" Minimum="9" Maximum="15" />
+                  <CheckBox x:Name="WebSocketClientTakeoverToggle" Content="Client compression context takeover" />
+                  <CheckBox x:Name="WebSocketServerTakeoverToggle" Content="Server compression context takeover" />
+                </StackPanel>
+              </StackPanel>
+            </Expander>
+          </Border>
+          <Border Classes="panel">
+            <Expander Header="TLS and Certificates" HorizontalAlignment="Stretch">
+              <StackPanel Spacing="8">
+                <CheckBox Content="Use TLS" x:Name="ConnectionUseTlsCheckBox" />
+                  <TextBlock Text="Client certificate source" Classes="caption" />
+                  <ComboBox x:Name="CertificateSourceSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Text="Certificate store" Classes="caption" />
+                  <ComboBox x:Name="CertificateStoreSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Text="Store location" Classes="caption" />
+                  <ComboBox x:Name="CertificateLocationSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Text="Certificate search" Classes="caption" />
+                  <ComboBox x:Name="CertificateFindTypeSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Text="Server certificate validation" Classes="caption" />
+                  <ComboBox x:Name="CertificateValidationSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Text="Client certificate selection" Classes="caption" />
+                  <ComboBox x:Name="CertificateSelectionSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <TextBlock Text="Certificate search value" Classes="caption" TextWrapping="Wrap" />
+                  <TextBox x:Name="CertificateFindValueEditor" />
+                  <CheckBox x:Name="CertificateAllowInvalidToggle" Content="Include invalid client certificates" />
+                  <TextBlock Text="Client certificate selection thumbprint" Classes="caption" TextWrapping="Wrap" />
+                  <TextBox x:Name="CertificateThumbprintEditor" />
+                  <TextBlock Text="Pinned server certificate thumbprint" Classes="caption" />
+                  <TextBox x:Name="PinnedServerCertificateEditor" />
+                <StackPanel Spacing="3">
+                  <TextBlock Text="TLS target host" Classes="caption" />
+                  <TextBox PlaceholderText="TLS target host" x:Name="ConnectionTlsTargetHostTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Ssl Protocol Options" Classes="caption" />
+                  <ComboBox x:Name="ConnectionSslProtocolOptionsComboBox">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Revocation Modes" Classes="caption" />
+                  <ComboBox x:Name="ConnectionRevocationModesComboBox">
+                    <ComboBox.ItemTemplate>
+                      <DataTemplate>
+                        <TextBlock Text="{Binding}" />
+                      </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+                <TextBlock Text="Custom trust-chain certificates (paths separated by semicolons)" Classes="caption" TextWrapping="Wrap" />
+                <TextBox x:Name="TrustChainEditor" AcceptsReturn="True" MinHeight="64" />
+                <TextBlock Text="TLS application protocols (separated by semicolons)" Classes="caption" />
+                <TextBox x:Name="ApplicationProtocolsEditor" />
+                <TextBlock Text="TLS encryption policy" Classes="caption" />
+                <ComboBox x:Name="EncryptionPolicySelector">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+                <CheckBox Content="Allow untrusted certificates" x:Name="ConnectionAllowUntrustedCertificatesCheckBox" />
+                <CheckBox Content="Ignore chain errors" x:Name="ConnectionIgnoreCertificateChainErrorsCheckBox" />
+                <CheckBox Content="Ignore revocation errors" x:Name="ConnectionIgnoreCertificateRevocationErrorsCheckBox" />
+                <CheckBox Content="Allow renegotiation" x:Name="ConnectionAllowTlsRenegotiationCheckBox" />
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Client certificate .pfx path" Classes="caption" />
+                  <TextBox PlaceholderText="Client certificate .pfx path" x:Name="ConnectionClientCertificatePathTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Certificate password" Classes="caption" />
+                  <TextBox PasswordChar="*" PlaceholderText="Certificate password" x:Name="ConnectionClientCertificatePasswordTextBox" />
+                </StackPanel>
+              </StackPanel>
+            </Expander>
+          </Border>
+          <Border Classes="panel">
+            <Expander Header="Last Will" HorizontalAlignment="Stretch">
+              <StackPanel Spacing="8">
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Will topic" Classes="caption" />
+                  <TextBox PlaceholderText="Will topic" x:Name="ConnectionWillTopicTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Will payload" Classes="caption" />
+                  <TextBox PlaceholderText="Will payload" AcceptsReturn="True" MinHeight="70" x:Name="ConnectionWillPayloadTextBox" />
+                  <TextBlock Text="Will payload encoding" Classes="caption" />
+                  <ComboBox x:Name="WillPayloadFormatSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Quality Of Service Levels" Classes="caption" />
+                    <ComboBox x:Name="ConnectionQualityOfServiceLevelsComboBox">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </StackPanel>
+                  <StackPanel Spacing="3" Grid.Column="1">
+                    <TextBlock Text="Payload Format Indicators" Classes="caption" />
+                    <ComboBox x:Name="ConnectionPayloadFormatIndicatorsComboBox">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </StackPanel>
+                </Grid>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Will content type" Classes="caption" />
+                  <TextBox PlaceholderText="Will content type" x:Name="ConnectionWillContentTypeTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Will response topic" Classes="caption" />
+                  <TextBox PlaceholderText="Will response topic" x:Name="ConnectionWillResponseTopicTextBox" />
+                </StackPanel>
+                <StackPanel Spacing="3">
+                  <TextBlock Text="Will correlation data" Classes="caption" />
+                  <TextBox PlaceholderText="Will correlation data" x:Name="ConnectionWillCorrelationDataTextBox" />
+                  <TextBlock Text="Will correlation data encoding" Classes="caption" />
+                  <ComboBox x:Name="WillCorrelationFormatSelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Delay" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.WillDelaySeconds}" Minimum="0" Maximum="4294967295" PlaceholderText="Delay" />
+                  </StackPanel>
+                  <StackPanel Spacing="3" Grid.Column="1">
+                    <TextBlock Text="Expiry" Classes="caption" />
+                    <NumericUpDown Value="{Binding Connection.WillMessageExpirySeconds}" Minimum="0" Maximum="4294967295" PlaceholderText="Expiry" />
+                  </StackPanel>
+                  <CheckBox Grid.Column="2" Content="Retain will" x:Name="ConnectionWillRetainCheckBox" />
+                </Grid>
+                <Expander Header="MQTT 5 user properties" HorizontalAlignment="Stretch">
+                  <StackPanel Spacing="8">
+                    <cc:Button Content="Add property" Command="{Binding AddWillUserPropertyCommand}" />
+                    <ItemsControl ItemsSource="{Binding Connection.WillUserProperties}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="5" Margin="0,0,0,5">
+                            <TextBox Text="{Binding Name}" PlaceholderText="Name" />
+                            <TextBox Grid.Column="1" Text="{Binding Value}" PlaceholderText="Value" />
+                            <cc:Button Grid.Column="2" Content="Remove" Command="{Binding $parent[Window].DataContext.RemoveWillUserPropertyCommand}" CommandParameter="{Binding}" />
+                          </Grid>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </StackPanel>
+                </Expander>
+              </StackPanel>
+            </Expander>
+          </Border>
+          <Border Classes="panel">
+            <Expander Header="Enhanced Authentication Exchange" HorizontalAlignment="Stretch">
+              <StackPanel Spacing="8">
+                <TextBlock Text="Configure ordered challenge responses before connecting, or send an exchange on the current connection." TextWrapping="Wrap" Classes="caption" />
+                <TextBlock Text="Authentication data" Classes="caption" />
+                <TextBox x:Name="AuthenticationStepDataEditor" AcceptsReturn="True" MinHeight="64" />
+                <TextBlock Text="Data encoding" Classes="caption" />
+                <ComboBox x:Name="AuthenticationStepFormatSelector"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                <TextBlock Text="Reason" Classes="caption" />
+                <TextBox x:Name="AuthenticationStepReasonEditor" />
+                <TextBlock Text="Reason code (sent live, or expected challenge when adding a step)" Classes="caption" TextWrapping="Wrap" />
+                <ComboBox x:Name="AuthenticationReasonCodeSelector"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                <WrapPanel>
+                  <cc:Button x:Name="AddAuthenticationStepButton" Content="Add response step" Margin="0,0,8,8" />
+                  <cc:Button x:Name="SendAuthenticationExchangeButton" Content="Send exchange" Margin="0,0,0,8" />
+                </WrapPanel>
+                <ItemsControl x:Name="AuthenticationStepsItemsControl">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Border Classes="panel" Margin="0,0,0,8">
+                        <StackPanel Spacing="5">
+                          <TextBlock Text="Response data" Classes="caption" />
+                          <TextBox Text="{Binding Data}" AcceptsReturn="True" />
+                          <ComboBox ItemsSource="{Binding PayloadFormats}" SelectedItem="{Binding DataFormat}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                          <TextBlock Text="Response reason" Classes="caption" />
+                          <TextBox Text="{Binding Reason}" />
+                          <TextBlock Text="Expected challenge reason code" Classes="caption" />
+                          <ComboBox ItemsSource="{Binding ReasonCodes}" SelectedItem="{Binding ReasonCode}"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate></ComboBox>
+                          <cc:Button Content="Remove step" Command="{Binding $parent[Window].DataContext.RemoveEnhancedAuthenticationStepCommand}" CommandParameter="{Binding}" />
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </Expander>
+          </Border>
+          <Border Classes="panel">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Subscribe" FontSize="16" FontWeight="SemiBold" />
+              <StackPanel Spacing="3">
+                <TextBlock Text="Topic filter" Classes="caption" />
+                <TextBox PlaceholderText="Topic filter" x:Name="SubscriptionTopicFilterTextBox" />
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="Quality Of Service Levels" Classes="caption" />
+                <ComboBox x:Name="SubscriptionQualityOfServiceLevelsComboBox">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+              <StackPanel Spacing="3">
+                <TextBlock Text="Retain Handling Options" Classes="caption" />
+                <ComboBox x:Name="SubscriptionRetainHandlingOptionsComboBox">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding}" />
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <CheckBox Content="No local" x:Name="SubscriptionNoLocalCheckBox" />
+                <CheckBox Grid.Column="1" Content="Retain as published" x:Name="SubscriptionRetainAsPublishedCheckBox" />
+              </Grid>
+              <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <cc:Button Content="Subscribe" x:Name="SubscribeCommandButton" />
+                <cc:Button Grid.Column="1" Content="Unsubscribe" x:Name="UnsubscribeCommandButton" />
+              </Grid>
+              <StackPanel Spacing="3">
+                <TextBlock Text="Subscription identifier (0 = omit)" Classes="caption" />
+                <NumericUpDown Value="{Binding Subscription.SubscriptionIdentifier}" Minimum="0" Maximum="268435455" />
+              </StackPanel>
+              <Expander Header="MQTT 5 user properties" HorizontalAlignment="Stretch">
+                <StackPanel Spacing="8">
+                  <cc:Button Content="Add property" Command="{Binding AddSubscribeUserPropertyCommand}" />
+                  <ItemsControl ItemsSource="{Binding Subscription.UserProperties}">
+                    <ItemsControl.ItemTemplate>
+                      <DataTemplate>
+                        <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="5" Margin="0,0,0,5">
+                          <TextBox Text="{Binding Name}" PlaceholderText="Name" />
+                          <TextBox Grid.Column="1" Text="{Binding Value}" PlaceholderText="Value" />
+                          <cc:Button Grid.Column="2" Content="Remove" Command="{Binding $parent[Window].DataContext.RemoveSubscribeUserPropertyCommand}" CommandParameter="{Binding}" />
+                        </Grid>
+                      </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                  </ItemsControl>
+                </StackPanel>
+              </Expander>
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+      <TabControl Grid.Column="1">
+        <TabItem Header="Topics">
+          <Grid ColumnDefinitions="420,*" ColumnSpacing="12">
+            <Border Classes="panel">
+              <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                  <TextBlock Text="Topic Tree" FontSize="16" FontWeight="SemiBold" />
+                  <cc:Button Grid.Column="1" Content="Use" x:Name="UseSelectedTopicCommandButton" />
+                </Grid>
+                <TextBlock Grid.Row="1" Text="Observed topics only. Access depends on broker permissions; subscribe to $SYS/# separately for system topics." TextWrapping="Wrap" Classes="caption" />
+                <TreeView Grid.Row="2" x:Name="TopicsTreeView">
+                  <TreeView.ItemTemplate>
+                    <TreeDataTemplate DataType="vm:TopicNodeViewModel" ItemsSource="{Binding Children}">
+                      <Grid ColumnDefinitions="*,50" RowDefinitions="Auto,Auto" MinHeight="26" MaxWidth="330">
+                        <TextBlock Grid.Column="0" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="1" Text="{Binding MessageCount}" HorizontalAlignment="Right" />
+                        <TextBlock Grid.Row="1" Grid.ColumnSpan="2" Text="{Binding LastPayload}" Opacity="0.72" TextTrimming="CharacterEllipsis" MaxWidth="330" />
+                      </Grid>
+                    </TreeDataTemplate>
+                  </TreeView.ItemTemplate>
+                </TreeView>
+              </Grid>
+            </Border>
+            <Border Grid.Column="1" Classes="panel">
+              <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                  <cc:SearchBox PlaceholderText="Filter topics and payloads" x:Name="MessageSearchSearchBox" />
+                  <cc:Button Grid.Column="1" Content="Use selected" x:Name="UseSelectedTopicCommandButton2" />
+                  <cc:Button Grid.Column="2" Content="Clear" x:Name="ClearMessagesCommandButton" />
+                </Grid>
+                <DataGrid Grid.Row="1" AutoGenerateColumns="False" GridLinesVisibility="Horizontal" x:Name="MessagesDataGrid" IsReadOnly="True">
+                  <DataGrid.Columns>
+                    <DataGridTextColumn Header="Time" Binding="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss.fff}'}" Width="110" />
+                    <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="120" />
+                    <DataGridTextColumn Header="Topic" Binding="{Binding Topic}" Width="180" />
+                    <DataGridTextColumn Header="Payload" Binding="{Binding Payload}" Width="*" />
+                  </DataGrid.Columns>
+                </DataGrid>
+              </Grid>
+            </Border>
+          </Grid>
+        </TabItem>
+        <TabItem Header="Publish">
+          <Grid ColumnDefinitions="*,420" ColumnSpacing="12">
+            <Border Classes="panel">
+              <ScrollViewer>
+                <StackPanel Spacing="8">
+                  <TextBlock Text="Message Builder" FontSize="16" FontWeight="SemiBold" />
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Publish topic" Classes="caption" />
+                    <TextBox PlaceholderText="Publish topic" x:Name="PublisherTopicTextBox" />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8">
+                    <StackPanel Spacing="3">
+                      <TextBlock Text="Payload Formats" Classes="caption" />
+                      <ComboBox x:Name="PublisherPayloadFormatsComboBox">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding}" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                    </StackPanel>
+                    <StackPanel Spacing="3" Grid.Column="1">
+                      <TextBlock Text="Quality Of Service Levels" Classes="caption" />
+                      <ComboBox x:Name="PublisherQualityOfServiceLevelsComboBox">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding}" />
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                    </StackPanel>
+                    <CheckBox Grid.Column="2" Content="Retain" x:Name="PublisherRetainCheckBox" />
+                  </Grid>
+                  <StackPanel Spacing="3">
+                    <TextBlock Text="Payload" Classes="caption" />
+                    <TextBox AcceptsReturn="True" MinHeight="260" PlaceholderText="Payload" x:Name="PublisherPayloadTextBox" />
+                  </StackPanel>
+                  <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                    <StackPanel Spacing="3">
+                      <TextBlock Text="Content type" Classes="caption" />
+                      <TextBox PlaceholderText="Content type" x:Name="PublisherContentTypeTextBox" />
+                    </StackPanel>
+                    <StackPanel Spacing="3" Grid.Column="1">
+                      <TextBlock Text="Response topic" Classes="caption" />
+                      <TextBox PlaceholderText="Response topic" x:Name="PublisherResponseTopicTextBox" />
+                    </StackPanel>
+                  </Grid>
+                  <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                    <StackPanel Spacing="3">
+                      <TextBlock Text="Correlation data" Classes="caption" />
+                      <TextBox PlaceholderText="Correlation data" x:Name="PublisherCorrelationDataTextBox" />
+                    </StackPanel>
+                    <StackPanel Spacing="3" Grid.Column="1">
+                      <TextBlock Text="Expiry seconds" Classes="caption" />
+                      <NumericUpDown Value="{Binding Publisher.MessageExpirySeconds}" Minimum="0" Maximum="4294967295" PlaceholderText="Expiry seconds" />
+                    </StackPanel>
+                    <StackPanel Spacing="3" Grid.Column="2">
+                      <TextBlock Text="Topic alias" Classes="caption" />
+                      <NumericUpDown Value="{Binding Publisher.TopicAlias}" Minimum="0" Maximum="65535" PlaceholderText="Topic alias" />
+                    </StackPanel>
+                  </Grid>
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="Correlation data encoding" Classes="caption" />
+                    <ComboBox x:Name="CorrelationFormatSelector">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <CheckBox x:Name="IncludePayloadIndicatorToggle" Content="Send payload format indicator" />
+                    <ComboBox x:Name="PayloadIndicatorSelector">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                          <TextBlock Text="{Binding}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                  </StackPanel>
+                  <cc:Button Content="Publish message" HorizontalAlignment="Left" x:Name="PublishCommandButton" />
+                  <Expander Header="MQTT 5 user properties" HorizontalAlignment="Stretch">
+                    <StackPanel Spacing="8">
+                      <cc:Button Content="Add property" Command="{Binding AddPublishUserPropertyCommand}" />
+                      <ItemsControl ItemsSource="{Binding Publisher.UserProperties}">
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="5" Margin="0,0,0,5">
+                              <TextBox Text="{Binding Name}" PlaceholderText="Name" />
+                              <TextBox Grid.Column="1" Text="{Binding Value}" PlaceholderText="Value" />
+                              <cc:Button Grid.Column="2" Content="Remove" Command="{Binding $parent[Window].DataContext.RemovePublishUserPropertyCommand}" CommandParameter="{Binding}" />
+                            </Grid>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </StackPanel>
+                  </Expander>
+                </StackPanel>
+              </ScrollViewer>
+            </Border>
+            <Border Grid.Column="1" Classes="panel">
+              <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                <ScrollViewer>
+                  <StackPanel Spacing="8">
+                    <TextBlock Text="Selected message" FontSize="16" FontWeight="SemiBold" />
+                    <TextBlock Text="Source" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.Source}" IsReadOnly="True" />
+                    <TextBlock Text="Topic" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.Topic}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Timestamp" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.Timestamp}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Quality Of Service" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.QualityOfService}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Retain" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.Retain}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Dup" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.Dup}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Payload Bytes" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.PayloadBytes}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Detected Format" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.DetectedFormat}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Content Type" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.ContentType}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Payload Format Indicator" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.PayloadFormatIndicator}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Response Topic" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.ResponseTopic}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Correlation Data Hex" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.CorrelationDataHex}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Message Expiry Interval" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.MessageExpiryInterval}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Subscription Identifiers Text" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.SubscriptionIdentifiersText}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Topic Alias" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.TopicAlias}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="User Properties Text" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.UserPropertiesText}" IsReadOnly="True" TextWrapping="Wrap" />
+                    <TextBlock Text="Payload" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.Payload}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="100" MaxHeight="220" />
+                    <TextBlock Text="Raw Payload Hex" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.RawPayloadHex}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="100" MaxHeight="220" />
+                    <TextBlock Text="Raw Payload Base64" Classes="caption" />
+                    <TextBox Text="{Binding SelectedMessage.RawPayloadBase64}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="100" MaxHeight="220" />
+                  </StackPanel>
+                </ScrollViewer>
+              </Grid>
+            </Border>
+          </Grid>
+        </TabItem>
+        <TabItem Header="Dashboard">
+          <Grid RowDefinitions="Auto,*" RowSpacing="12">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+              <cc:Button Content="Add selected topic" x:Name="AddSelectedTopicDashboardTileCommandButton" />
+              <cc:Button Content="Save layout" x:Name="SaveDashboardLayoutCommandButton" />
+              <TextBlock Text="Choose a topic in Topics, or enter one in Publish." VerticalAlignment="Center" />
+            </StackPanel>
+            <ScrollViewer Grid.Row="1">
+              <ItemsControl x:Name="DashboardTilesItemsControl">
+                <ItemsControl.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <WrapPanel />
+                  </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+              </ItemsControl>
+            </ScrollViewer>
+          </Grid>
+        </TabItem>
+        <TabItem Header="TwinCAT" x:Name="TwinCatTab">
+          <ScrollViewer>
+            <Border Classes="panel">
+              <StackPanel Spacing="10" MaxWidth="800" HorizontalAlignment="Left">
+                <TextBlock Text="Publish a PLC structure" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="Connect to your MQTT broker first, then subscribe to a TwinCAT structure. Each member is published as its own topic, with current values followed by updates. The topics appear in Topics and can be added to the dashboard." TextWrapping="Wrap" />
+                <TextBlock Text="TwinCAT ADS requires Windows and a configured ADS route to the PLC." TextWrapping="Wrap" Classes="caption" />
+                <TextBlock Text="AMS Net ID" Classes="caption" />
+                <TextBox x:Name="TwinCatAddressEditor" PlaceholderText="For example 192.168.1.10.1.1" />
+                <TextBlock Text="ADS runtime port (801 for TwinCAT 2; 851 for TwinCAT 3 runtime 1)" Classes="caption" />
+                <NumericUpDown Value="{Binding TwinCat.AdsPort}" Minimum="1" Maximum="65535" />
+                <TextBlock Text="Structure symbol" Classes="caption" />
+                <TextBox x:Name="TwinCatSymbolEditor" PlaceholderText="GVL.Rig or .Rig" />
+                <TextBlock Text="MQTT topic prefix" Classes="caption" />
+                <TextBox x:Name="TwinCatTopicEditor" />
+                <TextBlock Text="For example: plc/rig/Pressure and plc/rig/Valve/Open" Classes="caption" />
+                <TextBlock Text="Republish interval in seconds (0 for changes only)" Classes="caption" />
+                <NumericUpDown Value="{Binding TwinCat.RepublishSeconds}" Minimum="0" Maximum="86400" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                  <ComboBox x:Name="TwinCatQualitySelector">
+                    <ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" /></DataTemplate></ComboBox.ItemTemplate>
+                  </ComboBox>
+                  <CheckBox x:Name="TwinCatRetainToggle" Content="Retain member values" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <cc:Button x:Name="StartTwinCatBridgeButton" Content="Subscribe structure" />
+                  <cc:Button x:Name="StopTwinCatBridgeButton" Content="Stop structure" />
+                </StackPanel>
+                <TextBlock Text="Reusable configuration" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="Export settings to reuse in a hosted bridge, or paste a saved configuration and apply it." TextWrapping="Wrap" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <cc:Button x:Name="ExportTwinCatConfigurationButton" Content="Export settings" />
+                  <cc:Button x:Name="ImportTwinCatConfigurationButton" Content="Apply settings" />
+                </StackPanel>
+                <TextBox x:Name="TwinCatConfigurationEditor" AcceptsReturn="True" MinHeight="180" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </ScrollViewer>
+        </TabItem>
+        <TabItem Header="Errors">
+          <Border Classes="panel">
+            <DataGrid AutoGenerateColumns="False" GridLinesVisibility="Horizontal" x:Name="TopicIssuesDataGrid" IsReadOnly="True">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp}" Width="170" />
+                <DataGridTextColumn Header="Topic" Binding="{Binding Topic}" Width="260" />
+                <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="150" />
+                <DataGridTextColumn Header="Detail" Binding="{Binding Detail}" Width="*" />
+              </DataGrid.Columns>
+            </DataGrid>
+          </Border>
+        </TabItem>
+        <TabItem Header="Log">
+          <Border Classes="panel">
+            <DataGrid AutoGenerateColumns="False" GridLinesVisibility="Horizontal" x:Name="LogEntriesDataGrid" IsReadOnly="True">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Time" Binding="{Binding Timestamp}" Width="170" />
+                <DataGridTextColumn Header="Level" Binding="{Binding Level}" Width="90" />
+                <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="130" />
+                <DataGridTextColumn Header="Message" Binding="{Binding Message}" Width="*" />
+              </DataGrid.Columns>
+            </DataGrid>
+          </Border>
+        </TabItem>
+      </TabControl>
+    </Grid>
+  </Grid>
+</Window>

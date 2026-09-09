@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(MQTTnetRxTargetFrameworks)</TargetFrameworks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>MQTTnet.Rx.Extensions.Rpc.Reactive</RootNamespace>
+    <DefineConstants>$(DefineConstants);REACTIVE_SHIM</DefineConstants>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MQTTnet.Extensions.Rpc" />
+    <PackageReference Include="ReactiveUI.Primitives.Reactive" />
+    <PackageReference Include="ReactiveUI.Primitives.Async.Reactive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\MQTTnet.Rx.Extensions.Rpc\**\*.cs"
+             Exclude="..\MQTTnet.Rx.Extensions.Rpc\bin\**;..\MQTTnet.Rx.Extensions.Rpc\obj\**"
+             Link="%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="ReactiveUI.Primitives.Async" />
+    <Using Include="ReactiveUI.Primitives.Async.Disposables" />
+    <Using Include="ReactiveUI.Primitives.Reactive" />
+    <Using Include="ReactiveUI.Primitives.Reactive.Signals" />
+    <Using Include="System.Reactive.Unit" Alias="RxUnit" />
+    <Using Include="System.Reactive.Unit" Alias="RxVoid" />
+  </ItemGroup>
+
+</Project>

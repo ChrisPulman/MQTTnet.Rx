@@ -1,0 +1,60 @@
+<UserControl xmlns="https://github.com/avaloniaui" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:cc="clr-namespace:CrissCross.Avalonia.UI.Controls;assembly=CrissCross.Avalonia.UI" x:Class="MQTTnet.Rx.Toolkit.Controls.DashboardTileView" Width="340" Margin="0,0,12,12">
+  <Border Background="#20242B" BorderBrush="#343B46" BorderThickness="1" CornerRadius="8" Padding="16">
+    <StackPanel Spacing="10">
+      <TextBlock x:Name="TopicLabel" FontWeight="SemiBold" TextWrapping="Wrap" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <TextBlock x:Name="ValueLabel" FontSize="28" MaxHeight="180" TextWrapping="Wrap" />
+        <TextBlock x:Name="UnitLabel" Grid.Column="1" VerticalAlignment="Center" />
+      </Grid>
+      <cc:CircularGauge x:Name="ValueGauge" Width="220" Height="220" ShowValue="False" />
+      <CheckBox x:Name="BooleanIndicator" Content="Value is true" IsEnabled="False" />
+      <TextBlock x:Name="LastSeenLabel" FontSize="11" Opacity="0.7" />
+      <TextBlock Text="Publish a new value" FontSize="12" />
+      <TextBox x:Name="ValueEditor" AcceptsReturn="True" MinHeight="64" MaxHeight="180" />
+      <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+        <ComboBox x:Name="QualitySelector" HorizontalAlignment="Stretch">
+          <ComboBox.ItemTemplate>
+            <DataTemplate>
+              <TextBlock Text="{Binding}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+        <CheckBox x:Name="RetainToggle" Grid.Column="1" Content="Retain" />
+      </Grid>
+      <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+        <cc:Button x:Name="PublishButton" Content="Publish" HorizontalAlignment="Stretch" />
+        <CheckBox x:Name="PreserveEditorToggle" Grid.Column="1" Content="Keep my edits" />
+      </Grid>
+      <Expander Header="Tile settings" HorizontalAlignment="Stretch">
+        <StackPanel Spacing="8">
+          <TextBlock Text="Visualization" FontSize="12" />
+          <CheckBox x:Name="AutoVisualToggle" Content="Choose automatically from the payload" />
+          <ComboBox x:Name="VisualSelector" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Text="Units" FontSize="12" />
+          <TextBox x:Name="UnitEditor" />
+          <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+            <StackPanel Spacing="3">
+              <TextBlock Text="Minimum" />
+              <NumericUpDown x:Name="MinimumEditor" />
+            </StackPanel>
+            <StackPanel Grid.Column="1" Spacing="3">
+              <TextBlock Text="Maximum" />
+              <NumericUpDown x:Name="MaximumEditor" />
+            </StackPanel>
+          </Grid>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <cc:Button x:Name="MoveLeftButton" Content="Move left" />
+            <cc:Button x:Name="MoveRightButton" Content="Move right" />
+            <cc:Button x:Name="RemoveButton" Content="Remove" />
+          </StackPanel>
+        </StackPanel>
+      </Expander>
+    </StackPanel>
+  </Border>
+</UserControl>

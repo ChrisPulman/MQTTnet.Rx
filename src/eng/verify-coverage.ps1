@@ -5,28 +5,35 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+# Discover shipping assemblies so adding a package cannot silently bypass this gate.
+$sourceDirectory = Split-Path -Parent $PSScriptRoot
 $expectedModules = @(
-    'MQTTnet.Rx.ABPlc',
-    'MQTTnet.Rx.ABPlc.Reactive',
-    'MQTTnet.Rx.AspNetCore',
-    'MQTTnet.Rx.AspNetCore.Reactive',
-    'MQTTnet.Rx.Client',
-    'MQTTnet.Rx.Client.Reactive',
-    'MQTTnet.Rx.Mitsubishi',
-    'MQTTnet.Rx.Mitsubishi.Reactive',
-    'MQTTnet.Rx.Modbus',
-    'MQTTnet.Rx.Modbus.Reactive',
-    'MQTTnet.Rx.OmronPlc',
-    'MQTTnet.Rx.OmronPlc.Reactive',
-    'MQTTnet.Rx.S7Plc',
-    'MQTTnet.Rx.S7Plc.Reactive',
-    'MQTTnet.Rx.SerialPort',
-    'MQTTnet.Rx.SerialPort.Reactive',
-    'MQTTnet.Rx.Server',
-    'MQTTnet.Rx.Server.Reactive',
-    'MQTTnet.Rx.TwinCAT',
-    'MQTTnet.Rx.TwinCAT.Reactive'
-)
+    foreach ($projectDirectory in Get-ChildItem -LiteralPath $sourceDirectory -Directory -Filter 'MQTTnet.Rx.*') {
+        $projectPath = Join-Path $projectDirectory.FullName "$($projectDirectory.Name).csproj"
+        if (-not (Test-Path -LiteralPath $projectPath)) {
+            continue
+        }
+
+        [xml]$project = Get-Content -Raw -LiteralPath $projectPath
+        if (@($project.SelectNodes('/Project/PropertyGroup/IsPackable')) | Where-Object { $_.InnerText -eq 'false' }) {
+            continue
+        }
+
+        $assemblyNames = @($project.SelectNodes('/Project/PropertyGroup/AssemblyName'))
+        if ($assemblyNames.Count -eq 0) {
+            $projectDirectory.Name
+        }
+        elseif ($assemblyNames.Count -eq 1 -and $assemblyNames[0].InnerText -notmatch '\$\(') {
+            $assemblyNames[0].InnerText
+        }
+        else {
+            throw "Cannot determine the shipping assembly name from '$projectPath'."
+        }
+    }
+) | Sort-Object -Unique
+if ($expectedModules.Count -eq 0) {
+    throw "No shipping projects were found under '$sourceDirectory'."
+}
 
 $resolvedResultsDirectory = Resolve-Path -LiteralPath $ResultsDirectory -ErrorAction Stop
 $coverageFiles = @(Get-ChildItem -LiteralPath $resolvedResultsDirectory -Recurse -Filter '*.cobertura.xml' -File)
@@ -51,6 +58,10 @@ foreach ($coverageFile in $coverageFiles) {
             File = $coverageFile.FullName
             LineRate = [decimal]$package.'line-rate'
             BranchRate = [decimal]$package.'branch-rate'
+            # Check individual entries as well: rounded aggregate rates can conceal misses.
+            MissedLines = @($package.SelectNodes('classes/class/lines/line[@hits="0"]')).Count
+            MissedBranches = @($package.SelectNodes('classes/class/lines/line[@branch="true"]') |
+                Where-Object { $_.'condition-coverage' -notmatch '^100%' }).Count
         })
     }
 }
@@ -63,17 +74,18 @@ foreach ($moduleName in $expectedModules) {
     }
 
     foreach ($observation in $observations[$moduleName]) {
-        if ($observation.LineRate -lt 1 -or $observation.BranchRate -lt 1) {
+        if ($observation.LineRate -lt 1 -or $observation.BranchRate -lt 1 -or
+            $observation.MissedLines -gt 0 -or $observation.MissedBranches -gt 0) {
             $failures.Add(
                 "$moduleName is below 100% in '$($observation.File)': " +
-                "line=$($observation.LineRate), branch=$($observation.BranchRate)")
+                "line=$($observation.LineRate), branch=$($observation.BranchRate), " +
+                "missed lines=$($observation.MissedLines), missed branch lines=$($observation.MissedBranches)")
         }
     }
 }
 
 if ($failures.Count -gt 0) {
-    $failures | ForEach-Object { Write-Error $_ }
-    throw "Coverage verification failed with $($failures.Count) error(s)."
+    throw "Coverage verification failed with $($failures.Count) error(s):`n$($failures -join "`n")"
 }
 
 foreach ($moduleName in $expectedModules) {

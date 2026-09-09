@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <Using Include="CP.Collections" />
+    <Using Include="IoT.Driver.Core" />
     <Using Include="IoT.Driver.TwinCATRx" />
     <Using Include="MQTTnet.Rx.Client" />
     <Using Include="ReactiveUI.Primitives" />

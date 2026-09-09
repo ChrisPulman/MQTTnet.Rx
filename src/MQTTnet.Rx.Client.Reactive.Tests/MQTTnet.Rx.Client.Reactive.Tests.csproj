@@ -36,6 +36,8 @@
     <ProjectReference Include="..\MQTTnet.Rx.ABPlc.Reactive\MQTTnet.Rx.ABPlc.Reactive.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.AspNetCore.Reactive\MQTTnet.Rx.AspNetCore.Reactive.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Client.Reactive\MQTTnet.Rx.Client.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Extensions.Rpc.Reactive\MQTTnet.Rx.Extensions.Rpc.Reactive.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Extensions.TopicTemplate.Reactive\MQTTnet.Rx.Extensions.TopicTemplate.Reactive.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Mitsubishi.Reactive\MQTTnet.Rx.Mitsubishi.Reactive.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Modbus.Reactive\MQTTnet.Rx.Modbus.Reactive.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.OmronPlc.Reactive\MQTTnet.Rx.OmronPlc.Reactive.csproj" />

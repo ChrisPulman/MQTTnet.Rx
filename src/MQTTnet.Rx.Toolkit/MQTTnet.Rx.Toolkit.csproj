@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework Condition="$([MSBuild]::IsOSPlatform('Windows')) and '$(EnableTwinCat)' != 'false'">net10.0-windows10.0.19041</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Controls.DataGrid" />
+    <PackageReference Include="CrissCross.Avalonia.UI" />
+    <PackageReference Include="ReactiveUI.Avalonia" />
+    <PackageReference Include="ReactiveUI.SourceGenerators" PrivateAssets="all" />
+    <PackageReference Include="ReactiveUI.Primitives" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Server\MQTTnet.Rx.Server.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.TwinCAT\MQTTnet.Rx.TwinCAT.csproj" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'" />
+  </ItemGroup>
+</Project>

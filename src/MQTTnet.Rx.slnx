@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Applications/">
+    <Project Path="MQTTnet.Rx.Toolkit/MQTTnet.Rx.Toolkit.csproj" />
+  </Folder>
   <Folder Name="/Config/">
     <File Path="../.editorconfig" />
     <File Path="../.gitignore" />
@@ -10,10 +13,16 @@
     <File Path="../README.md" />
     <File Path="testconfig.json" />
   </Folder>
+  <Folder Name="/Extensions/">
+    <Project Path="MQTTnet.Rx.Extensions.Rpc/MQTTnet.Rx.Extensions.Rpc.csproj" />
+    <Project Path="MQTTnet.Rx.Extensions.TopicTemplate/MQTTnet.Rx.Extensions.TopicTemplate.csproj" />
+  </Folder>
   <Folder Name="/Reactive/">
     <Project Path="MQTTnet.Rx.ABPlc.Reactive/MQTTnet.Rx.ABPlc.Reactive.csproj" />
     <Project Path="MQTTnet.Rx.AspNetCore.Reactive/MQTTnet.Rx.AspNetCore.Reactive.csproj" />
     <Project Path="MQTTnet.Rx.Client.Reactive/MQTTnet.Rx.Client.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.Extensions.Rpc.Reactive/MQTTnet.Rx.Extensions.Rpc.Reactive.csproj" />
+    <Project Path="MQTTnet.Rx.Extensions.TopicTemplate.Reactive/MQTTnet.Rx.Extensions.TopicTemplate.Reactive.csproj" />
     <Project Path="MQTTnet.Rx.Mitsubishi.Reactive/MQTTnet.Rx.Mitsubishi.Reactive.csproj" />
     <Project Path="MQTTnet.Rx.Modbus.Reactive/MQTTnet.Rx.Modbus.Reactive.csproj" />
     <Project Path="MQTTnet.Rx.OmronPlc.Reactive/MQTTnet.Rx.OmronPlc.Reactive.csproj" />
@@ -23,6 +32,7 @@
     <Project Path="MQTTnet.Rx.TwinCAT.Reactive/MQTTnet.Rx.TwinCAT.Reactive.csproj" />
   </Folder>
   <Folder Name="/Tests/">
+    <Project Path="MQTTnet.Rx.Toolkit.Tests/MQTTnet.Rx.Toolkit.Tests.csproj" />
     <Project Path="MQTTnet.Rx.Client.Reactive.Tests/MQTTnet.Rx.Client.Reactive.Tests.csproj" />
     <Project Path="MQTTnet.Rx.Client.TestApp/MQTTnet.Rx.Client.TestApp.csproj" />
     <Project Path="MQTTnet.Rx.Client.Tests/MQTTnet.Rx.Client.Tests.csproj" />

@@ -40,7 +40,11 @@ MQTTnet 5 removed `ManagedClient`. Use the `IResilientMqttClient` implementation
 - [MQTT server](#mqtt-server)
 - [ASP.NET Core hosting](#aspnet-core-hosting)
 - [Industrial bridges](#industrial-bridges)
-- [Complete public API](#complete-public-api)
+- [Bulk and structured industrial data](#bulk-and-structured-industrial-data)
+- [Low-level MQTT operations](#low-level-mqtt-operations)
+- [MQTT extension packages](#mqtt-extension-packages)
+- [Desktop toolkit](#desktop-toolkit)
+- [Public API reference](#public-api-reference)
   - [`MQTTnet.Rx.Client`](#mqttnetrxclient-api)
   - [`MQTTnet.Rx.Server`](#mqttnetrxserver-api)
   - [`MQTTnet.Rx.AspNetCore`](#mqttnetrxaspnetcore-api)
@@ -59,6 +63,8 @@ Choose one column for an application. A `.Reactive` package compiles the same so
 | --- | --- | --- | --- | --- |
 | MQTT client, resilience, payloads, topics | `MQTTnet.Rx.Client` | `MQTTnet.Rx.Client.Reactive` | `MQTTnet.Rx.Client` | `MQTTnet.Rx.Client.Reactive` |
 | MQTT broker/server | `MQTTnet.Rx.Server` | `MQTTnet.Rx.Server.Reactive` | `MQTTnet.Rx.Server` | `MQTTnet.Rx.Server.Reactive` |
+| Request/response RPC | `MQTTnet.Rx.Extensions.Rpc` | `MQTTnet.Rx.Extensions.Rpc.Reactive` | `MQTTnet.Rx.Extensions.Rpc` | `MQTTnet.Rx.Extensions.Rpc.Reactive` |
+| MQTT topic templates | `MQTTnet.Rx.Extensions.TopicTemplate` | `MQTTnet.Rx.Extensions.TopicTemplate.Reactive` | `MQTTnet.Rx.Extensions.TopicTemplate` | `MQTTnet.Rx.Extensions.TopicTemplate.Reactive` |
 | ASP.NET Core hosting | `MQTTnet.Rx.AspNetCore` | `MQTTnet.Rx.AspNetCore.Reactive` | `MQTTnet.Rx.AspNetCore` | `MQTTnet.Rx.AspNetCore.Reactive` |
 | Allen-Bradley | `MQTTnet.Rx.ABPlc` | `MQTTnet.Rx.ABPlc.Reactive` | `MQTTnet.Rx.ABPlc` | `MQTTnet.Rx.ABPlc.Reactive` |
 | Mitsubishi | `MQTTnet.Rx.Mitsubishi` | `MQTTnet.Rx.Mitsubishi.Reactive` | `MQTTnet.Rx.Mitsubishi` | `MQTTnet.Rx.Mitsubishi.Reactive` |
@@ -1462,13 +1468,13 @@ using var customWrite = clients.SubscribeWrite(
 
 `SubscribeWrite<T>` accepts synchronous `Action<ModbusIpMaster,T>` and asynchronous `Func<ModbusIpMaster,T,Task>` writers. The single/multiple register and coil helpers provide typed parsing and address forwarding. `Serialize` and `DeSerialize<T>` are available as static compatibility methods and extension methods, implemented with `System.Text.Json`.
 
-## Complete public API
+## Public API reference
 
-The reference below is synchronized with every public source declaration in the ten lean projects. It includes all public types, enum values, constructors, properties, events, methods, extension receivers, overloads, default values, and generic constraints. Static compatibility forwarders are included even when an equivalent extension form exists.
+The signature reference below describes the established client, server, hosting and industrial APIs, including static compatibility forwarders. The subsequent bulk, low-level MQTT and extension-package sections describe the added surfaces. The XML documentation shipped with each assembly documents its public declarations and overloads.
 
 The collapsed blocks use compact signature notation rather than complete compilation units. In particular, C# 14 extension blocks are shown as `extension(receiver) { member; }`, and implementation bodies are omitted. Use the feature examples above for copy/paste programs.
 
-The ten `.Reactive` projects compile these same files with `REACTIVE_SHIM`; therefore every listed API is also present in the matching `.Reactive` namespace. Apply these substitutions when reading a signature:
+The matching `.Reactive` projects compile these same files with `REACTIVE_SHIM`; therefore every listed API is also present in the matching `.Reactive` namespace. Apply these substitutions when reading a signature:
 
 - namespace `MQTTnet.Rx.<component>` becomes `MQTTnet.Rx.<component>.Reactive`;
 - `RxVoid`/`RxUnit` completion values become `System.Reactive.Unit`;
@@ -3248,6 +3254,111 @@ extension(IObservableAsync<IResilientMqttClient> client) { public IDisposable Su
 
 <!-- PUBLIC_API_END -->
 
+## Bulk and structured industrial data
+
+The industrial bridges accept raw and resilient MQTT client streams, with corresponding asynchronous observable overloads. Keep each returned subscription for as long as the bridge should run and dispose it to stop forwarding data.
+
+| Package | Publishing from the driver | Writing received MQTT values |
+| --- | --- | --- |
+| ABPlc | `PublishABPlcTags` uses the driver's multi-variable observation; `PublishABLogicalTag` observes registered logical tags. | `SubscribeABPlcTags` writes variable maps; `SubscribeABLogicalTags` writes logical-tag batches. |
+| S7Plc | `PublishS7PlcTags` exposes optimized batch reads; `PublishS7LogicalTags` publishes logical-tag batches. | `SubscribeS7PlcTags` and `SubscribeS7LogicalTags` expose their matching batch write paths. |
+| OmronPlc | `PublishOmronLogicalTags` publishes batches from the logical-tag client. | `SubscribeOmronLogicalTags` writes parsed logical-tag batches. |
+| Mitsubishi | `PublishMitsubishiTags` publishes logical-tag batches. | `SubscribeMitsubishiTags` writes parsed batches. |
+| Modbus | `PublishInputRegisters`, `PublishHoldingRegisters`, `PublishInputs` and `PublishCoils` publish register or bit ranges. | `SubscribeWriteSingleRegister`, `SubscribeWriteMultipleRegisters`, `SubscribeWriteSingleCoil` and `SubscribeWriteMultipleCoils` expose matching writes; `SubscribeWrite` accepts custom operations. |
+| TwinCAT | `PublishTcPlcRead` supports ADS reads, correlation IDs and array lengths; `PublishTcStructMember` observes a structured member; `PublishTcLogicalTags` and `PublishTcLogicalTagReads` expose logical operations. | `SubscribeTcTag`, `SubscribeTcStructMember`, `SubscribeTcStructWrite` and `SubscribeTcLogicalTags` support individual, structured and batch updates. |
+| SerialPort | Line, byte, error and open-state streams supplement the existing framed-message publisher. | Existing text, line and binary write subscriptions use caller-supplied payload conversion. |
+
+Bulk publishers offer payload formatters so the MQTT representation can match the consuming application's schema. Write bridges take payload parsers so driver-specific value types are preserved. Configure logical tags and driver connections through the underlying IoT libraries before attaching a bridge. Hardware connection ownership remains with the application.
+
+TwinCAT complex values serialize as JSON, including arrays and public fields on ADS structures. Existing scalar boolean and character payloads retain their text representation; numbers use invariant culture. A structure created through the driver's `TwinCatStructureExtensions.CreateStruct` carries its ADS connection metadata: `SubscribeTcStructWrite` edits the driver's cloned structure and writes it through that connection. An unattached `HashTableRx` is a local data model and receives a local update.
+
+## Low-level MQTT operations
+
+The core client package also wraps `ILowLevelMqttClient`: `Connect`, `Disconnect`, `Send`, `Receive`, `InspectPacket`, and property snapshots have observable and `Observe...` asynchronous forms. Factory overloads accept MQTTnet loggers and adapter factories; server factories also accept server adapters and retained-message initialization. These hooks allow custom transports and diagnostics to participate in the same reactive lifetime management.
+
+## MQTT extension packages
+
+The RPC and TopicTemplate packages extend the corresponding official MQTTnet 5.2 packages. Both have lean and System.Reactive variants and integrate with the existing client and message streams.
+
+`MQTTnet.Rx.Extensions.Rpc` creates an RPC client over an existing MQTT client with `CreateRpcClient`, including a builder callback for custom RPC topic generation. `Execute` and `ExecuteString` return cold observable requests with a timeout; disposing the subscription cancels the pending request. `ObserveExecute` and `ObserveExecuteString` expose asynchronous observable requests with subscription cancellation. Payload overloads support binary or UTF-8 data, QoS selection, and topic-generation parameters. Keep the RPC client alive while requests are running and dispose it when the connection session ends.
+
+`MQTTnet.Rx.Extensions.TopicTemplate` provides `WhereTopicTemplate` and `SelectTopicTemplateParameters` for received message streams, plus cold `SubscribeTopicTemplate` / `ObserveSubscribeTopicTemplate` and `PublishTopicTemplate` / `ObservePublishTopicTemplate` operations. Use the underlying `MqttTopicTemplate` to supply parameter values and the message-builder callback to configure payloads and MQTT 5 metadata. `BuildResponseMessage` copies the request's response topic and correlation data into a response builder and rejects requests without a response topic.
+
+WebSocket connections use the built-in MQTTnet transport configured by `WithWebSocketServer`. The legacy WebSocket4Net extension is intentionally excluded.
+
+## Desktop toolkit
+
+`src/MQTTnet.Rx.Toolkit` is the Avalonia desktop application, using CrissCross.Avalonia.UI and ReactiveUI.SourceGenerators. Its reactive code uses the lean `MQTTnet.Rx.Client` and `MQTTnet.Rx.Server` projects with ReactiveUI.Primitives throughout. Windows builds also include the lean TwinCAT bridge; the official Beckhoff ADS SDK requires System.Reactive internally. The portable MQTT-only build has no System.Reactive dependency. The application is not a NuGet package.
+
+Each successful `BuildDeploy` release run provides a `MQTTnet.Rx.Toolkit-<version>-win-x64` artifact alongside the signed NuGet packages. Download it from the run's **Artifacts** section, extract the entire archive, and start `MQTTnet.Rx.Toolkit.exe`. This self-contained Windows x64 build includes the .NET runtime and TwinCAT support. CI signs the application executable and MQTTnet.Rx assemblies with Certum, then verifies their Authenticode signatures, certificate fingerprint and timestamps on Windows before uploading the final artifact and publishing NuGet packages. Runtime and third-party binaries retain their existing signatures.
+
+The default profile starts a local MQTTnet.Rx.Server on loopback port 1883. Configure TCP, MQTT URI, or native WebSocket connectivity in the connection panel; advanced sections expose MQTT session settings, transport options, TLS and client certificates, and last-will metadata. The message builder validates JSON, text, number, boolean, hex and Base64 payloads and supports MQTT 5 properties.
+
+Certificate settings support files, operating-system stores, client certificate selection and pinned server certificates. Native WebSocket settings include credentials, cookies, headers, proxy and compression options. Binary credentials, authentication data, will payloads and correlation data can be entered as hexadecimal or Base64. Ordered authentication response steps consume one response for each matching broker challenge; the live exchange action sends the configured MQTT reason code on the current connection. Custom stream providers and application-specific callbacks are composition hooks in `ConnectionOptionsViewModel`.
+
+Select a topic or message, choose **Use**, then publish a new value or add the topic to the dashboard. Dashboard tiles can display text, JSON, binary values, boolean status or a gauge. Tile settings include units, gauge bounds, QoS, retained publishing, automatic visual selection and preserving editor changes while messages arrive. Reorder or remove tiles and choose **Save layout** to persist the dashboard under the current user's local application data directory.
+
+Build the solution, then launch the toolkit:
+
+```powershell
+dotnet run --project src/MQTTnet.Rx.Toolkit -c Release --no-build
+```
+
+MQTT does not expose a standard complete topic catalog. A remote broker only delivers traffic permitted by the connection's subscriptions and broker ACLs. The topic tree therefore represents observed topics; subscribe to `#` for ordinary topics and `$SYS/#` separately for broker status, when allowed. The embedded broker can additionally expose traffic through its server event stream.
+
+### TwinCAT structure setup
+
+Windows Toolkit builds include the lean `MQTTnet.Rx.TwinCAT` bridge. Connect to the desired MQTT broker, open **TwinCAT**, enter the AMS Net ID, ADS runtime port, structure symbol and topic prefix, then choose **Subscribe structure**. The bridge publishes current member values and subsequent changes. Retained publishing makes the values available to later MQTT subscribers; an optional republish interval refreshes unchanged values. **Stop structure**, disconnecting MQTT, or closing the Toolkit releases the bridge. Connection progress and ADS failures appear in **Log**.
+
+For example, subscribing to `GVL.Rig` under `plc/rig` produces member topics such as `plc/rig/Pressure`. The values appear in **Topics** and can be added to the dashboard. ADS routes must already exist on the machine. Use the actual runtime port and symbol spelling from the PLC: TwinCAT 2 commonly uses port 801 and `.Rig`, while TwinCAT 3 commonly uses port 851 and `GVL.Rig`.
+
+Nested structures are traversed recursively: `Rig.Sensor.Pressure` produces a `Sensor/Pressure` member path. TwinCAT 2 tables normalize member paths to uppercase for both initial values and changes; TwinCAT 3 tables preserve member casing. Arrays are published as JSON arrays at their member topic. Initial replay duplicates are removed, while an explicit republish interval refreshes every member even when its value has not changed.
+
+**Export settings** produces a JSON `TwinCatStructureOptions` configuration for another application; **Apply settings** loads it back into the editor. Runtime delegates are excluded from this configuration. Non-Windows builds retain the portable MQTT workspace without ADS. To explicitly build the portable version on Windows, pass `-p:EnableTwinCat=false`.
+
+A hosted bridge can use the same configuration without per-member publication subscriptions:
+
+```csharp
+using IoT.Driver.TwinCATRx;
+using MQTTnet.Rx.Client;
+using MQTTnet.Rx.TwinCAT;
+
+var clients = MQTTnet.Rx.Client.Create.ResilientMqttClient()
+    .WithResilientClientOptions(options => options
+        .WithAutoReconnectDelay(TimeSpan.FromSeconds(5))
+        .WithClientOptions(client => client.WithTcpServer("localhost", 1883)));
+
+var settings = new TwinCatStructureOptions
+{
+    AmsNetId = "192.168.1.10.1.1",
+    AdsPort = 851,
+    PlcVariable = "GVL.Rig",
+    TopicPrefix = "plc/rig",
+    Retain = true,
+    RepublishInterval = TimeSpan.FromSeconds(1),
+    ErrorHandler = error => Console.Error.WriteLine(error.Message),
+};
+
+using var bridge = clients.PublishTcStructure(settings, static () => new RxTcAdsClient());
+// Keep this lease alive for the host lifetime; dispose it when the host stops.
+```
+
+Already linked `HashTableRx` structures can be passed to `PublishTcStructure(structure, settings)`, which returns a publication observable. `ObserveTcStructureMessages` exposes the generated topic/payload stream for further composition. `MemberFilter`, `TopicFactory` and `PayloadFormatter` customize the published subset and wire protocol. Keep application-specific command allowlists and member writes in the host; automatic structure telemetry does not write incoming MQTT data to the PLC or write a whole stale structure back.
+
+For an existing protocol that sends named JSON values to a shared status topic, use `TopicFactory` to select that topic and `PayloadFormatter` to serialize the member name and value. Deduplication tracks each member separately even when several members share a topic. `IsTcStructureMember` matches a member name case-insensitively, including dotted path suffixes, for custom filters and command routing.
+
+### Reusable message inspection
+
+Payload encoding, format detection, message snapshots and topic diagnostics are public APIs in `MQTTnet.Rx.Client`, shared by the Toolkit and other consumers. They have matching `.Reactive` variants and no UI dependency:
+
+```csharp
+var snapshot = message.ToReceivedMqttMessage("Broker ingress", TimeProvider.System);
+var issues = TopicDiagnostics.Find(snapshot);
+var bytes = MqttPayloadEncoding.BuildBytes("{\"pressure\":42}", PayloadFormat.Json);
+```
+
+`PayloadInspector` detects JSON, finite numbers, boolean values, text and binary data; `ReceivedMqttMessage` preserves MQTT metadata and copied payload data. Server event handlers can use these helpers directly with their `MqttApplicationMessage` values.
+
 ## Building the repository
 
 The repository is pinned by `global.json` to .NET SDK `11.0.100-preview.6.26359.118`. On Windows, use a Visual Studio version that supports that SDK and the .NET 11 targets.
@@ -3265,6 +3376,21 @@ On macOS or Linux:
 ```
 
 Restart Visual Studio after bootstrapping, then open `src/MQTTnet.Rx.slnx`.
+
+Build with the configured analyzers and warnings treated as errors, then run the complete TUnit framework matrix and strict coverage gate:
+
+```powershell
+dotnet build src/MQTTnet.Rx.slnx -c Release
+./src/eng/test-coverage.ps1 -ResultsDirectory ./artifacts/coverage-current
+```
+
+Use a fresh results directory for each run. The runner evaluates each test project's target frameworks, invokes its compiled test assembly with Microsoft Testing Platform coverage, and checks every shipping assembly for 100% line and branch coverage. It fails on missing assemblies and individual uncovered entries, even if aggregate percentages round up to 100%. Test assertions use TUnit.
+
+The pinned SDK may be installed separately from the .NET runtimes. If the SDK-local runtime host cannot locate the .NET 8–10 runtimes, pass the host where those runtimes are installed:
+
+```powershell
+./src/eng/test-coverage.ps1 -DotNetHost 'C:\Program Files\dotnet\dotnet.exe' -ResultsDirectory ./artifacts/coverage-current
+```
 
 ## Contributing
 
