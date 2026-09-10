@@ -14,6 +14,7 @@
     <PackageReleaseNotes>Central package management, ReactiveUI.Primitives migration, IoT-Driver integrations, and .NET 8 / 9 / 10 / 11 compatibility</PackageReleaseNotes>
     <PackageTags>MQTT;MQTTnet;ReactiveUI;Primitives;S7Plc;Allen;Bradley;Rockwell;Mitsubishi;Omron;Modbus;Siemens;Serial;Beckhoff;TwinCAT;rx;reactive;extensions;observable;LINQ;net</PackageTags>
     <EnableNETAnalyzers>True</EnableNETAnalyzers>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest</AnalysisLevel>
     <PackageProjectUrl>https://github.com/ChrisPulman/MQTTnet.Rx</PackageProjectUrl>
     <RepositoryUrl>https://github.com/ChrisPulman/MQTTnet.Rx</RepositoryUrl>
@@ -59,7 +60,7 @@
     <None Include="$(MSBuildThisFileDirectory)LICENSE" Pack="true" PackagePath="LICENSE" />
     <None Include="$(MSBuildThisFileDirectory)README.md" Pack="true" PackagePath="\"/>
   </ItemGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="MinVer" PrivateAssets="All" />
     <PackageReference Include="StyleSharp.Analyzers" PrivateAssets="all" />

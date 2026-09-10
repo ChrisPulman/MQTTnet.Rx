@@ -1,44 +1,56 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <IOTDriverVersion>1.1.0</IOTDriverVersion>
+    <RxUIPrimitivesVersion>7.4.0</RxUIPrimitivesVersion>
+    <RoslyAnalysersVersion>3.46.2</RoslyAnalysersVersion>
+    <MQTTnetVersion>5.2.0.1603</MQTTnetVersion>
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
+    <PackageVersion Include="CrissCross.Avalonia.UI" Version="4.0.0" />
     <PackageVersion Include="ConsoleMenu-simple" Version="2.7.0" />
     <PackageVersion Include="CP.Nuke.BuildTools" Version="3.0.2" />
-    <PackageVersion Include="IoT-Driver.ABPlcRx" Version="1.0.2" />
-    <PackageVersion Include="IoT-Driver.ABPlcRx.Reactive" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.MitsubishiRx" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.MitsubishiRx.Reactive" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.ModbusRx" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.ModbusRx.Reactive" Version="1.0.2" />
-    <PackageVersion Include="IoT-Driver.OmronPlcRx" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.OmronPlcRx.Reactive" Version="1.0.2" />
-    <PackageVersion Include="IoT-Driver.S7PlcRx" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.S7PlcRx.Reactive" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.SerialPortRx" Version="1.0.2" />
-    <PackageVersion Include="IoT-Driver.SerialPortRx.Reactive" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.TwinCATRx" Version="1.0.3" />
-    <PackageVersion Include="IoT-Driver.TwinCATRx.Reactive" Version="1.0.2" />
+    <PackageVersion Include="IoT-Driver.ABPlcRx" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.ABPlcRx.Reactive" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.MitsubishiRx" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.MitsubishiRx.Reactive" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.ModbusRx" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.ModbusRx.Reactive" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.OmronPlcRx" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.OmronPlcRx.Reactive" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.S7PlcRx" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.S7PlcRx.Reactive" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.SerialPortRx" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.SerialPortRx.Reactive" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.TwinCATRx" Version="$(IOTDriverVersion)" />
+    <PackageVersion Include="IoT-Driver.TwinCATRx.Reactive" Version="$(IOTDriverVersion)" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
-    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.301" />
-    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.9.0" />
-    <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.3.3" />
-    <PackageVersion Include="MQTTnet" Version="5.2.0.1603" />
-    <PackageVersion Include="MQTTnet.AspNetCore" Version="5.2.0.1603" />
-    <PackageVersion Include="MQTTnet.Server" Version="5.2.0.1603" />
+    <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="10.0.401" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.CodeCoverage" Version="18.10.0" />
+    <PackageVersion Include="Microsoft.Testing.Platform.MSBuild" Version="2.4.0" />
+    <PackageVersion Include="MQTTnet" Version="$(MQTTnetVersion)" />
+    <PackageVersion Include="MQTTnet.AspNetCore" Version="$(MQTTnetVersion)" />
+    <PackageVersion Include="MQTTnet.Extensions.Rpc" Version="$(MQTTnetVersion)" />
+    <PackageVersion Include="MQTTnet.Extensions.TopicTemplate" Version="$(MQTTnetVersion)" />
+    <PackageVersion Include="MQTTnet.Server" Version="$(MQTTnetVersion)" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <PackageVersion Include="Nuke.Common" Version="10.1.0" />
-    <PackageVersion Include="MinVer" Version="7.0.0" />
-    <PackageVersion Include="PerformanceSharp.Analyzers" Version="3.41.14" />
-    <PackageVersion Include="ReactiveUI.Primitives" Version="7.1.0" />
-    <PackageVersion Include="ReactiveUI.Primitives.Async" Version="7.1.0" />
-    <PackageVersion Include="ReactiveUI.Primitives.Async.Reactive" Version="7.1.0" />
-    <PackageVersion Include="ReactiveUI.Primitives.Reactive" Version="7.1.0" />
-    <PackageVersion Include="SecuritySharp.Analyzers" Version="3.41.14" />
-    <PackageVersion Include="StyleSharp.Analyzers" Version="3.41.14" />
-    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.10" />
-    <PackageVersion Include="TUnit" Version="1.63.25" />
-    <PackageVersion Include="Verify.TUnit" Version="31.28.0" />
+    <PackageVersion Include="MinVer" Version="8.0.0" />
+    <PackageVersion Include="PerformanceSharp.Analyzers" Version="$(RoslyAnalysersVersion)" />
+    <PackageVersion Include="ReactiveUI.Avalonia" Version="12.1.2" />
+    <PackageVersion Include="ReactiveUI.SourceGenerators" Version="3.2.0" />
+    <PackageVersion Include="ReactiveUI.Primitives" Version="$(RxUIPrimitivesVersion)" />
+    <PackageVersion Include="ReactiveUI.Primitives.Async" Version="$(RxUIPrimitivesVersion)" />
+    <PackageVersion Include="ReactiveUI.Primitives.Async.Reactive" Version="$(RxUIPrimitivesVersion)" />
+    <PackageVersion Include="ReactiveUI.Primitives.Reactive" Version="$(RxUIPrimitivesVersion)" />
+    <PackageVersion Include="SecuritySharp.Analyzers" Version="$(RoslyAnalysersVersion)" />
+    <PackageVersion Include="StyleSharp.Analyzers" Version="$(RoslyAnalysersVersion)" />
+    <PackageVersion Include="System.Reactive" Version="7.0.0" />
+    <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.11" />
+    <PackageVersion Include="TUnit" Version="1.66.27" />
+    <PackageVersion Include="Verify.TUnit" Version="32.0.0" />
   </ItemGroup>
 </Project>

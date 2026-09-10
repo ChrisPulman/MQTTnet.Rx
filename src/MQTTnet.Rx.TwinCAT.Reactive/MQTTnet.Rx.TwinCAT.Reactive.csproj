@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <Using Include="CP.Collections.Reactive" />
+    <Using Include="IoT.Driver.Core" />
     <Using Include="IoT.Driver.TwinCATRx.Reactive" />
     <Using Include="MQTTnet.Rx.Client.Reactive" />
     <Using Include="ReactiveUI.Primitives.Advanced" />

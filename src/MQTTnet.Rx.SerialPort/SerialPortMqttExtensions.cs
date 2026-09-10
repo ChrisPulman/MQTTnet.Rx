@@ -81,6 +81,64 @@ public static class SerialPortMqttExtensions
                 payloadFactory,
                 static (port, payload) => port.Write(payload));
 
+        /// <summary>Publishes serial-port lines to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives the line payloads.</param>
+        /// <param name="serialPort">The serial port that supplies received lines.</param>
+        /// <returns>The result of each MQTT publish operation.</returns>
+        public IObservable<MqttClientPublishResult> PublishSerialPortLines(
+            string topic,
+            ISerialPortRx serialPort) =>
+            PublishSerialPortLinesCore(client, topic, serialPort);
+
+        /// <summary>Publishes serial-port byte buffers to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives the byte payloads.</param>
+        /// <param name="serialPort">The serial port that supplies received bytes.</param>
+        /// <returns>The result of each MQTT publish operation.</returns>
+        public IObservable<MqttClientPublishResult> PublishSerialPortBytes(
+            string topic,
+            ISerialPortRx serialPort) =>
+            PublishSerialPortBytesCore(client, topic, serialPort);
+
+        /// <summary>Publishes serial-port byte buffers as formatted MQTT string payloads.</summary>
+        /// <param name="topic">The MQTT topic that receives the formatted byte payloads.</param>
+        /// <param name="serialPort">The serial port that supplies received bytes.</param>
+        /// <param name="payloadFormatter">Formats each byte buffer.</param>
+        /// <returns>The result of each MQTT publish operation.</returns>
+        public IObservable<MqttClientPublishResult> PublishSerialPortBytes(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<byte, string> payloadFormatter) =>
+            PublishSerialPortBytesCore(client, topic, serialPort, payloadFormatter);
+
+        /// <summary>Publishes serial-port error notifications to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives error payloads.</param>
+        /// <param name="serialPort">The serial port that supplies errors.</param>
+        /// <returns>The result of each MQTT publish operation.</returns>
+        public IObservable<MqttClientPublishResult> PublishSerialPortErrors(
+            string topic,
+            ISerialPortRx serialPort) =>
+            PublishSerialPortErrorsCore(client, topic, serialPort, static error => error.ToString());
+
+        /// <summary>Publishes serial-port error notifications to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives error payloads.</param>
+        /// <param name="serialPort">The serial port that supplies errors.</param>
+        /// <param name="payloadFormatter">Formats each error event.</param>
+        /// <returns>The result of each MQTT publish operation.</returns>
+        public IObservable<MqttClientPublishResult> PublishSerialPortErrors(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<Exception, string> payloadFormatter) =>
+            PublishSerialPortErrorsCore(client, topic, serialPort, payloadFormatter);
+
+        /// <summary>Publishes serial-port open-state changes to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives open-state payloads.</param>
+        /// <param name="serialPort">The serial port that supplies open-state changes.</param>
+        /// <returns>The result of each MQTT publish operation.</returns>
+        public IObservable<MqttClientPublishResult> PublishSerialPortOpenState(
+            string topic,
+            ISerialPortRx serialPort) =>
+            PublishSerialPortOpenStateCore(client, topic, serialPort);
+
     }
 
     /// <summary>Provides serial-port bridge operations for resilient MQTT client sequences.</summary>
@@ -152,6 +210,64 @@ public static class SerialPortMqttExtensions
                 serialPort,
                 payloadFactory,
                 static (port, payload) => port.Write(payload));
+
+        /// <summary>Publishes serial-port lines to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives the line payloads.</param>
+        /// <param name="serialPort">The serial port that supplies received lines.</param>
+        /// <returns>The result of each resilient MQTT publish operation.</returns>
+        public IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortLines(
+            string topic,
+            ISerialPortRx serialPort) =>
+            PublishSerialPortLinesCore(client, topic, serialPort);
+
+        /// <summary>Publishes serial-port byte buffers to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives the byte payloads.</param>
+        /// <param name="serialPort">The serial port that supplies received bytes.</param>
+        /// <returns>The result of each resilient MQTT publish operation.</returns>
+        public IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortBytes(
+            string topic,
+            ISerialPortRx serialPort) =>
+            PublishSerialPortBytesCore(client, topic, serialPort);
+
+        /// <summary>Publishes serial-port byte buffers as formatted MQTT string payloads.</summary>
+        /// <param name="topic">The MQTT topic that receives the formatted byte payloads.</param>
+        /// <param name="serialPort">The serial port that supplies received bytes.</param>
+        /// <param name="payloadFormatter">Formats each byte buffer.</param>
+        /// <returns>The result of each resilient MQTT publish operation.</returns>
+        public IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortBytes(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<byte, string> payloadFormatter) =>
+            PublishSerialPortBytesCore(client, topic, serialPort, payloadFormatter);
+
+        /// <summary>Publishes serial-port error notifications to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives error payloads.</param>
+        /// <param name="serialPort">The serial port that supplies errors.</param>
+        /// <returns>The result of each resilient MQTT publish operation.</returns>
+        public IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortErrors(
+            string topic,
+            ISerialPortRx serialPort) =>
+            PublishSerialPortErrorsCore(client, topic, serialPort, static error => error.ToString());
+
+        /// <summary>Publishes serial-port error notifications to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives error payloads.</param>
+        /// <param name="serialPort">The serial port that supplies errors.</param>
+        /// <param name="payloadFormatter">Formats each error event.</param>
+        /// <returns>The result of each resilient MQTT publish operation.</returns>
+        public IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortErrors(
+            string topic,
+            ISerialPortRx serialPort,
+            Func<Exception, string> payloadFormatter) =>
+            PublishSerialPortErrorsCore(client, topic, serialPort, payloadFormatter);
+
+        /// <summary>Publishes serial-port open-state changes to an MQTT topic.</summary>
+        /// <param name="topic">The MQTT topic that receives open-state payloads.</param>
+        /// <param name="serialPort">The serial port that supplies open-state changes.</param>
+        /// <returns>The result of each resilient MQTT publish operation.</returns>
+        public IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortOpenState(
+            string topic,
+            ISerialPortRx serialPort) =>
+            PublishSerialPortOpenStateCore(client, topic, serialPort);
     }
 
     /// <summary>Publishes framed serial-port data through ordinary MQTT clients.</summary>
@@ -196,6 +312,158 @@ public static class SerialPortMqttExtensions
         return client.PublishMessage(SerialPortRxMixins
             .BufferUntil(serialPort.DataReceived, startsWith, endsWith, timeOut)
             .Select(payload => (topic, payload)));
+    }
+
+    /// <summary>Publishes serial-port lines through ordinary MQTT clients.</summary>
+    /// <param name="client">The MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives line payloads.</param>
+    /// <param name="serialPort">The serial port that supplies received lines.</param>
+    /// <returns>The result of each MQTT publish operation.</returns>
+    private static IObservable<MqttClientPublishResult> PublishSerialPortLinesCore(
+        IObservable<IMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        return client.PublishMessage(serialPort.Lines.Select(line => (topic, line)));
+    }
+
+    /// <summary>Publishes serial-port lines through resilient MQTT clients.</summary>
+    /// <param name="client">The resilient MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives line payloads.</param>
+    /// <param name="serialPort">The serial port that supplies received lines.</param>
+    /// <returns>The result of each resilient MQTT publish operation.</returns>
+    private static IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortLinesCore(
+        IObservable<IResilientMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        return client.PublishMessage(serialPort.Lines.Select(line => (topic, line)));
+    }
+
+    /// <summary>Publishes serial-port byte buffers through ordinary MQTT clients.</summary>
+    /// <param name="client">The MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives byte payloads.</param>
+    /// <param name="serialPort">The serial port that supplies received bytes.</param>
+    /// <returns>The result of each MQTT publish operation.</returns>
+    private static IObservable<MqttClientPublishResult> PublishSerialPortBytesCore(
+        IObservable<IMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        return client.PublishMessage(serialPort.DataReceivedBytes.Select(payload => (Topic: topic, Payload: (byte[])[payload])));
+    }
+
+    /// <summary>Publishes formatted serial-port byte buffers through ordinary MQTT clients.</summary>
+    /// <param name="client">The MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives formatted byte payloads.</param>
+    /// <param name="serialPort">The serial port that supplies received bytes.</param>
+    /// <param name="payloadFormatter">Formats each byte buffer.</param>
+    /// <returns>The result of each MQTT publish operation.</returns>
+    private static IObservable<MqttClientPublishResult> PublishSerialPortBytesCore(
+        IObservable<IMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort,
+        Func<byte, string> payloadFormatter)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        ArgumentNullException.ThrowIfNull(payloadFormatter);
+        return client.PublishMessage(serialPort.DataReceivedBytes.Select(payload => (topic, payloadFormatter(payload))));
+    }
+
+    /// <summary>Publishes serial-port byte buffers through resilient MQTT clients.</summary>
+    /// <param name="client">The resilient MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives byte payloads.</param>
+    /// <param name="serialPort">The serial port that supplies received bytes.</param>
+    /// <returns>The result of each resilient MQTT publish operation.</returns>
+    private static IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortBytesCore(
+        IObservable<IResilientMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        return client.PublishMessage(serialPort.DataReceivedBytes.Select(payload => (Topic: topic, Payload: (byte[])[payload])));
+    }
+
+    /// <summary>Publishes formatted serial-port byte buffers through resilient MQTT clients.</summary>
+    /// <param name="client">The resilient MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives formatted byte payloads.</param>
+    /// <param name="serialPort">The serial port that supplies received bytes.</param>
+    /// <param name="payloadFormatter">Formats each byte buffer.</param>
+    /// <returns>The result of each resilient MQTT publish operation.</returns>
+    private static IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortBytesCore(
+        IObservable<IResilientMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort,
+        Func<byte, string> payloadFormatter)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        ArgumentNullException.ThrowIfNull(payloadFormatter);
+        return client.PublishMessage(serialPort.DataReceivedBytes.Select(payload => (topic, payloadFormatter(payload))));
+    }
+
+    /// <summary>Publishes serial-port errors through ordinary MQTT clients.</summary>
+    /// <param name="client">The MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives error payloads.</param>
+    /// <param name="serialPort">The serial port that supplies errors.</param>
+    /// <param name="payloadFormatter">Formats each error event.</param>
+    /// <returns>The result of each MQTT publish operation.</returns>
+    private static IObservable<MqttClientPublishResult> PublishSerialPortErrorsCore(
+        IObservable<IMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort,
+        Func<Exception, string> payloadFormatter)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        ArgumentNullException.ThrowIfNull(payloadFormatter);
+        return client.PublishMessage(serialPort.ErrorReceived.Select(error => (topic, payloadFormatter(error))));
+    }
+
+    /// <summary>Publishes serial-port errors through resilient MQTT clients.</summary>
+    /// <param name="client">The resilient MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives error payloads.</param>
+    /// <param name="serialPort">The serial port that supplies errors.</param>
+    /// <param name="payloadFormatter">Formats each error event.</param>
+    /// <returns>The result of each resilient MQTT publish operation.</returns>
+    private static IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortErrorsCore(
+        IObservable<IResilientMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort,
+        Func<Exception, string> payloadFormatter)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        ArgumentNullException.ThrowIfNull(payloadFormatter);
+        return client.PublishMessage(serialPort.ErrorReceived.Select(error => (topic, payloadFormatter(error))));
+    }
+
+    /// <summary>Publishes serial-port open-state changes through ordinary MQTT clients.</summary>
+    /// <param name="client">The MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives open-state payloads.</param>
+    /// <param name="serialPort">The serial port that supplies open-state changes.</param>
+    /// <returns>The result of each MQTT publish operation.</returns>
+    private static IObservable<MqttClientPublishResult> PublishSerialPortOpenStateCore(
+        IObservable<IMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        return client.PublishMessage(serialPort.IsOpenObservable.Select(isOpen => (topic, isOpen.ToString())));
+    }
+
+    /// <summary>Publishes serial-port open-state changes through resilient MQTT clients.</summary>
+    /// <param name="client">The resilient MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives open-state payloads.</param>
+    /// <param name="serialPort">The serial port that supplies open-state changes.</param>
+    /// <returns>The result of each resilient MQTT publish operation.</returns>
+    private static IObservable<ApplicationMessageProcessedEventArgs> PublishSerialPortOpenStateCore(
+        IObservable<IResilientMqttClient> client,
+        string topic,
+        ISerialPortRx serialPort)
+    {
+        ValidateSerialPortObservableArguments(client, topic, serialPort);
+        return client.PublishMessage(serialPort.IsOpenObservable.Select(isOpen => (topic, isOpen.ToString())));
     }
 
     /// <summary>Subscribes ordinary MQTT clients and forwards each transformed payload to a serial port.</summary>
@@ -248,6 +516,21 @@ public static class SerialPortMqttExtensions
         return client.SubscribeToTopic(topic).Subscribe(
             Witness.Create<MqttApplicationMessageReceivedEventArgs>(message =>
                 write(serialPort, payloadFactory(message.ApplicationMessage.ConvertPayloadToString()))));
+    }
+
+    /// <summary>Validates serial-port observable publish arguments.</summary>
+    /// <typeparam name="TClient">The MQTT client type.</typeparam>
+    /// <param name="client">The MQTT client sequence used by the bridge.</param>
+    /// <param name="topic">The MQTT topic that receives serial-port payloads.</param>
+    /// <param name="serialPort">The serial port that supplies observed values.</param>
+    private static void ValidateSerialPortObservableArguments<TClient>(
+        IObservable<TClient> client,
+        string topic,
+        ISerialPortRx serialPort)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        ArgumentException.ThrowIfNullOrWhiteSpace(topic);
+        ArgumentNullException.ThrowIfNull(serialPort);
     }
 
     /// <summary>Validates the required serial-port publishing arguments.</summary>

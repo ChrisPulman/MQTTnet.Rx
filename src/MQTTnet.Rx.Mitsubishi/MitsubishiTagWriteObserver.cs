@@ -87,8 +87,14 @@ internal sealed class MitsubishiTagWriteObserver<T> : IObserver<MqttApplicationM
     public void OnError(Exception error)
     {
         ArgumentNullException.ThrowIfNull(error);
-        _onError?.Invoke(error);
-        Dispose();
+        try
+        {
+            NotifyError(error);
+        }
+        finally
+        {
+            Dispose();
+        }
     }
 
     /// <inheritdoc/>
@@ -141,7 +147,7 @@ internal sealed class MitsubishiTagWriteObserver<T> : IObserver<MqttApplicationM
                 .ConfigureAwait(false);
             if (!result.Succeeded)
             {
-                _onError?.Invoke(new InvalidOperationException(result.Error));
+                NotifyError(new InvalidOperationException(result.Error));
             }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -149,7 +155,21 @@ internal sealed class MitsubishiTagWriteObserver<T> : IObserver<MqttApplicationM
         }
         catch (Exception error)
         {
+            NotifyError(error);
+        }
+    }
+
+    /// <summary>Invokes the error callback without re-entering write-failure handling.</summary>
+    /// <param name="error">The error to report.</param>
+    private void NotifyError(Exception error)
+    {
+        try
+        {
             _onError?.Invoke(error);
+        }
+        catch (Exception callbackError)
+        {
+            System.Diagnostics.Trace.TraceError(callbackError.ToString());
         }
     }
 }

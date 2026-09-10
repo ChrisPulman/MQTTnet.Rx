@@ -7,6 +7,9 @@ using MQTTnet.Rx.Client.Reactive.ResilientClient.Internal;
 #else
 using MQTTnet.Rx.Client.ResilientClient.Internal;
 #endif
+using MQTTnet.Adapter;
+using MQTTnet.Diagnostics.Logger;
+using MQTTnet.LowLevelClient;
 using ReactiveUI.Primitives.Async;
 #if REACTIVE_SHIM
 using ReactiveUI.Primitives.Reactive.Signals;
@@ -51,33 +54,151 @@ public static class Create
     /// <remarks>The returned observable shares a single underlying MQTT client instance among all
     /// subscribers. The client is disposed automatically when the last subscription is disposed. Subscribers should not
     /// dispose the client directly. The observable sequence will retry on errors, resubscribing as needed.</remarks>
-    /// <returns>An observable sequence that emits a single shared <see cref="IMqttClient"/> instance to each
-    /// subscriber. The
-    /// client is disposed when all subscriptions are disposed.</returns>
-    public static IObservable<IMqttClient> MqttClient()
+    /// <returns>An observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    public static IObservable<IMqttClient> MqttClient() =>
+        CreateMqttClientObservable(static factory => factory.CreateMqttClient());
+
+    /// <summary>Creates an observable sequence that provides a shared MQTT client using a logger.</summary>
+    /// <param name="logger">The MQTTnet logger used by the created client.</param>
+    /// <returns>An observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    public static IObservable<IMqttClient> MqttClient(IMqttNetLogger logger)
     {
-        var lifetime = new SharedClientLifetime<IMqttClient>(static () => MqttFactory.CreateMqttClient());
-        return CreateObservable.RetryForever(
-            Signal.Create<IMqttClient>(observer =>
-            {
-                var lease = lifetime.Acquire();
-                return NotifyObserver(observer, lease);
-            }));
+        ArgumentNullException.ThrowIfNull(logger);
+        return CreateMqttClientObservable(factory => factory.CreateMqttClient(logger));
+    }
+
+    /// <summary>Creates an observable sequence that provides a shared MQTT client using an adapter factory.</summary>
+    /// <param name="clientAdapterFactory">The client adapter factory used by the created client.</param>
+    /// <returns>An observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    public static IObservable<IMqttClient> MqttClient(IMqttClientAdapterFactory clientAdapterFactory)
+    {
+        ArgumentNullException.ThrowIfNull(clientAdapterFactory);
+        return CreateMqttClientObservable(factory => factory.CreateMqttClient(clientAdapterFactory));
+    }
+
+    /// <summary>Creates an observable sequence that provides a shared MQTT client using a logger and adapter factory.</summary>
+    /// <param name="logger">The MQTTnet logger used by the created client.</param>
+    /// <param name="clientAdapterFactory">The client adapter factory used by the created client.</param>
+    /// <returns>An observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    public static IObservable<IMqttClient> MqttClient(
+        IMqttNetLogger logger,
+        IMqttClientAdapterFactory clientAdapterFactory)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(clientAdapterFactory);
+        return CreateMqttClientObservable(factory => factory.CreateMqttClient(logger, clientAdapterFactory));
     }
 
     /// <summary>Creates an asynchronous observable sequence that provides a shared MQTT client.</summary>
     /// <returns>An asynchronous observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
-    public static IObservableAsync<IMqttClient> MqttClientSignal()
+    public static IObservableAsync<IMqttClient> MqttClientSignal() =>
+        CreateMqttClientSignal(static factory => factory.CreateMqttClient());
+
+    /// <summary>Creates an asynchronous observable sequence that provides a shared MQTT client using a logger.</summary>
+    /// <param name="logger">The MQTTnet logger used by the created client.</param>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    public static IObservableAsync<IMqttClient> MqttClientSignal(IMqttNetLogger logger)
     {
-        var lifetime = new SharedClientLifetime<IMqttClient>(static () => MqttFactory.CreateMqttClient());
-        return SignalAsync
-            .Create<IMqttClient>(
-                async (observer, cancellationToken) =>
-                {
-                    var lease = lifetime.Acquire();
-                    return await NotifyObserverAsync(observer, lease, cancellationToken).ConfigureAwait(false);
-                })
-            .Retry();
+        ArgumentNullException.ThrowIfNull(logger);
+        return CreateMqttClientSignal(factory => factory.CreateMqttClient(logger));
+    }
+
+    /// <summary>Creates an asynchronous observable sequence that provides a shared MQTT client using an adapter factory.</summary>
+    /// <param name="clientAdapterFactory">The client adapter factory used by the created client.</param>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    public static IObservableAsync<IMqttClient> MqttClientSignal(IMqttClientAdapterFactory clientAdapterFactory)
+    {
+        ArgumentNullException.ThrowIfNull(clientAdapterFactory);
+        return CreateMqttClientSignal(factory => factory.CreateMqttClient(clientAdapterFactory));
+    }
+
+    /// <summary>Creates an asynchronous observable sequence that provides a shared MQTT client using a logger and adapter factory.</summary>
+    /// <param name="logger">The MQTTnet logger used by the created client.</param>
+    /// <param name="clientAdapterFactory">The client adapter factory used by the created client.</param>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    public static IObservableAsync<IMqttClient> MqttClientSignal(
+        IMqttNetLogger logger,
+        IMqttClientAdapterFactory clientAdapterFactory)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(clientAdapterFactory);
+        return CreateMqttClientSignal(factory => factory.CreateMqttClient(logger, clientAdapterFactory));
+    }
+
+    /// <summary>Creates an observable sequence that provides a shared low-level MQTT client.</summary>
+    /// <returns>An observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    public static IObservable<ILowLevelMqttClient> LowLevelMqttClient() =>
+        CreateLowLevelMqttClientObservable(static factory => factory.CreateLowLevelMqttClient());
+
+    /// <summary>Creates an observable sequence that provides a shared low-level MQTT client using a logger.</summary>
+    /// <param name="logger">The MQTTnet logger used by the created client.</param>
+    /// <returns>An observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    public static IObservable<ILowLevelMqttClient> LowLevelMqttClient(IMqttNetLogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        return CreateLowLevelMqttClientObservable(factory => factory.CreateLowLevelMqttClient(logger));
+    }
+
+    /// <summary>Creates an observable sequence that provides a shared low-level MQTT client using an adapter factory.</summary>
+    /// <param name="clientAdapterFactory">The client adapter factory used by the created client.</param>
+    /// <returns>An observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    public static IObservable<ILowLevelMqttClient> LowLevelMqttClient(
+        IMqttClientAdapterFactory clientAdapterFactory)
+    {
+        ArgumentNullException.ThrowIfNull(clientAdapterFactory);
+        return CreateLowLevelMqttClientObservable(factory => factory.CreateLowLevelMqttClient(clientAdapterFactory));
+    }
+
+    /// <summary>Creates an observable sequence that provides a shared low-level MQTT client using a logger and adapter factory.</summary>
+    /// <param name="logger">The MQTTnet logger used by the created client.</param>
+    /// <param name="clientAdapterFactory">The client adapter factory used by the created client.</param>
+    /// <returns>An observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    public static IObservable<ILowLevelMqttClient> LowLevelMqttClient(
+        IMqttNetLogger logger,
+        IMqttClientAdapterFactory clientAdapterFactory)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(clientAdapterFactory);
+        return CreateLowLevelMqttClientObservable(
+            factory => factory.CreateLowLevelMqttClient(logger, clientAdapterFactory));
+    }
+
+    /// <summary>Creates an asynchronous observable sequence that provides a shared low-level MQTT client.</summary>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    public static IObservableAsync<ILowLevelMqttClient> LowLevelMqttClientSignal() =>
+        CreateLowLevelMqttClientSignal(static factory => factory.CreateLowLevelMqttClient());
+
+    /// <summary>Creates an asynchronous observable sequence that provides a shared low-level MQTT client using a logger.</summary>
+    /// <param name="logger">The MQTTnet logger used by the created client.</param>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    public static IObservableAsync<ILowLevelMqttClient> LowLevelMqttClientSignal(IMqttNetLogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        return CreateLowLevelMqttClientSignal(factory => factory.CreateLowLevelMqttClient(logger));
+    }
+
+    /// <summary>Creates an asynchronous observable sequence that provides a shared low-level MQTT client using an adapter factory.</summary>
+    /// <param name="clientAdapterFactory">The client adapter factory used by the created client.</param>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    public static IObservableAsync<ILowLevelMqttClient> LowLevelMqttClientSignal(
+        IMqttClientAdapterFactory clientAdapterFactory)
+    {
+        ArgumentNullException.ThrowIfNull(clientAdapterFactory);
+        return CreateLowLevelMqttClientSignal(factory => factory.CreateLowLevelMqttClient(clientAdapterFactory));
+    }
+
+    /// <summary>Creates an asynchronous observable sequence that provides a shared low-level MQTT client using a logger and adapter factory.</summary>
+    /// <param name="logger">The MQTTnet logger used by the created client.</param>
+    /// <param name="clientAdapterFactory">The client adapter factory used by the created client.</param>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    public static IObservableAsync<ILowLevelMqttClient> LowLevelMqttClientSignal(
+        IMqttNetLogger logger,
+        IMqttClientAdapterFactory clientAdapterFactory)
+    {
+        ArgumentNullException.ThrowIfNull(logger);
+        ArgumentNullException.ThrowIfNull(clientAdapterFactory);
+        return CreateLowLevelMqttClientSignal(
+            factory => factory.CreateLowLevelMqttClient(logger, clientAdapterFactory));
     }
 
     /// <summary>Creates an observable sequence that provides a shared resilient MQTT client.</summary>
@@ -173,6 +294,70 @@ public static class Create
     {
         ArgumentNullException.ThrowIfNull(factory);
         return new(factory.CreateMqttClient(), factory.DefaultLogger);
+    }
+
+    /// <summary>Creates an observable sequence that provides a shared MQTT client from a factory callback.</summary>
+    /// <param name="clientFactory">Creates the client from the current MQTT factory.</param>
+    /// <returns>An observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    private static IObservable<IMqttClient> CreateMqttClientObservable(
+        Func<MqttClientFactory, IMqttClient> clientFactory)
+    {
+        var lifetime = new SharedClientLifetime<IMqttClient>(() => clientFactory(MqttFactory));
+        return CreateObservable.RetryForever(
+            Signal.Create<IMqttClient>(observer =>
+            {
+                var lease = lifetime.Acquire();
+                return NotifyObserver(observer, lease);
+            }));
+    }
+
+    /// <summary>Creates an asynchronous observable sequence that provides a shared MQTT client from a factory callback.</summary>
+    /// <param name="clientFactory">Creates the client from the current MQTT factory.</param>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="IMqttClient"/> instance.</returns>
+    private static IObservableAsync<IMqttClient> CreateMqttClientSignal(
+        Func<MqttClientFactory, IMqttClient> clientFactory)
+    {
+        var lifetime = new SharedClientLifetime<IMqttClient>(() => clientFactory(MqttFactory));
+        return SignalAsync
+            .Create<IMqttClient>(
+                async (observer, cancellationToken) =>
+                {
+                    var lease = lifetime.Acquire();
+                    return await NotifyObserverAsync(observer, lease, cancellationToken).ConfigureAwait(false);
+                })
+            .Retry();
+    }
+
+    /// <summary>Creates an observable sequence that provides a shared low-level MQTT client from a factory callback.</summary>
+    /// <param name="clientFactory">Creates the low-level client from the current MQTT factory.</param>
+    /// <returns>An observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    private static IObservable<ILowLevelMqttClient> CreateLowLevelMqttClientObservable(
+        Func<MqttClientFactory, ILowLevelMqttClient> clientFactory)
+    {
+        var lifetime = new SharedClientLifetime<ILowLevelMqttClient>(() => clientFactory(MqttFactory));
+        return CreateObservable.RetryForever(
+            Signal.Create<ILowLevelMqttClient>(observer =>
+            {
+                var lease = lifetime.Acquire();
+                return NotifyObserver(observer, lease);
+            }));
+    }
+
+    /// <summary>Creates an asynchronous observable sequence that provides a shared low-level MQTT client from a factory callback.</summary>
+    /// <param name="clientFactory">Creates the low-level client from the current MQTT factory.</param>
+    /// <returns>An asynchronous observable sequence that emits a shared <see cref="ILowLevelMqttClient"/> instance.</returns>
+    private static IObservableAsync<ILowLevelMqttClient> CreateLowLevelMqttClientSignal(
+        Func<MqttClientFactory, ILowLevelMqttClient> clientFactory)
+    {
+        var lifetime = new SharedClientLifetime<ILowLevelMqttClient>(() => clientFactory(MqttFactory));
+        return SignalAsync
+            .Create<ILowLevelMqttClient>(
+                async (observer, cancellationToken) =>
+                {
+                    var lease = lifetime.Acquire();
+                    return await NotifyObserverAsync(observer, lease, cancellationToken).ConfigureAwait(false);
+                })
+            .Retry();
     }
 
     /// <summary>Notifies a synchronous observer and releases a rejected client lease.</summary>

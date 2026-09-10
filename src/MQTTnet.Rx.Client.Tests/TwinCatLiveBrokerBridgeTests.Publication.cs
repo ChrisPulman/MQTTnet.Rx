@@ -28,7 +28,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         Action<int> trigger)
     {
         await using var probe = await broker.SubscribeProbeAsync(topic);
-        var resultTask = publishResults.FirstAsync(OperationTimeout);
+        var resultTask = FirstWithTimeoutAsync(publishResults);
         await Task.Yield();
         trigger(value);
 
@@ -78,7 +78,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         Action<int> trigger)
     {
         await using var probe = await broker.SubscribeProbeAsync(topic);
-        var resultTask = publishResults.FirstAsync(OperationTimeout);
+        var resultTask = FirstWithTimeoutAsync(publishResults);
         await Task.Yield();
         trigger(value);
 
@@ -122,7 +122,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         Action<int> trigger)
     {
         await using var probe = await broker.SubscribeProbeAsync(topic);
-        var resultTask = publishResults.FirstAsync(OperationTimeout);
+        var resultTask = FirstWithTimeoutAsync(publishResults);
         await Task.Yield();
         trigger(value);
 
@@ -172,7 +172,7 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         Action<int> trigger)
     {
         await using var probe = await broker.SubscribeProbeAsync(topic);
-        var resultTask = publishResults.FirstAsync(OperationTimeout);
+        var resultTask = FirstWithTimeoutAsync(publishResults);
         await Task.Yield();
         trigger(value);
 
@@ -200,5 +200,29 @@ public sealed partial class TwinCatLiveBrokerBridgeTests
         IObservableAsync<ApplicationMessageProcessedEventArgs> publishResults,
         Action<int> trigger) =>
         AssertResilientHashPublishAsync(broker, topic, initialValue, value, publishResults.ToObservable(), trigger);
+
+    /// <summary>Captures the first synchronous publication result with the fixture timeout.</summary>
+    /// <typeparam name="T">The publication result type.</typeparam>
+    /// <param name="source">The source to observe.</param>
+    /// <returns>The first observed value.</returns>
+    private static async Task<T> FirstWithTimeoutAsync<T>(IObservable<T> source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var first = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var subscription = source.Subscribe(
+            value => _ = first.TrySetResult(value),
+            exception => _ = first.TrySetException(exception));
+        return await first.Task.WaitAsync(OperationTimeout).ConfigureAwait(false);
+    }
+
+    /// <summary>Captures the first asynchronous publication result with the fixture timeout.</summary>
+    /// <typeparam name="T">The publication result type.</typeparam>
+    /// <param name="source">The asynchronous source to observe.</param>
+    /// <returns>The first observed value.</returns>
+    private static Task<T> FirstWithTimeoutAsync<T>(IObservableAsync<T> source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        return FirstWithTimeoutAsync(source.ToObservable());
+    }
 }
 #endif

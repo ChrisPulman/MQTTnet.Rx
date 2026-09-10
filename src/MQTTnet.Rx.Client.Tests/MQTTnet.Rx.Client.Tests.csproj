@@ -28,6 +28,8 @@
     <ProjectReference Include="..\MQTTnet.Rx.ABPlc\MQTTnet.Rx.ABPlc.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.AspNetCore\MQTTnet.Rx.AspNetCore.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Client\MQTTnet.Rx.Client.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Extensions.Rpc\MQTTnet.Rx.Extensions.Rpc.csproj" />
+    <ProjectReference Include="..\MQTTnet.Rx.Extensions.TopicTemplate\MQTTnet.Rx.Extensions.TopicTemplate.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Mitsubishi\MQTTnet.Rx.Mitsubishi.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.Modbus\MQTTnet.Rx.Modbus.csproj" />
     <ProjectReference Include="..\MQTTnet.Rx.OmronPlc\MQTTnet.Rx.OmronPlc.csproj" />

@@ -452,6 +452,31 @@ public class MitsubishiBridgeBranchTests
         await Assert.That(successFixture.Memory.ReadWord(Address)).IsEqualTo(SuccessfulWriteValue);
     }
 
+    /// <summary>Verifies a failing error callback is invoked once and cannot prevent subscription cleanup.</summary>
+    /// <returns>The asynchronous assertions.</returns>
+    [Test]
+    public async Task ErrorCallbackFailureStillDisposesSubscriptionAsync()
+    {
+        await using var broker = await LiveMqttBroker.StartAsync();
+        await using var fixture = CreateFixture(broker.Port, LogicalTagAccessMode.ReadWrite);
+        var callbackCount = 0;
+        var observer = CreateObserver(
+            fixture,
+            static _ => SuccessfulWriteValue,
+            _ =>
+            {
+                callbackCount++;
+                throw new InvalidOperationException("callback failed");
+            },
+            CancellationToken.None);
+        var subscription = new TrackingDisposable();
+        Attach(observer, subscription);
+        observer.Observer.OnError(new InvalidOperationException("source failed"));
+        await Assert.That(callbackCount).IsEqualTo(1);
+        await Assert.That(subscription.IsDisposed).IsTrue();
+        observer.Disposable.Dispose();
+    }
+
     /// <summary>Creates an internal production observer through its non-public constructor.</summary>
     /// <param name="fixture">The simulator-backed logical tag fixture.</param>
     /// <param name="parser">The MQTT payload parser.</param>

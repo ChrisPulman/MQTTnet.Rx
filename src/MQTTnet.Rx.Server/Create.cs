@@ -4,6 +4,7 @@
 
 using System.Text.Json;
 using System.Threading.Channels;
+using MQTTnet.Diagnostics.Logger;
 using MQTTnet.Server;
 
 #if REACTIVE_SHIM
@@ -18,12 +19,19 @@ public static class Create
     /// <summary>Defines the maximum number of attempts used when starting a server sequence.</summary>
     private const int MaximumServerRetries = 3;
 
+    /// <summary>Defines the retained-message persistence file name.</summary>
+    private const string RetainedMessagesFileName = "RetainedMessages.json";
+
     /// <summary>Gets the MQTT server factory.</summary>
     public static MqttServerFactory MqttFactory { get; private set; } = new();
 
     /// <summary>Sets the MQTT server factory.</summary>
     /// <param name="mqttFactory">The MQTT server factory.</param>
-    public static void NewMqttFactory(MqttServerFactory mqttFactory) => MqttFactory = mqttFactory;
+    public static void NewMqttFactory(MqttServerFactory mqttFactory)
+    {
+        ArgumentNullException.ThrowIfNull(mqttFactory);
+        MqttFactory = mqttFactory;
+    }
 
     /// <summary>Creates an MQTT server observable sequence.</summary>
     /// <param name="builder">Configures the server options.</param>
@@ -35,12 +43,58 @@ public static class Create
 
         var factory = MqttFactory;
         var options = builder(factory.CreateServerOptionsBuilder());
-        var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options));
-        return SignalFactory.Create<(MqttServer Server, MqttServerSession Disposable)>(async (observer, cancellationToken) =>
-        {
-            var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
-            return NotifyObserver(observer, session);
-        }).Retry(MaximumServerRetries);
+        return CreateMqttServerObservable(() => factory.CreateMqttServer(options));
+    }
+
+    /// <summary>Creates an MQTT server observable sequence using a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServer(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IMqttNetLogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerObservable(() => factory.CreateMqttServer(options, logger));
+    }
+
+    /// <summary>Creates an MQTT server observable sequence using explicit adapters.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServer(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(serverAdapters);
+
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerObservable(() => factory.CreateMqttServer(options, serverAdapters));
+    }
+
+    /// <summary>Creates an MQTT server observable sequence using explicit adapters and a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServer(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters,
+        IMqttNetLogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(serverAdapters);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerObservable(() => factory.CreateMqttServer(options, serverAdapters, logger));
     }
 
     /// <summary>Creates an asynchronous MQTT server sequence.</summary>
@@ -53,7 +107,321 @@ public static class Create
 
         var factory = MqttFactory;
         var options = builder(factory.CreateServerOptionsBuilder());
-        var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options));
+        return CreateMqttServerSignal(() => factory.CreateMqttServer(options));
+    }
+
+    /// <summary>Creates an asynchronous MQTT server sequence using a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)> MqttServerSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IMqttNetLogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerSignal(() => factory.CreateMqttServer(options, logger));
+    }
+
+    /// <summary>Creates an asynchronous MQTT server sequence using explicit adapters.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)> MqttServerSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(serverAdapters);
+
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerSignal(() => factory.CreateMqttServer(options, serverAdapters));
+    }
+
+    /// <summary>Creates an asynchronous MQTT server sequence using explicit adapters and a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)> MqttServerSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters,
+        IMqttNetLogger logger)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(serverAdapters);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerSignal(() => factory.CreateMqttServer(options, serverAdapters, logger));
+    }
+
+    /// <summary>Creates an MQTT server sequence with retained messages.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder) =>
+        MqttServerWithRetainedMessages(builder, (string?)null);
+
+    /// <summary>Creates an MQTT server sequence with retained messages.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), RetainedMessagesFileName);
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerWithRetainedMessagesObservable(() => factory.CreateMqttServer(options), storePath);
+    }
+
+    /// <summary>Creates an MQTT server sequence with retained messages using a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IMqttNetLogger logger) =>
+        MqttServerWithRetainedMessages(builder, logger, (string?)null);
+
+    /// <summary>Creates an MQTT server sequence with retained messages using a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IMqttNetLogger logger,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), RetainedMessagesFileName);
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerWithRetainedMessagesObservable(() => factory.CreateMqttServer(options, logger), storePath);
+    }
+
+    /// <summary>Creates an MQTT server sequence with retained messages using explicit adapters.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters) =>
+        MqttServerWithRetainedMessages(builder, serverAdapters, (string?)null);
+
+    /// <summary>Creates an MQTT server sequence with retained messages using explicit adapters.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(serverAdapters);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), RetainedMessagesFileName);
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerWithRetainedMessagesObservable(
+            () => factory.CreateMqttServer(options, serverAdapters),
+            storePath);
+    }
+
+    /// <summary>Creates an MQTT server sequence with retained messages using explicit adapters and a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters,
+        IMqttNetLogger logger) =>
+        MqttServerWithRetainedMessages(builder, serverAdapters, logger, (string?)null);
+
+    /// <summary>Creates an MQTT server sequence with retained messages using explicit adapters and a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An observable server sequence.</returns>
+    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters,
+        IMqttNetLogger logger,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(serverAdapters);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), RetainedMessagesFileName);
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerWithRetainedMessagesObservable(
+            () => factory.CreateMqttServer(options, serverAdapters, logger),
+            storePath);
+    }
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder) =>
+        MqttServerWithRetainedMessagesSignal(builder, (string?)null);
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), RetainedMessagesFileName);
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerWithRetainedMessagesSignal(() => factory.CreateMqttServer(options), storePath);
+    }
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages using a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IMqttNetLogger logger) =>
+        MqttServerWithRetainedMessagesSignal(builder, logger, (string?)null);
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages using a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IMqttNetLogger logger,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), RetainedMessagesFileName);
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerWithRetainedMessagesSignal(() => factory.CreateMqttServer(options, logger), storePath);
+    }
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages using explicit adapters.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters) =>
+        MqttServerWithRetainedMessagesSignal(builder, serverAdapters, (string?)null);
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages using explicit adapters.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(serverAdapters);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), RetainedMessagesFileName);
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerWithRetainedMessagesSignal(
+            () => factory.CreateMqttServer(options, serverAdapters),
+            storePath);
+    }
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages using explicit adapters and a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters,
+        IMqttNetLogger logger) =>
+        MqttServerWithRetainedMessagesSignal(builder, serverAdapters, logger, (string?)null);
+
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages using explicit adapters and a logger.</summary>
+    /// <param name="builder">Configures the server options.</param>
+    /// <param name="serverAdapters">The server adapters used by the created server.</param>
+    /// <param name="logger">The MQTTnet logger used by the created server.</param>
+    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        MqttServerWithRetainedMessagesSignal(
+        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
+        IEnumerable<IMqttServerAdapter> serverAdapters,
+        IMqttNetLogger logger,
+        string? retainedMessageDirectory)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+        ArgumentNullException.ThrowIfNull(serverAdapters);
+        ArgumentNullException.ThrowIfNull(logger);
+
+        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), RetainedMessagesFileName);
+        var factory = MqttFactory;
+        var options = builder(factory.CreateServerOptionsBuilder());
+        return CreateMqttServerWithRetainedMessagesSignal(
+            () => factory.CreateMqttServer(options, serverAdapters, logger),
+            storePath);
+    }
+
+    /// <summary>Creates an MQTT server observable sequence from a server factory callback.</summary>
+    /// <param name="serverFactory">Creates the server.</param>
+    /// <returns>An observable server sequence.</returns>
+    private static IObservable<(MqttServer Server, MqttServerSession Disposable)> CreateMqttServerObservable(
+        Func<MqttServer> serverFactory)
+    {
+        var lifetime = new MqttServerLifetime(serverFactory);
+        return SignalFactory.Create<(MqttServer Server, MqttServerSession Disposable)>(async (observer, cancellationToken) =>
+        {
+            var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
+            return NotifyObserver(observer, session);
+        }).Retry(MaximumServerRetries);
+    }
+
+    /// <summary>Creates an asynchronous MQTT server sequence from a server factory callback.</summary>
+    /// <param name="serverFactory">Creates the server.</param>
+    /// <returns>An asynchronous observable server sequence.</returns>
+    private static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)> CreateMqttServerSignal(
+        Func<MqttServer> serverFactory)
+    {
+        var lifetime = new MqttServerLifetime(serverFactory);
         return SignalAsync.Create<(MqttServer Server, MqttServerSession Disposable)>(
             async (observer, cancellationToken) =>
         {
@@ -62,27 +430,16 @@ public static class Create
         }).Retry(MaximumServerRetries);
     }
 
-    /// <summary>Creates an MQTT server sequence with retained messages.</summary>
-    /// <param name="builder">Configures the server options.</param>
+    /// <summary>Creates an MQTT server sequence with retained messages from a server factory callback.</summary>
+    /// <param name="serverFactory">Creates the server.</param>
+    /// <param name="storePath">The retained-message store path.</param>
     /// <returns>An observable server sequence.</returns>
-    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
-        Func<MqttServerOptionsBuilder, MqttServerOptions> builder) =>
-        MqttServerWithRetainedMessages(builder, null);
-
-    /// <summary>Creates an MQTT server sequence with retained messages.</summary>
-    /// <param name="builder">Configures the server options.</param>
-    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
-    /// <returns>An observable server sequence.</returns>
-    public static IObservable<(MqttServer Server, MqttServerSession Disposable)> MqttServerWithRetainedMessages(
-        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
-        string? retainedMessageDirectory)
+    private static IObservable<(MqttServer Server, MqttServerSession Disposable)>
+        CreateMqttServerWithRetainedMessagesObservable(
+        Func<MqttServer> serverFactory,
+        string storePath)
     {
-        ArgumentNullException.ThrowIfNull(builder);
-
-        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), "RetainedMessages.json");
-        var factory = MqttFactory;
-        var options = builder(factory.CreateServerOptionsBuilder());
-        var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options), storePath);
+        var lifetime = new MqttServerLifetime(serverFactory, storePath);
         return SignalFactory.Create<(MqttServer Server, MqttServerSession Disposable)>(async (observer, cancellationToken) =>
         {
             var session = await lifetime.AcquireAsync(cancellationToken).ConfigureAwait(false);
@@ -90,29 +447,16 @@ public static class Create
         }).Retry(MaximumServerRetries);
     }
 
-    /// <summary>Creates an asynchronous MQTT server sequence with retained messages.</summary>
-    /// <param name="builder">Configures the server options.</param>
+    /// <summary>Creates an asynchronous MQTT server sequence with retained messages from a server factory callback.</summary>
+    /// <param name="serverFactory">Creates the server.</param>
+    /// <param name="storePath">The retained-message store path.</param>
     /// <returns>An asynchronous observable server sequence.</returns>
-    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
-        MqttServerWithRetainedMessagesSignal(
-        Func<MqttServerOptionsBuilder, MqttServerOptions> builder) =>
-        MqttServerWithRetainedMessagesSignal(builder, null);
-
-    /// <summary>Creates an asynchronous MQTT server sequence with retained messages.</summary>
-    /// <param name="builder">Configures the server options.</param>
-    /// <param name="retainedMessageDirectory">The retained-message directory.</param>
-    /// <returns>An asynchronous observable server sequence.</returns>
-    public static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
-        MqttServerWithRetainedMessagesSignal(
-        Func<MqttServerOptionsBuilder, MqttServerOptions> builder,
-        string? retainedMessageDirectory)
+    private static IObservableAsync<(MqttServer Server, MqttServerSession Disposable)>
+        CreateMqttServerWithRetainedMessagesSignal(
+        Func<MqttServer> serverFactory,
+        string storePath)
     {
-        ArgumentNullException.ThrowIfNull(builder);
-
-        var storePath = Path.Combine(retainedMessageDirectory ?? Path.GetTempPath(), "RetainedMessages.json");
-        var factory = MqttFactory;
-        var options = builder(factory.CreateServerOptionsBuilder());
-        var lifetime = new MqttServerLifetime(() => factory.CreateMqttServer(options), storePath);
+        var lifetime = new MqttServerLifetime(serverFactory, storePath);
         return SignalAsync.Create<(MqttServer Server, MqttServerSession Disposable)>(
             async (observer, cancellationToken) =>
         {
