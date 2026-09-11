@@ -10,7 +10,7 @@
   <ItemGroup>
     <PackageVersion Include="Avalonia.Desktop" Version="12.1.2" />
     <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
-    <PackageVersion Include="CrissCross.Avalonia.UI" Version="4.0.0" />
+    <PackageVersion Include="CrissCross.Avalonia.UI" Version="4.1.0" />
     <PackageVersion Include="ConsoleMenu-simple" Version="2.7.0" />
     <PackageVersion Include="CP.Nuke.BuildTools" Version="3.0.2" />
     <PackageVersion Include="IoT-Driver.ABPlcRx" Version="$(IOTDriverVersion)" />
