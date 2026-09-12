@@ -50,7 +50,7 @@
     <PackageVersion Include="StyleSharp.Analyzers" Version="$(RoslyAnalysersVersion)" />
     <PackageVersion Include="System.Reactive" Version="7.0.0" />
     <PackageVersion Include="System.Security.Cryptography.Xml" Version="10.0.12" />
-    <PackageVersion Include="TUnit" Version="1.66.27" />
+    <PackageVersion Include="TUnit" Version="1.67.0" />
     <PackageVersion Include="Verify.TUnit" Version="32.0.0" />
   </ItemGroup>
 </Project>
