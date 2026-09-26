@@ -41,7 +41,7 @@
     <PackageVersion Include="MinVer" Version="8.0.0" />
     <PackageVersion Include="PerformanceSharp.Analyzers" Version="$(RoslyAnalysersVersion)" />
     <PackageVersion Include="ReactiveUI.Avalonia" Version="12.1.2" />
-    <PackageVersion Include="ReactiveUI.SourceGenerators" Version="3.2.0" />
+    <PackageVersion Include="ReactiveUI.SourceGenerators" Version="4.2.0" />
     <PackageVersion Include="ReactiveUI.Primitives" Version="$(RxUIPrimitivesVersion)" />
     <PackageVersion Include="ReactiveUI.Primitives.Async" Version="$(RxUIPrimitivesVersion)" />
     <PackageVersion Include="ReactiveUI.Primitives.Async.Reactive" Version="$(RxUIPrimitivesVersion)" />
