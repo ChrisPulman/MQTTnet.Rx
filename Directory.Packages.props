@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageVersion Include="Avalonia.Desktop" Version="12.1.2" />
+    <PackageVersion Include="Avalonia.Desktop" Version="12.1.3" />
     <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
     <PackageVersion Include="CrissCross.Avalonia.UI" Version="4.1.0" />
     <PackageVersion Include="ConsoleMenu-simple" Version="2.7.0" />
