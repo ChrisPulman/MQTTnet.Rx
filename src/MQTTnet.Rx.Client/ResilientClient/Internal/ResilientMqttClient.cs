@@ -67,6 +67,9 @@ internal sealed partial class ResilientMqttClient : Disposable, IResilientMqttCl
     /// <summary>Synchronizes access to the message queue.</summary>
     private readonly AsyncLock _messageQueueLock = new();
 
+    /// <summary>Identifies the publishing operation invoking an asynchronous callback.</summary>
+    private readonly AsyncLocal<CancellationToken?> _publishingContext = new();
+
     /// <summary>Stores subscriptions that must be restored after reconnection.</summary>
     private readonly Dictionary<string, MqttTopicFilter> _reconnectSubscriptions = [];
 
@@ -85,8 +88,14 @@ internal sealed partial class ResilientMqttClient : Disposable, IResilientMqttCl
     /// <summary>Represents the connection maintenance operation.</summary>
     private Task? _maintainConnectionTask;
 
+    /// <summary>Tracks completion of the queued-message publishing operation.</summary>
+    private Task? _publishingTask;
+
     /// <summary>Controls the background publishing operation.</summary>
     private CancellationTokenSource? _publishingCancellationToken;
+
+    /// <summary>Identifies the current publishing operation across asynchronous callbacks.</summary>
+    private CancellationToken _publishingToken;
 
     /// <summary>Initializes a new instance of the <see cref="ResilientMqttClient"/> class.</summary>
     /// <param name="mqttClient">The underlying MQTT client to be used for communication. Cannot be null.</param>
@@ -172,18 +181,23 @@ internal sealed partial class ResilientMqttClient : Disposable, IResilientMqttCl
 
         _isCleanDisconnect = cleanDisconnect;
 
-        StopPublishing();
         StopMaintainingConnection();
 
-        _messageQueue.Clear();
-
-        if (_maintainConnectionTask is null)
+        if (_maintainConnectionTask is not null)
         {
-            return;
+            await _maintainConnectionTask.ConfigureAwait(false);
+            _maintainConnectionTask = null;
         }
 
-        await Task.WhenAny(_maintainConnectionTask);
-        _maintainConnectionTask = null;
+        var stoppingFromPublisher = _publishingContext.Value is { } activeToken && activeToken == _publishingToken;
+        StopPublishing();
+        if (_publishingTask is not null && !stoppingFromPublisher)
+        {
+            await _publishingTask.ConfigureAwait(false);
+            _publishingTask = null;
+        }
+
+        _messageQueue.Clear();
     }
 
     /// <summary>Asynchronously subscribes to the specified MQTT topic filters.</summary>
@@ -322,6 +336,7 @@ internal sealed partial class ResilientMqttClient : Disposable, IResilientMqttCl
     /// <returns>A task that represents the asynchronous operation of publishing queued messages.</returns>
     private async Task PublishQueuedMessagesAsync(CancellationToken cancellationToken)
     {
+        _publishingContext.Value = cancellationToken;
         try
         {
             while (!cancellationToken.IsCancellationRequested && InternalClient.IsConnected)
@@ -354,6 +369,7 @@ internal sealed partial class ResilientMqttClient : Disposable, IResilientMqttCl
         finally
         {
             _logger.Verbose("Stopped publishing messages.");
+            _publishingContext.Value = null;
         }
     }
 
@@ -673,9 +689,10 @@ internal sealed partial class ResilientMqttClient : Disposable, IResilientMqttCl
         var cancellationTokenSource = new CancellationTokenSource();
         var cancellationToken = cancellationTokenSource.Token;
         _publishingCancellationToken = cancellationTokenSource;
+        _publishingToken = cancellationToken;
 
-        Task.Run(() => PublishQueuedMessagesAsync(cancellationToken), cancellationToken)
-            .RunInBackground(_logger);
+        _publishingTask = Task.Run(() => PublishQueuedMessagesAsync(cancellationToken));
+        _publishingTask.RunInBackground(_logger);
     }
 
     /// <summary>Stops maintaining the current connection and releases associated resources.</summary>

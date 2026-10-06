@@ -956,11 +956,11 @@ public sealed partial class S7PlcLiveBridgeTests
 
         /// <inheritdoc/>
         public IObservable<T?> Observe<T>(LogicalTagKey<T> tag) =>
-            Signal.Emit((T?)GetValue<T>(tag.Name));
+            Signal.Emit(GetValue<T>(tag.Name));
 
         /// <inheritdoc/>
         public Task<T?> ReadAsync<T>(LogicalTagKey<T> tag) =>
-            Task.FromResult((T?)GetValue<T>(tag.Name));
+            Task.FromResult(GetValue<T>(tag.Name));
 
         /// <inheritdoc/>
         public Task<T?> ReadAsync<T>(LogicalTagKey<T> tag, CancellationToken cancellationToken)

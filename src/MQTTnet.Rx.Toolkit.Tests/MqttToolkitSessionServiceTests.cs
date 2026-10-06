@@ -24,7 +24,7 @@ public sealed class MqttToolkitSessionServiceTests
     private const int TestTimeoutSeconds = 5;
 
     /// <summary>Stores the number of connections exercised by subscription reuse tests.</summary>
-    private const int ConnectionCycles = 3;
+    private const int ConnectionCycles = 30;
 
     /// <summary>Stores the expected observations from the broker and subscribed client.</summary>
     private const int ObservationsPerPublish = 2;
@@ -40,18 +40,12 @@ public sealed class MqttToolkitSessionServiceTests
     [Arguments(true)]
     public async Task ReconnectPreservesClientAndBrokerMessageSubscriptionsAsync(bool restartBroker)
     {
-        using var listener = new TcpListener(IPAddress.Loopback, 0);
-        listener.Start();
-        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
-        listener.Stop();
+        var port = GetAvailablePort();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(ConnectTimeoutSeconds));
         await using var service = new MqttToolkitSessionService(TimeProvider.System);
-        using var connection = new ConnectionOptionsViewModel
-        {
-            ClientId = "toolkit-reconnect",
-            Host = IPAddress.Loopback.ToString(),
-            Port = port,
-        };
+        var logs = new ConcurrentQueue<string>();
+        service.LogReceived += (_, log) => logs.Enqueue(log.ToString());
+        using var connection = CreateReconnectOptions(port);
         var subscription = new SubscriptionViewModel { TopicFilter = ReconnectTopic };
 
         for (var cycle = 0; cycle < ConnectionCycles; cycle++)
@@ -89,6 +83,10 @@ public sealed class MqttToolkitSessionServiceTests
 
                 await AssertMessageObservationsAsync(received.ToArray(), payload);
             }
+            catch (Exception exception)
+            {
+                throw new InvalidOperationException($"Reconnect cycle {cycle}: {string.Join(Environment.NewLine, logs)}", exception);
+            }
             finally
             {
                 service.MessageReceived -= handler;
@@ -125,6 +123,43 @@ public sealed class MqttToolkitSessionServiceTests
 
         await Assert.That(observedException is ObjectDisposedException).IsFalse();
     }
+
+    /// <summary>Verifies broker shutdown does not leave client disconnect waiting on a removed session.</summary>
+    /// <returns>A task representing the asynchronous assertions.</returns>
+    [Test]
+    public async Task StopEmbeddedServer_AllowsClientDisconnectAsync()
+    {
+        var port = GetAvailablePort();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(TestTimeoutSeconds));
+        await using var service = new MqttToolkitSessionService(TimeProvider.System);
+        using var connection = CreateReconnectOptions(port);
+        await service.StartEmbeddedServerAsync(port, timeout.Token);
+        await service.ConnectAsync(connection.BuildClientOptions(), timeout.Token);
+        await service.StopEmbeddedServerAsync(timeout.Token);
+        await service.DisconnectAsync(timeout.Token);
+
+        await Assert.That(() => service.SubscribeAsync(new() { TopicFilter = ReconnectTopic }, timeout.Token))
+            .Throws<InvalidOperationException>();
+    }
+
+    /// <summary>Finds a loopback port for the test broker.</summary>
+    /// <returns>The available port.</returns>
+    private static int GetAvailablePort()
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        return ((IPEndPoint)listener.LocalEndpoint).Port;
+    }
+
+    /// <summary>Creates connection options for repeated client lifetimes.</summary>
+    /// <param name="port">The broker port.</param>
+    /// <returns>The connection options.</returns>
+    private static ConnectionOptionsViewModel CreateReconnectOptions(int port) => new()
+    {
+        ClientId = "toolkit-reconnect",
+        Host = IPAddress.Loopback.ToString(),
+        Port = port,
+    };
 
     /// <summary>Verifies that one publish was observed once by both the broker and subscribed client.</summary>
     /// <param name="messages">The observations collected during the connection.</param>

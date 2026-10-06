@@ -283,10 +283,30 @@ public static class ObservableBridgeCompatibilityExtensions
     /// <summary>Forwards asynchronous notifications to a System.Reactive observer.</summary>
     /// <typeparam name="T">The notification element type.</typeparam>
     /// <param name="observer">The System.Reactive observer that receives notifications.</param>
-    private sealed class AsynchronousBridgeObserver<T>(IObserver<T> observer) : WitnessAsync<T>
+    private sealed class AsynchronousBridgeObserver<T>(IObserver<T> observer) : IWitnessAsync<T>
     {
+        /// <summary>Stores the notification gate and disposal state.</summary>
+        private WitnessAsyncState _witness;
+
         /// <inheritdoc/>
-        protected override ValueTask OnCompletedAsyncCore(PrimitivesResult result)
+        ref WitnessAsyncState IWitnessState.Witness => ref _witness;
+
+        /// <inheritdoc/>
+        public ValueTask OnNextAsync(T value, CancellationToken cancellationToken = default) =>
+            WitnessAsync.OnNextAsync(this, value, cancellationToken);
+
+        /// <inheritdoc/>
+        public ValueTask OnErrorResumeAsync(Exception error, CancellationToken cancellationToken = default) =>
+            WitnessAsync.OnErrorResumeAsync(this, error, cancellationToken);
+
+        /// <inheritdoc/>
+        public ValueTask OnCompletedAsync(PrimitivesResult result) => WitnessAsync.OnCompletedAsync(this, result);
+
+        /// <inheritdoc/>
+        public ValueTask DisposeAsync() => WitnessAsync.DisposeStateAsync(this);
+
+        /// <inheritdoc/>
+        ValueTask IWitnessAsync<T>.OnCompletedAsyncCore(PrimitivesResult result)
         {
             if (result.IsFailure)
             {
@@ -301,7 +321,7 @@ public static class ObservableBridgeCompatibilityExtensions
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnErrorResumeAsyncCore(
+        ValueTask IWitnessAsync<T>.OnErrorResumeAsyncCore(
             Exception error,
             CancellationToken cancellationToken)
         {
@@ -310,7 +330,7 @@ public static class ObservableBridgeCompatibilityExtensions
         }
 
         /// <inheritdoc/>
-        protected override ValueTask OnNextAsyncCore(T value, CancellationToken cancellationToken)
+        ValueTask IWitnessAsync<T>.OnNextAsyncCore(T value, CancellationToken cancellationToken)
         {
             observer.OnNext(value);
             return default;

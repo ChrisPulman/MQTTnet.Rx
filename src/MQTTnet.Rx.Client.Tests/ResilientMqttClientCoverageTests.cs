@@ -194,6 +194,106 @@ public class ResilientMqttClientCoverageTests
         await Assert.That(processedMessages).IsEqualTo(1);
     }
 
+    /// <summary>Verifies shutdown waits for an in-flight processed-message handler.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task StopAsync_WaitsForProcessedMessageHandlerAsync()
+    {
+        using var internalClient = new ScriptedMqttClient();
+        using var client = CreateClient(internalClient);
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var completed = false;
+        using var registration = client.RegisterApplicationMessageProcessedHandler(async (_, _) =>
+        {
+            entered.SetResult();
+            await release.Task;
+            completed = true;
+        });
+
+        await client.StartAsync(CreateOptions());
+        await client.EnqueueAsync(new MqttApplicationMessage { Topic = FirstTopic });
+        await entered.Task.WaitAsync(TransitionTimeout);
+        var stopping = client.StopAsync();
+        try
+        {
+            await Assert.That(() => stopping.WaitAsync(TransitionTimeout)).Throws<TimeoutException>();
+        }
+        finally
+        {
+            release.SetResult();
+            await stopping.WaitAsync(TransitionTimeout);
+        }
+
+        await Assert.That(completed).IsTrue();
+    }
+
+    /// <summary>Verifies shutdown cancels a publisher started by an in-flight connection attempt.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task StopAsync_CancelsPublishingStartedDuringConnectionShutdownAsync()
+    {
+        var connecting = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var connectRelease = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var publishing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var publishRelease = new TaskCompletionSource<MqttClientPublishResult>(TaskCreationOptions.RunContinuationsAsynchronously);
+        CancellationToken publishToken = default;
+        using var internalClient = new ScriptedMqttClient
+        {
+            ConnectHandler = async (_, _) =>
+            {
+                connecting.SetResult();
+                await connectRelease.Task;
+                return new();
+            },
+            DisconnectHandler = (_, _) => publishing.Task,
+            PublishHandler = async (_, token) =>
+            {
+                publishToken = token;
+                publishing.SetResult();
+                return await publishRelease.Task.WaitAsync(token);
+            },
+        };
+        using var client = CreateClient(internalClient);
+        await client.StartAsync(CreateOptions());
+        await connecting.Task.WaitAsync(TransitionTimeout);
+        await client.EnqueueAsync(new MqttApplicationMessage { Topic = FirstTopic });
+        var stopping = client.StopAsync();
+        connectRelease.SetResult();
+        try
+        {
+            await publishing.Task.WaitAsync(TransitionTimeout);
+            await stopping.WaitAsync(TransitionTimeout);
+            await Assert.That(publishToken.IsCancellationRequested).IsTrue();
+            await Assert.That(client.IsStarted).IsFalse();
+        }
+        finally
+        {
+            _ = publishRelease.TrySetResult(new(0, MqttClientPublishReasonCode.Success, string.Empty, []));
+            await stopping.WaitAsync(TransitionTimeout);
+        }
+    }
+
+    /// <summary>Verifies processed-message callbacks can await shutdown without awaiting themselves.</summary>
+    /// <returns>A task representing the asynchronous test.</returns>
+    [Test]
+    public async Task StopAsync_CanBeAwaitedFromProcessedMessageHandlerAsync()
+    {
+        using var internalClient = new ScriptedMqttClient();
+        using var client = CreateClient(internalClient);
+        var stopped = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var registration = client.RegisterApplicationMessageProcessedHandler(async (_, _) =>
+        {
+            await client.StopAsync(cleanDisconnect: false);
+            stopped.SetResult();
+        });
+
+        await client.StartAsync(CreateOptions());
+        await client.EnqueueAsync(new MqttApplicationMessage { Topic = FirstTopic });
+        await stopped.Task.WaitAsync(TransitionTimeout);
+        await Assert.That(client.IsStarted).IsFalse();
+    }
+
     /// <summary>Exercises both bounded-queue overflow strategies and skipped-message notifications.</summary>
     /// <returns>A task representing the asynchronous test.</returns>
     [Test]

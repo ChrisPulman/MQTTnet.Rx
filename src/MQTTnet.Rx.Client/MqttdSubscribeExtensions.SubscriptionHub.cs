@@ -86,7 +86,7 @@ public static partial class MqttdSubscribeExtensions
                     out var clientExists);
                 if (!clientExists)
                 {
-                    topics = new(StringComparer.Ordinal);
+                    topics = [with(StringComparer.Ordinal)];
                 }
 
                 ref var hub = ref CollectionsMarshal.GetValueRefOrAddDefault(
@@ -227,7 +227,7 @@ public static partial class MqttdSubscribeExtensions
                     out var clientExists);
                 if (!clientExists)
                 {
-                    topics = new(StringComparer.Ordinal);
+                    topics = [with(StringComparer.Ordinal)];
                 }
 
                 ref var hub = ref CollectionsMarshal.GetValueRefOrAddDefault(
@@ -313,7 +313,7 @@ public static partial class MqttdSubscribeExtensions
     private sealed class TopicFilter(string topic)
     {
         /// <summary>Caches topic-filter comparison results by incoming topic.</summary>
-        private readonly Dictionary<string, bool> _matches = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, bool> _matches = [with(StringComparer.Ordinal)];
 
         /// <summary>Applies the topic filter to a message sequence.</summary>
         /// <param name="messages">The received MQTT message sequence.</param>
