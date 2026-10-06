@@ -6,9 +6,9 @@
 [![MQTTnet.Rx.Server](https://img.shields.io/nuget/v/MQTTnet.Rx.Server.svg?style=flat-square&label=server)](https://www.nuget.org/packages/MQTTnet.Rx.Server)
 [![MQTTnet.Rx.AspNetCore](https://img.shields.io/nuget/v/MQTTnet.Rx.AspNetCore.svg?style=flat-square&label=aspnetcore)](https://www.nuget.org/packages/MQTTnet.Rx.AspNetCore)
 
-<p align="left">
+<p>
   <a href="https://github.com/ChrisPulman/MQTTnet.Rx">
-    <img alt="MQTTnet.Rx" src="https://github.com/ChrisPulman/MQTTnet.Rx/blob/main/Images/logo.png" width="200" />
+    <img alt="MQTTnet.Rx" src="https://github.com/ChrisPulman/MQTTnet.Rx/blob/main/Images/InfoGraphic.png" height="400" />
   </a>
 </p>
 
