@@ -46,11 +46,17 @@ internal sealed partial class MqttToolkitSessionService : IDisposable, IAsyncDis
     /// <summary>Stores the current MQTT client.</summary>
     private IMqttClient? _client;
 
+    /// <summary>Completes when the embedded broker has cleaned up the current client.</summary>
+    private TaskCompletionSource? _embeddedClientDisconnected;
+
     /// <summary>Tracks whether this instance has been disposed.</summary>
     private bool _disposed;
 
     /// <summary>Stores the current embedded MQTT server.</summary>
     private MqttServer? _server;
+
+    /// <summary>Stores the loopback port of the embedded broker.</summary>
+    private int _embeddedServerPort;
 
     /// <summary>Stores the asynchronous server session returned by the Rx server factory.</summary>
     private IAsyncDisposable? _serverSession;
@@ -404,6 +410,9 @@ internal sealed partial class MqttToolkitSessionService : IDisposable, IAsyncDis
         try
         {
             _client = client;
+            _embeddedClientDisconnected = GetEmbeddedServer(options) is null
+                ? null
+                : new(TaskCreationOptions.RunContinuationsAsynchronously);
             HookClient(client);
             var result = await client.ConnectAsync(options, cancellationToken).ConfigureAwait(false);
             if (result.ResultCode is not MqttClientConnectResultCode.Success)
@@ -419,6 +428,7 @@ internal sealed partial class MqttToolkitSessionService : IDisposable, IAsyncDis
             _clientSubscriptions.Clear();
             client.Dispose();
             _client = null;
+            _embeddedClientDisconnected = null;
             ConnectionChanged?.Invoke(this, false);
             throw;
         }
@@ -452,15 +462,41 @@ internal sealed partial class MqttToolkitSessionService : IDisposable, IAsyncDis
                 {
                     await _client.DisconnectAsync(new(), cancellationToken).ConfigureAwait(false);
                 }
+
+                if (_embeddedClientDisconnected is not null)
+                {
+                    await _embeddedClientDisconnected.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
+                }
             }
             finally
             {
                 _client.Dispose();
                 _client = null;
+                _embeddedClientDisconnected = null;
             }
         }
 
         ConnectionChanged?.Invoke(this, false);
+    }
+
+    /// <summary>Resolves the embedded broker for a loopback TCP client.</summary>
+    /// <param name="options">The client connection options.</param>
+    /// <returns>The matching broker, or null for an external connection.</returns>
+    private MqttServer? GetEmbeddedServer(MqttClientOptions options)
+    {
+        if (options.ChannelOptions is not MqttClientTcpOptions tcp)
+        {
+            return null;
+        }
+
+        var isEmbedded = tcp.RemoteEndpoint switch
+        {
+            IPEndPoint endpoint => endpoint.Port == _embeddedServerPort && IPAddress.IsLoopback(endpoint.Address),
+            DnsEndPoint endpoint => endpoint.Port == _embeddedServerPort &&
+                string.Equals(endpoint.Host, "localhost", StringComparison.OrdinalIgnoreCase),
+            _ => false,
+        };
+        return isEmbedded ? _server : null;
     }
 
     /// <summary>Handles MQTT packet inspection diagnostics.</summary>
@@ -503,6 +539,7 @@ internal sealed partial class MqttToolkitSessionService : IDisposable, IAsyncDis
 
             var result = await ready.Task.WaitAsync(cancellationToken).ConfigureAwait(false);
             _server = result.Server;
+            _embeddedServerPort = port;
             _serverSession = result.Session;
             HookServer(_server);
             Log("Info", BrokerSource, $"Embedded MQTTnet.Rx.Server started on port {port}.");
@@ -536,6 +573,7 @@ internal sealed partial class MqttToolkitSessionService : IDisposable, IAsyncDis
             _serverLease = null;
             _server.Dispose();
             _server = null;
+            _ = _embeddedClientDisconnected?.TrySetResult();
         }
 
         Log("Info", BrokerSource, "Embedded MQTTnet.Rx.Server stopped.");
@@ -596,7 +634,15 @@ internal sealed partial class MqttToolkitSessionService : IDisposable, IAsyncDis
             .SubscribePrimitives(e => Log("Info", ServerSource, $"Client connected: {e.ClientId}.")));
 
         _serverSubscriptions.Add(server.ClientDisconnected()
-            .SubscribePrimitives(e => Log("Info", ServerSource, $"Client disconnected: {e.ClientId}.")));
+            .SubscribePrimitives(e =>
+            {
+                if (string.Equals(e.ClientId, _client?.Options.ClientId, StringComparison.Ordinal))
+                {
+                    _ = _embeddedClientDisconnected?.TrySetResult();
+                }
+
+                Log("Info", ServerSource, $"Client disconnected: {e.ClientId}.");
+            }));
 
         _serverSubscriptions.Add(server.InterceptingSubscription()
             .SubscribePrimitives(e => Log("Info", ServerSource, $"Subscription requested by {e.ClientId}: {e.TopicFilter.Topic}.")));
