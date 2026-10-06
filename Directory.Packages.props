@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <IOTDriverVersion>1.1.0</IOTDriverVersion>
+    <IOTDriverVersion>2.0.0</IOTDriverVersion>
     <RxUIPrimitivesVersion>7.5.0</RxUIPrimitivesVersion>
     <RoslyAnalysersVersion>3.46.2</RoslyAnalysersVersion>
     <MQTTnetVersion>5.2.0.1603</MQTTnetVersion>
