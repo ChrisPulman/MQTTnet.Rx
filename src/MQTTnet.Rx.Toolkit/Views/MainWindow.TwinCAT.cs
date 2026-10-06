@@ -2,7 +2,6 @@
 // Chris Pulman and contributors licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for full license information.
 
-using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Disposables;
 

@@ -41,7 +41,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable, 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
     /// <summary>Stores dashboard tiles keyed by exact MQTT topic.</summary>
-    private readonly Dictionary<string, DashboardTileViewModel> _dashboardByTopic = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DashboardTileViewModel> _dashboardByTopic = [with(StringComparer.Ordinal)];
 
     /// <summary>Stores the dashboard layout persistence path.</summary>
     private readonly string _dashboardLayoutPath;
