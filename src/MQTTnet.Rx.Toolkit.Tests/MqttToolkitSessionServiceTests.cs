@@ -12,7 +12,7 @@ using MQTTnet.Rx.Toolkit.ViewModels;
 namespace MQTTnet.Rx.Toolkit.Tests;
 
 /// <summary>Verifies MQTT Toolkit session lifecycle behavior.</summary>
-public sealed class MqttToolkitSessionServiceTests
+public sealed partial class MqttToolkitSessionServiceTests
 {
     /// <summary>Stores the test MQTT client identifier.</summary>
     private const string ClientId = "toolkit-dispose-race";
@@ -125,14 +125,22 @@ public sealed class MqttToolkitSessionServiceTests
     }
 
     /// <summary>Verifies broker shutdown does not leave client disconnect waiting on a removed session.</summary>
+    /// <param name="localhost">Whether to connect using the embedded broker's DNS loopback name.</param>
     /// <returns>A task representing the asynchronous assertions.</returns>
     [Test]
-    public async Task StopEmbeddedServer_AllowsClientDisconnectAsync()
+    [Arguments(false)]
+    [Arguments(true)]
+    public async Task StopEmbeddedServer_AllowsClientDisconnectAsync(bool localhost)
     {
         var port = GetAvailablePort();
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(TestTimeoutSeconds));
         await using var service = new MqttToolkitSessionService(TimeProvider.System);
         using var connection = CreateReconnectOptions(port);
+        if (localhost)
+        {
+            connection.Host = "localhost";
+        }
+
         await service.StartEmbeddedServerAsync(port, timeout.Token);
         await service.ConnectAsync(connection.BuildClientOptions(), timeout.Token);
         await service.StopEmbeddedServerAsync(timeout.Token);

@@ -10,8 +10,12 @@ namespace MQTTnet.Rx.Toolkit.ViewModels;
 /// <summary>Represents one node in the observed MQTT topic tree.</summary>
 /// <param name="name">The display name for this topic node.</param>
 /// <param name="fullTopic">The complete topic represented by this node.</param>
-internal sealed partial class TopicNodeViewModel(string name, string fullTopic) : ViewModelBase
+/// <param name="isRoot">Whether this node is the topic tree root rather than an observed topic level.</param>
+internal sealed partial class TopicNodeViewModel(string name, string fullTopic, bool isRoot = false) : ViewModelBase
 {
+    /// <summary>Stores whether child topics start at the topic tree root.</summary>
+    private readonly bool _isRoot = isRoot;
+
     /// <summary>Stores the display name for this topic level.</summary>
     [Reactive]
     private string _name = name;
@@ -40,7 +44,7 @@ internal sealed partial class TopicNodeViewModel(string name, string fullTopic) 
     /// <returns>The existing or newly created child node.</returns>
     internal TopicNodeViewModel GetOrAdd(string childSegment)
     {
-        var childTopic = string.IsNullOrEmpty(FullTopic) ? childSegment : $"{FullTopic}/{childSegment}";
+        var childTopic = _isRoot ? childSegment : $"{FullTopic}/{childSegment}";
         foreach (var child in Children)
         {
             if (string.Equals(child.FullTopic, childTopic, StringComparison.Ordinal))

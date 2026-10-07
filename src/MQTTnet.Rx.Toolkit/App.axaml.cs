@@ -28,14 +28,22 @@ internal sealed class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow
-            {
-                ViewModel = new(new MqttToolkitSessionService()),
-            };
-            desktop.MainWindow.Closing += OnMainWindowClosing;
+            desktop.MainWindow = CreateMainWindow();
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>Creates a workspace whose closing event owns connection cleanup.</summary>
+    /// <returns>The initialized workspace window.</returns>
+    internal MainWindow CreateMainWindow()
+    {
+        var window = new MainWindow
+        {
+            ViewModel = new(new MqttToolkitSessionService()),
+        };
+        window.Closing += OnMainWindowClosing;
+        return window;
     }
 
     /// <summary>Keeps the UI responsive while pending connections are cancelled and disposed.</summary>

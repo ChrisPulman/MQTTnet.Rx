@@ -186,7 +186,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable, 
     /// <summary>Gets the observed MQTT topic tree.</summary>
     public ObservableCollection<TopicNodeViewModel> Topics { get; } =
     [
-        new("topics", string.Empty),
+        new("topics", string.Empty, isRoot: true),
     ];
 
     /// <summary>Gets retained topic and payload issues.</summary>
@@ -624,7 +624,7 @@ internal sealed partial class MainWindowViewModel : ViewModelBase, IDisposable, 
         {
             finalStatus = $"{operation} failed";
             SetOperationState(true, finalStatus);
-            AddLog(ErrorLevel, operation, exception.Message);
+            _postToUi(() => AddLog(ErrorLevel, operation, exception.Message));
         }
         finally
         {
