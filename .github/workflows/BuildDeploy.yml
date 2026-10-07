@@ -206,7 +206,7 @@ jobs:
       - name: Setup Python for package validation
         uses: actions/setup-python@v7
         with:
-          python-version: '3.13'
+          python-version: '3.14'
 
       - name: Cache NuGet HTTP v3 feed responses
         uses: actions/cache@v6
