@@ -15,6 +15,9 @@ namespace MQTTnet.Rx.Client;
 /// <summary>Detects and decodes MQTT payload data for display and validation.</summary>
 public static class PayloadInspector
 {
+    /// <summary>The shared encoding used to validate UTF-8 without allocating decoded text.</summary>
+    private static readonly UTF8Encoding StrictUtf8Encoding = new(false, true);
+
     /// <summary>Detects the most suitable display format for a decoded payload.</summary>
     /// <param name="text">The decoded payload text.</param>
     /// <param name="payload">The raw payload bytes.</param>
@@ -98,7 +101,7 @@ public static class PayloadInspector
         ArgumentNullException.ThrowIfNull(payload);
         try
         {
-            _ = new UTF8Encoding(false, true).GetString(payload);
+            _ = StrictUtf8Encoding.GetCharCount(payload);
             return true;
         }
         catch (DecoderFallbackException)
