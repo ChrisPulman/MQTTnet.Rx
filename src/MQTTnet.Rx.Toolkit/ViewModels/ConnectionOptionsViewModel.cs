@@ -633,8 +633,8 @@ internal sealed partial class ConnectionOptionsViewModel : ViewModelBase, IDispo
             _ = builder.WithoutPacketFragmentation();
         }
 
-        ConfigureStreamProvider(builder);
         ConfigureTransport(builder);
+        ConfigureStreamProvider(builder);
         ConfigureCredentials(builder);
         ConfigureEnhancedAuthentication(builder);
         ConfigureTls(builder);
@@ -1072,7 +1072,9 @@ internal sealed partial class ConnectionOptionsViewModel : ViewModelBase, IDispo
         var certificates = new X509Certificate2Collection();
         foreach (var path in certificatePaths)
         {
-            _ = certificates.Add(X509CertificateLoader.LoadCertificateFromFile(path));
+            var certificate = X509CertificateLoader.LoadCertificateFromFile(path);
+            _ownedCertificates.Add(certificate);
+            _ = certificates.Add(certificate);
         }
 
         _ = options.WithTrustChain(certificates);

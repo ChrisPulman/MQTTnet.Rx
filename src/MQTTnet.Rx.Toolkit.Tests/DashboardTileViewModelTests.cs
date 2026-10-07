@@ -10,7 +10,7 @@ using MQTTnet.Rx.Toolkit.ViewModels;
 namespace MQTTnet.Rx.Toolkit.Tests;
 
 /// <summary>Verifies dashboard tile editing and visualization behavior.</summary>
-public sealed class DashboardTileViewModelTests
+public sealed partial class DashboardTileViewModelTests
 {
     /// <summary>Stores the byte count of the boolean payload fixture.</summary>
     private const int BooleanPayloadByteCount = 4;

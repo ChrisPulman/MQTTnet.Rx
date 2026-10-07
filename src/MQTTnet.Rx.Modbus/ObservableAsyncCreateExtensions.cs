@@ -19,14 +19,28 @@ public static class ObservableAsyncCreateExtensions
     /// <summary>Gets the legacy callable entry point for creating a sequence from an existing master.</summary>
     public static Func<
         ModbusIpMaster,
-        IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)>> FromMasterAsync { get; } =
+        IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)>> FromMasterAsync
+    { get; } =
         FromMaster;
 
     /// <summary>Gets the legacy callable entry point for creating a sequence from a master factory.</summary>
     public static Func<
         Func<ModbusIpMaster>,
-        IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)>> FromFactoryAsync { get; } =
+        IObservableAsync<(bool Connected, Exception? Error, ModbusIpMaster? Master)>> FromFactoryAsync
+    { get; } =
         FromFactory;
+
+    /// <summary>Creates an asynchronous sequence for a caller-owned serial master.</summary>
+    /// <param name="master">The RTU or ASCII master.</param>
+    /// <returns>The asynchronous serial-master sequence.</returns>
+    public static IObservableAsync<(bool Connected, Exception? Error, IModbusSerialMaster? Master)> FromSerialMaster(
+        IModbusSerialMaster master) => Create.FromSerialMaster(master).ToMqttAsyncSignal();
+
+    /// <summary>Creates an asynchronous serial-master sequence with a scoped lifetime.</summary>
+    /// <param name="factory">Creates the RTU or ASCII master.</param>
+    /// <returns>The asynchronous serial-master sequence.</returns>
+    public static IObservableAsync<(bool Connected, Exception? Error, IModbusSerialMaster? Master)> FromSerialFactory(
+        Func<IModbusSerialMaster> factory) => Create.FromSerialFactory(factory).ToMqttAsyncSignal();
 
     /// <summary>Creates an asynchronous observable sequence from a master factory.</summary>
     /// <param name="factory">Creates the Modbus master.</param>

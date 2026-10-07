@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageVersion Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageVersion Include="Avalonia.Headless" Version="12.1.3" />
     <PackageVersion Include="Avalonia.Controls.DataGrid" Version="12.1.2" />
     <PackageVersion Include="CrissCross.Avalonia.UI" Version="5.0.0" />
     <PackageVersion Include="ConsoleMenu-simple" Version="2.7.0" />

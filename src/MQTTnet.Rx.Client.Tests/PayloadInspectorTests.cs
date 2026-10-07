@@ -10,6 +10,29 @@ public sealed class PayloadInspectorTests
     /// <summary>Stores a finite numeric payload used by parse assertions.</summary>
     private const double FiniteNumberValue = 1.25;
 
+    /// <summary>Verifies strict validation of Unicode scalar values and malformed encodings.</summary>
+    /// <param name="hexPayload">The encoded UTF-8 payload.</param>
+    /// <param name="expected">Whether the payload contains valid UTF-8.</param>
+    /// <returns>A task representing the asynchronous assertion.</returns>
+    [Test]
+    [Arguments("", true)]
+    [Arguments("00", true)]
+    [Arguments("C2A3", true)]
+    [Arguments("E282AC", true)]
+    [Arguments("F09F9880", true)]
+    [Arguments("F48FBFBF", true)]
+    [Arguments("80", false)]
+    [Arguments("C0AF", false)]
+    [Arguments("C2", false)]
+    [Arguments("E282", false)]
+    [Arguments("EDA080", false)]
+    [Arguments("F0908080", true)]
+    [Arguments("F4908080", false)]
+    [Arguments("F09F98", false)]
+    [Arguments("F09F4180", false)]
+    public async Task IsStrictUtf8ValidatesUnicodeScalarsAsync(string hexPayload, bool expected) =>
+        await Assert.That(PayloadInspector.IsStrictUtf8(Convert.FromHexString(hexPayload))).IsEqualTo(expected);
+
     /// <summary>Verifies that invalid UTF-8 bytes are not parsed after hexadecimal fallback.</summary>
     /// <returns>A task representing the asynchronous assertions.</returns>
     [Test]

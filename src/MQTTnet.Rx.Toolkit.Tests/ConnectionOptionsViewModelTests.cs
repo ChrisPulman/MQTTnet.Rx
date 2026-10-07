@@ -11,7 +11,7 @@ using MQTTnet.Rx.Toolkit.ViewModels;
 namespace MQTTnet.Rx.Toolkit.Tests;
 
 /// <summary>Verifies MQTT client connection option construction.</summary>
-public sealed class ConnectionOptionsViewModelTests
+public sealed partial class ConnectionOptionsViewModelTests
 {
     /// <summary>Stores a duplicate MQTT user-property name used by connection tests.</summary>
     private const string DuplicatePropertyName = "duplicate";

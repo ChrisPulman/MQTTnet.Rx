@@ -8,7 +8,7 @@ using ReactiveUI.Primitives;
 namespace MQTTnet.Rx.Toolkit.Tests;
 
 /// <summary>Verifies top-level Toolkit view-model command behavior.</summary>
-public sealed class MainWindowViewModelTests
+public sealed partial class MainWindowViewModelTests
 {
     /// <summary>Verifies queued UI dispatch cannot leave a completed publish command in the running state.</summary>
     /// <returns>A task representing the asynchronous assertions.</returns>

@@ -185,6 +185,10 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+            10.0.x
           global-json-file: global.json
           cache: true
           cache-dependency-path: |
@@ -192,6 +196,17 @@ jobs:
             **/*.csproj
             **/global.json
             **/nuget.config
+
+      - name: Setup .NET 11 test runtime
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 11.0.x
+          dotnet-quality: preview
+
+      - name: Setup Python for package validation
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
 
       - name: Cache NuGet HTTP v3 feed responses
         uses: actions/cache@v6
@@ -265,24 +280,13 @@ jobs:
           MinVerVersionOverride: ${{ steps.minver.outputs.SemVer2 }}
         run: ./build.cmd Compile --configuration ${{ env.configuration }}
 
-      - name: Tests + Coverage (MTP)
-        shell: bash
+      - name: Tests + production coverage gate (MTP)
+        shell: pwsh
         working-directory: ${{ env.solutionFolder }}
         env:
           MinVerVersionOverride: ${{ steps.minver.outputs.SemVer2 }}
         run: |
-          dotnet test --solution "${{ env.solutionFile }}" \
-            --configuration "${{ env.configuration }}" \
-            --no-build \
-            --max-parallel-test-modules 1 \
-            --coverage \
-            --coverage-output-format cobertura \
-            --results-directory ./TestResults
-
-      - name: Verify 100% production coverage
-        shell: pwsh
-        working-directory: ${{ env.solutionFolder }}
-        run: ./eng/verify-coverage.ps1 -ResultsDirectory ./TestResults
+          ./eng/test-coverage.ps1 -Configuration '${{ env.configuration }}' -ResultsDirectory ./TestResults
 
       - name: Pack unsigned NuGet packages
         shell: bash
@@ -293,7 +297,7 @@ jobs:
 
       - name: Verify package identities and generator isolation
         shell: bash
-        run: python3 src/eng/verify-package-layout.py packages
+        run: python src/eng/verify-package-layout.py packages
 
       - name: Upload unsigned packages
         uses: actions/upload-artifact@v7
@@ -302,6 +306,7 @@ jobs:
           path: |
             packages/*.nupkg
             packages/*.snupkg
+            !packages/*.symbols.nupkg
           if-no-files-found: error
 
   sign:
@@ -318,6 +323,15 @@ jobs:
       CERTUM_OTP_URI: ${{ secrets.CERTUM_OTP_URI }}
       CERTUM_CERT_FINGERPRINT: ${{ secrets.CERTUM_CERT_FINGERPRINT }}
     steps:
+      - name: Install Python for signing authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          apt-get update
+          apt-get install -y --no-install-recommends python3
+          python3 --version
+          python3 -c 'import base64, hashlib, hmac, os, struct, time; from urllib.parse import parse_qs, urlparse'
+
       - name: Download unsigned packages
         uses: actions/download-artifact@v8
         with:
@@ -329,11 +343,16 @@ jobs:
         run: |
           set -euo pipefail
           : "${SS_DIST:?prebuilt image must set SS_DIST}"
+          SS_START="$(find "$SS_DIST/" -name 'SimplySignDesktop_start' -type f -print -quit)"
+          SS_EXE="$(find "$SS_DIST/" -name 'SimplySignDesktop' -type f -print -quit)"
+          SS_PKCS11="$(find "$SS_DIST/" -name 'SimplySignPKCS*.so' -print -quit)"
+          [ -x "$SS_EXE" ] || { echo "::error::SimplySign executable is missing from the signing image"; exit 1; }
+          [ -f "$SS_PKCS11" ] || { echo "::error::SimplySign PKCS11 library is missing from the signing image"; exit 1; }
           {
             echo "SS_DIST=$SS_DIST"
-            echo "SS_START=$(find "$SS_DIST/" -name 'SimplySignDesktop_start' -type f | head -1)"
-            echo "SS_EXE=$(find "$SS_DIST/" -name 'SimplySignDesktop' -type f | head -1)"
-            echo "SS_PKCS11=$(find "$SS_DIST/" -name 'SimplySignPKCS*.so' | head -1)"
+            echo "SS_START=$SS_START"
+            echo "SS_EXE=$SS_EXE"
+            echo "SS_PKCS11=$SS_PKCS11"
           } >> "$GITHUB_ENV"
 
       - name: Start headless display
@@ -424,7 +443,8 @@ jobs:
           set -euo pipefail
           : "${CERTUM_CERT_FINGERPRINT:?map the CERTUM_CERT_FINGERPRINT secret into the job env}"
 
-          JAR="${JSIGN_JAR:-$RUNNER_TEMP/jsign.jar}"
+          # Use the version matching the checksum, regardless of the image's bundled jsign.
+          JAR="$RUNNER_TEMP/jsign-7.4.jar"
           EXPECTED_JSIGN_SHA256="2abf2ade9ea322acc2d60c24794eadc465ff9380938fca4c932d09e0b25f1c28"
           if [ ! -s "$JAR" ]; then
             curl -fsSL -o "$JAR" "https://repo1.maven.org/maven2/net/jsign/jsign/7.4/jsign-7.4.jar"
@@ -486,6 +506,8 @@ jobs:
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
 
       - name: NuGet login (OIDC trusted publishing)
         id: nuget-login
