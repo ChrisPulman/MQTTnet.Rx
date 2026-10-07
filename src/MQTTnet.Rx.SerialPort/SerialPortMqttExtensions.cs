@@ -287,8 +287,8 @@ public static class SerialPortMqttExtensions
         int timeOut)
     {
         ValidatePublishArguments(client, topic, serialPort, startsWith, endsWith);
-        return client.PublishMessage(SerialPortRxMixins
-            .BufferUntil(serialPort.DataReceived, startsWith, endsWith, timeOut)
+        return client.PublishMessage(SerialPortApplicationMessageExtensions
+            .Frames(serialPort, startsWith, endsWith, timeOut)
             .Select(payload => (topic, payload)));
     }
 
@@ -309,8 +309,8 @@ public static class SerialPortMqttExtensions
         int timeOut)
     {
         ValidatePublishArguments(client, topic, serialPort, startsWith, endsWith);
-        return client.PublishMessage(SerialPortRxMixins
-            .BufferUntil(serialPort.DataReceived, startsWith, endsWith, timeOut)
+        return client.PublishMessage(SerialPortApplicationMessageExtensions
+            .Frames(serialPort, startsWith, endsWith, timeOut)
             .Select(payload => (topic, payload)));
     }
 

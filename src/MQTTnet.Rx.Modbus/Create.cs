@@ -13,6 +13,27 @@ namespace MQTTnet.Rx.Modbus;
 /// <summary>Provides compatible static entry points for the Modbus MQTT bridge.</summary>
 public static class Create
 {
+    /// <summary>Creates a connected sequence for an existing RTU or ASCII master.</summary>
+    /// <param name="master">The serial master, whose lifetime remains owned by the caller.</param>
+    /// <returns>A sequence usable with all native serial-master operations.</returns>
+    public static IObservable<(bool Connected, Exception? Error, IModbusSerialMaster? Master)> FromSerialMaster(
+        IModbusSerialMaster master)
+    {
+        ArgumentNullException.ThrowIfNull(master);
+        return Signal.Emit<(bool Connected, Exception? Error, IModbusSerialMaster? Master)>((true, null, master));
+    }
+
+    /// <summary>Creates a serial-master sequence with a lifetime scoped to its subscription.</summary>
+    /// <param name="factory">Creates an RTU or ASCII master with any supported transport.</param>
+    /// <returns>A sequence that disposes its master when the subscription ends.</returns>
+    public static IObservable<(bool Connected, Exception? Error, IModbusSerialMaster? Master)> FromSerialFactory(
+        Func<IModbusSerialMaster> factory)
+    {
+        ArgumentNullException.ThrowIfNull(factory);
+        return Signal.Using(factory, static master =>
+            Signal.Emit<(bool Connected, Exception? Error, IModbusSerialMaster? Master)>((true, null, master)));
+    }
+
     /// <summary>Creates a connected sequence for an existing Modbus master.</summary>
     /// <param name="master">The existing Modbus master.</param>
     /// <returns>A connected Modbus master sequence.</returns>

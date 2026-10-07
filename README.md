@@ -253,6 +253,8 @@ outgoing.OnNext(("sensors/lab/temperature", "21.4"));
 
 The stream publisher accepts `(Topic, string Payload)` and `(Topic, byte[] Payload)` sequences. Raw-client overloads emit `MqttClientPublishResult`; resilient overloads emit `ApplicationMessageProcessedEventArgs`. Raw overloads also accept QoS, retain, and message-builder customization where shown in the complete API.
 
+`PublishMessage` also accepts complete `MqttApplicationMessage` streams and forwards their original payloads and MQTT properties. `SubscribeToTopic(topic, retryOnError: false)` forwards subscription and source failures to the observer; the single-argument form retains automatic retries. Both options are available for raw and resilient clients and ordinary and async observables.
+
 ### Async-observable client
 
 Use `MqttClientSignal` when observers must be awaited or cancellation should stop delivery.
@@ -1081,6 +1083,10 @@ The `.Reactive` package compiles the same source in `MQTTnet.Rx.AspNetCore.React
 
 The industrial packages bridge device values to MQTT and MQTT payloads back to devices. The application remains responsible for creating and configuring the driver object; the examples use `GetConfigured...` placeholders for that application-specific work.
 
+The native driver packages are transitive dependencies. Keep the configured driver object to use its complete API, including transport configuration, diagnostics, bulk operations, device-specific commands, and lifecycle events. MQTT bridges compose with these objects and native observable streams.
+
+For publications that need MQTT v5 properties, use a full `MqttApplicationMessage` factory instead of a text payload factory. `PublishABPlcTag`, `PublishS7PlcTag`, `PublishOmronPlcTag`, `PublishMitsubishiTag`, and `PublishTcPlcTag` accept complete-message factories. `PublishModbusMessages` accepts native reading or slave-event streams. Client `PublishMessage` overloads also accept complete-message streams. These paths preserve binary payloads, content type, response topic, correlation data, expiry, user properties, QoS, and retain settings.
+
 All bridges provide ordinary raw-client and resilient-client forms. Async-observable forms use `IObservableAsync<IMqttClient>` or `IObservableAsync<IResilientMqttClient>` and return `IObservableAsync<T>` for publications. Static `Create` methods are compatibility forwarders; extension methods are normally clearer and, for S7/TwinCAT subscriptions, preserve the returned lifetime handle.
 
 The client model changes the publication result but not the bridge's device arguments:
@@ -1200,6 +1206,8 @@ static LogicalTagKey<int> GetMitsubishiSpeedTag() => throw new NotImplementedExc
 
 `PublishOmronPlcTag<T>` and `SubscribeOmronPlcTag<T>` use `IOmronPlcRx` and `LogicalTagKey<T>`. Source-sequence failures are sent to the supplied trace callback. Exceptions thrown while parsing an MQTT payload or performing the synchronous PLC write propagate from the notification; handle them in the surrounding pipeline or in the parser/writer implementation.
 
+Use `SubscribeOmronPlcTagOrdered<T>` to await native writes in arrival order without blocking MQTT callbacks. Supply an error callback and cancellation token. Disposal or cancellation removes the subscription, cancels the active write, and discards queued writes; parser, source, and native write errors terminate the bridge and reach the error callback. Raw and resilient clients and both observable variants are supported. The existing `SubscribeOmronPlcTag<T>` retains its synchronous callback behavior.
+
 ```csharp
 using IoT.Driver.Core;
 using IoT.Driver.OmronPlcRx;
@@ -1265,6 +1273,8 @@ static LogicalTagKey<double> GetS7PressureTag() => throw new NotImplementedExcep
 ### Serial port
 
 `PublishSerialPort` buffers data between observable start and end delimiters and publishes complete frames. `SubscribeSerialPortWriteLine` appends the driver's line ending. `SubscribeSerialPortWrite` writes either a transformed string or byte array. The `timeOut` argument is expressed in milliseconds.
+
+`SubscribeSerialPortWriteBytes` forwards the MQTT payload directly without UTF-8 decoding; contiguous payloads use their existing memory and segmented payloads are combined once. `PublishSerialPortReceiveCount` publishes native receive-count notifications. `PublishSerialPortMessages<T>` lets a source factory select any native serial stream and a message factory supply all MQTT properties. The framed `PublishSerialPort` overload also accepts a complete-message factory. Each form supports raw and resilient clients and ordinary and async observables.
 
 ```csharp
 using IoT.Driver.Serial;
@@ -1344,6 +1354,8 @@ The `IHashTableRx` overload family is available for publication in synchronous a
 ### Modbus
 
 Modbus has the broadest bridge surface. `Create.FromMaster` wraps an existing `ModbusIpMaster`; `Create.FromFactory` creates one per subscription. Their state sequence reports connection status, an optional error, and the active master. Async code can use the public `FromMasterAsync` and `FromFactoryAsync` delegates.
+
+For native RTU or ASCII masters, use `Create.FromSerialMaster` for a caller-owned `IModbusSerialMaster` or `Create.FromSerialFactory` for a subscription-owned master. `ObservableAsyncCreateExtensions.FromSerialMaster` and `FromSerialFactory` provide their async-observable forms. Native serial operations, custom requests, diagnostics, and slave events can feed `PublishModbusMessages<TReading>` with a complete-message factory.
 
 #### Poll and publish
 
