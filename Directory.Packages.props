@@ -3,7 +3,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <IOTDriverVersion>2.0.0</IOTDriverVersion>
     <RxUIPrimitivesVersion>9.0.0</RxUIPrimitivesVersion>
-    <RoslyAnalysersVersion>5.1.2</RoslyAnalysersVersion>
+    <RoslyAnalysersVersion>5.1.3</RoslyAnalysersVersion>
     <MQTTnetVersion>5.2.0.1603</MQTTnetVersion>
   </PropertyGroup>
 
